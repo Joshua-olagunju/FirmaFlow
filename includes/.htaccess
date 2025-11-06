@@ -1,0 +1,7 @@
+# Deny all access to includes directory
+Require all denied
+
+# Additional protection
+<Files "*">
+    Require all denied
+</Files>

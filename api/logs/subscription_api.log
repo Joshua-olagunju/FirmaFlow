@@ -1,0 +1,8 @@
+2025-10-09 13:46:45 activateSubscription called by user 10 input: {"action":"activate_subscription","plan":"starter","amount":"5000","transaction_id":"TEST_1760010402","tx_ref":"FF_TEST_1760010402","currency":"NGN","payment_status":"successful"}
+2025-10-09 13:46:45 activateSubscription: SUCCESS for user 10 plan starter tx_ref FF_TEST_1760010402 tx_id TEST_1760010402
+2025-10-09 13:48:15 activateSubscription called by user 10 input: {"action":"activate_subscription","plan":"starter","amount":5000,"transaction_id":"REAL_TEST_1760010495977","tx_ref":"REAL_1760010495978","currency":"NGN","payment_status":"successful"}
+2025-10-09 13:48:16 activateSubscription: SUCCESS for user 10 plan starter tx_ref REAL_1760010495978 tx_id REAL_TEST_1760010495977
+2025-10-09 13:48:41 activateSubscription called by user 10 input: {"action":"activate_subscription","plan":"starter","amount":"5000","transaction_id":"TEST_1760010519","tx_ref":"FF_TEST_1760010519","currency":"NGN","payment_status":"successful"}
+2025-10-09 13:48:41 activateSubscription: SUCCESS for user 10 plan starter tx_ref FF_TEST_1760010519 tx_id TEST_1760010519
+2025-10-09 13:55:30 activateSubscription called by user 10 input: {"action":"activate_subscription","plan":"professional","transaction_id":9707188,"tx_ref":"FF_10_professional_1760010912511_moulcedu1","amount":10000,"currency":"NGN","payment_status":"successful"}
+2025-10-09 13:55:30 activateSubscription: SUCCESS for user 10 plan professional tx_ref FF_10_professional_1760010912511_moulcedu1 tx_id 9707188

@@ -1,0 +1,98 @@
+# FirmaFlow Security Configuration
+# Protect sensitive directories and files
+
+# Deny access to includes directory
+<Files "includes/*">
+    Require all denied
+</Files>
+
+# Protect database files
+<Files "*.sql">
+    Require all denied
+</Files>
+
+# Protect configuration files and sensitive data
+<Files "db.php">
+    Require all denied
+</Files>
+<Files "config.php">
+    Require all denied
+</Files>
+<Files ".env">
+    Require all denied
+</Files>
+<Files ".env.*">
+    Require all denied
+</Files>
+<Files "flutterwave_config.php">
+    Require all denied
+</Files>
+<FilesMatch "config/.*\.php$">
+    Require all denied
+</FilesMatch>
+
+# Protect log files
+<Files "*.log">
+    Require all denied
+</Files>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+
+# Prevent access to sensitive files
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak)$">
+    Require all denied
+</FilesMatch>
+
+# Directory listing protection
+Options -Indexes
+
+# PHP security
+<IfModule mod_php7.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_flag expose_php Off
+</IfModule>
+
+<IfModule mod_php8.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_flag expose_php Off
+</IfModule>
+
+# Force HTTPS
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# Set PHP handler (cPanel)
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php83 .php .php8 .phtml
+</IfModule>
+
+# Prevent direct HTTP access to sensitive files (Apache 2.4+)
+<FilesMatch "^(\.env|env_loader\.php|flutterwave_config\.php|email_config\.php|_config\.php)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the "ea-php83" package as the default "PHP" programming language.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php83 .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit
+
