@@ -1,0 +1,338 @@
+/* DEBUG: Force visible text in global messages modal table */
+#globalMessagesModal .table td {
+    color: red !important;
+    font-size: 2rem !important;
+    font-weight: bold !important;
+}
+/* DEBUG: Highlight global messages table rows for visibility */
+#globalMessagesModal .table tbody tr {
+    border: 2px solid #dc3545 !important;
+    background: #fffbe6 !important;
+}
+/* SuperAdmin Mobile-First CSS */
+
+/* Base Layout */
+.d-flex {
+    display: flex !important;
+}
+
+.flex-grow-1 {
+    flex-grow: 1 !important;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: 280px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1040;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+}
+
+/* Main Content */
+.main-content {
+    margin-left: 280px;
+    min-height: 100vh;
+    width: calc(100% - 280px);
+    background-color: #f8f9fa;
+}
+
+/* Mobile Styles */
+@media (max-width: 767.98px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1039;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .sidebar-overlay.show {
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+/* Navigation Styles */
+.nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    margin-bottom: 0.25rem;
+}
+
+.nav-link:hover {
+    background-color: #f8f9fa !important;
+    color: #dc3545 !important;
+}
+
+.nav-link.active {
+    background-color: #ffebee !important;
+    color: #dc3545 !important;
+    font-weight: 500;
+}
+
+.nav-section {
+    margin-bottom: 1rem;
+}
+
+.nav-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Header Bar for Mobile */
+.header-bar {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+/* Card Styles */
+.card {
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    padding: 1rem 1.25rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* Stat Cards */
+.stat-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Table Responsive */
+.table-responsive {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.75rem;
+}
+
+.table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* Status Badges */
+.status-active {
+    background-color: #d4edda !important;
+    color: #155724 !important;
+}
+
+.status-inactive {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+}
+
+.status-trial {
+    background-color: #fff3cd !important;
+    color: #856404 !important;
+}
+
+.status-expired {
+    background-color: #f5c6cb !important;
+    color: #721c24 !important;
+}
+
+.status-cancelled {
+    background-color: #d1ecf1 !important;
+    color: #0c5460 !important;
+}
+
+/* Chart Container */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+@media (max-width: 575.98px) {
+    .chart-container {
+        height: 250px;
+    }
+}
+
+/* Form Styles */
+.form-control:focus,
+.form-select:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Button Styles */
+.btn-primary {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-primary:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.btn-outline-primary {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-outline-primary:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+/* Dropdown Styles */
+.dropdown-menu {
+    border: 1px solid #e9ecef;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border-radius: 0.5rem;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Alert Styles */
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+/* Modal Responsive */
+@media (max-width: 575.98px) {
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-dialog-scrollable .modal-content {
+        max-height: calc(100vh - 1rem);
+    }
+}
+
+/* Utilities */
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.small {
+    font-size: 0.875rem;
+}
+
+.fw-medium {
+    font-weight: 500 !important;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Print Styles */
+@media print {
+    .sidebar,
+    .header-bar,
+    .btn,
+    .dropdown {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .card {
+        border-width: 2px;
+    }
+    
+    .nav-link.active {
+        border: 2px solid #dc3545;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .sidebar-overlay,
+    .stat-card,
+    .card {
+        transition: none !important;
+    }
+}
