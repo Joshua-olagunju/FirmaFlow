@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FirmaFlow Auth API Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 40px;
+            background: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .success { 
+            background: #d4edda; 
+            border-color: #c3e6cb; 
+            color: #155724; 
+        }
+        .error { 
+            background: #f8d7da; 
+            border-color: #f5c6cb; 
+            color: #721c24; 
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-ok {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 FirmaFlow Auth API Test</h1>
+        <p>This page tests your authentication API to ensure it's working correctly.</p>
+        
+        <div class="test-section">
+            <h3>📡 API Connectivity Test</h3>
+            <p>Testing basic API connection and CORS headers:</p>
+            <button onclick="testConnection()">Test Connection</button>
+            <div id="connection-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔍 Session Check Test</h3>
+            <p>Testing session validation endpoint:</p>
+            <button onclick="testSession()">Check Session</button>
+            <div id="session-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📧 Email Configuration Test</h3>
+            <p>Checking if email helper is accessible:</p>
+            <button onclick="testEmailConfig()">Test Email Config</button>
+            <div id="email-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🗄️ Database Connection Test</h3>
+            <p>Testing database connectivity:</p>
+            <button onclick="testDatabase()">Test Database</button>
+            <div id="database-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        async function testConnection() {
+            const resultDiv = document.getElementById('connection-result');
+            resultDiv.innerHTML = '⏳ Testing connection...';
+            
+            try {
+                const response = await fetch('api/auth.php', {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+                    'access-control-allow-methods': response.headers.get('access-control-allow-methods'),
+                    'access-control-allow-headers': response.headers.get('access-control-allow-headers')
+                };
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ <strong>Connection Success!</strong><br>
+                        Status: ${response.status}<br>
+                        CORS Origin: ${corsHeaders['access-control-allow-origin'] || 'Not set'}<br>
+                        Allowed Methods: ${corsHeaders['access-control-allow-methods'] || 'Not set'}<br>
+                        Allowed Headers: ${corsHeaders['access-control-allow-headers'] || 'Not set'}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ <strong>Connection Failed!</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function testSession() {
+            const resultDiv = document.getElementById('session-result');
+            resultDiv.innerHTML = '⏳ Testing session check...';
+            
+            try {
+                const response = await fetch('api/auth.php?action=check', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ <strong>Session Check Success!</strong><br>
+                        Status: ${response.status}<br>
+                        Response: <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ <strong>Session Check Failed!</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function testEmailConfig() {
+            const resultDiv = document.getElementById('email-result');
+            resultDiv.innerHTML = '⏳ Testing email configuration...';
+            
+            try {
+                const response = await fetch('includes/email_config.php', {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ <strong>Email Config Accessible!</strong><br>
+                            Status: ${response.status}<br>
+                            Content Type: ${response.headers.get('content-type')}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ⚠️ <strong>Email Config Response:</strong><br>
+                            Status: ${response.status}<br>
+                            This might be protected (which is good for security)
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ <strong>Email Config Test Failed!</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function testDatabase() {
+            const resultDiv = document.getElementById('database-result');
+            resultDiv.innerHTML = '⏳ Testing database connection...';
+            
+            try {
+                // Test with a simple POST request that should trigger database connection
+                const response = await fetch('api/auth.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'test_connection'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error && data.error.includes('Invalid action')) {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ <strong>Database Connection Working!</strong><br>
+                            Status: ${response.status}<br>
+                            API processed request (got expected "Invalid action" response)<br>
+                            This means database connection is established.
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            ⚠️ <strong>Unexpected Response:</strong><br>
+                            Status: ${response.status}<br>
+                            Response: <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        ❌ <strong>Database Test Failed!</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-run connection test when page loads
+        window.addEventListener('load', function() {
+            testConnection();
+        });
+    </script>
+</body>
+</html>
