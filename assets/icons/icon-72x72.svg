@@ -1,0 +1,7 @@
+<!-- This is a placeholder SVG icon for FirmaFlow PWA -->
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72" fill="none">
+  <rect width="72" height="72" rx="16" fill="#667eea"/>
+  <path d="M18 24h36v4H18v-4zm0 8h36v4H18v-4zm0 8h24v4H18v-4z" fill="white"/>
+  <circle cx="48" cy="44" r="8" fill="white"/>
+  <text x="36" y="58" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="8" font-weight="bold">FF</text>
+</svg>

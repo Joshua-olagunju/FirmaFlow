@@ -1,0 +1,378 @@
+/* Theme System - Dark/Light Mode Support */
+/* This file provides comprehensive dark/light mode theming for the entire application */
+
+:root {
+  /* Light mode colors (default Tabler colors) */
+  --bs-primary: #206bc4;
+  --bs-primary-rgb: 32, 107, 196;
+  --bs-secondary: #6c757d;
+  --bs-secondary-rgb: 108, 117, 125;
+  --bs-success: #2fb344;
+  --bs-success-rgb: 47, 179, 68;
+  --bs-info: #17a2b8;
+  --bs-info-rgb: 23, 162, 184;
+  --bs-warning: #ffc107;
+  --bs-warning-rgb: 255, 193, 7;
+  --bs-danger: #d63384;
+  --bs-danger-rgb: 214, 51, 132;
+  
+  /* Background colors */
+  --bs-body-bg: #ffffff;
+  --bs-body-color: #1e293b;
+  --bs-card-bg: #ffffff;
+  --bs-border-color: #dee2e6;
+  
+  /* Header colors */
+  --header-bg: var(--bs-primary);
+  --header-color: #ffffff;
+  
+  /* Sidebar colors */
+  --sidebar-bg: #ffffff;
+  --sidebar-color: #1e293b;
+  --sidebar-active-bg: #e7f3ff;
+  --sidebar-active-color: var(--bs-primary);
+  
+  /* Table colors */
+  --table-bg: transparent;
+  --table-hover-bg: #f8f9fa;
+  --table-border-color: #dee2e6;
+  
+  /* Modal colors */
+  --modal-bg: #ffffff;
+  --modal-header-bg: #f8f9fa;
+  --modal-border-color: #dee2e6;
+  
+  /* Form colors */
+  --input-bg: #ffffff;
+  --input-border-color: #ced4da;
+  --input-focus-border-color: var(--bs-primary);
+  
+  /* Shadow and overlay */
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+}
+
+/* Dark mode theme */
+[data-theme="dark"] {
+  /* Primary colors remain the same but adjusted for dark backgrounds */
+  --bs-primary: #3b82f6;
+  --bs-primary-rgb: 59, 130, 246;
+  --bs-secondary: #6b7280;
+  --bs-secondary-rgb: 107, 114, 128;
+  --bs-success: #10b981;
+  --bs-success-rgb: 16, 185, 129;
+  --bs-info: #06b6d4;
+  --bs-info-rgb: 6, 182, 212;
+  --bs-warning: #f59e0b;
+  --bs-warning-rgb: 245, 158, 11;
+  --bs-danger: #ef4444;
+  --bs-danger-rgb: 239, 68, 68;
+  
+  /* Dark background colors */
+  --bs-body-bg: #0f172a;
+  --bs-body-color: #e2e8f0;
+  --bs-card-bg: #1e293b;
+  --bs-border-color: #334155;
+  
+  /* Dark header */
+  --header-bg: #1e293b;
+  --header-color: #e2e8f0;
+  
+  /* Dark sidebar */
+  --sidebar-bg: #1e293b;
+  --sidebar-color: #e2e8f0;
+  --sidebar-active-bg: #334155;
+  --sidebar-active-color: var(--bs-primary);
+  
+  /* Dark table */
+  --table-bg: transparent;
+  --table-hover-bg: #334155;
+  --table-border-color: #334155;
+  
+  /* Dark modal */
+  --modal-bg: #1e293b;
+  --modal-header-bg: #334155;
+  --modal-border-color: #334155;
+  
+  /* Dark form */
+  --input-bg: #334155;
+  --input-border-color: #475569;
+  --input-focus-border-color: var(--bs-primary);
+  
+  /* Dark shadow and overlay */
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --overlay-bg: rgba(0, 0, 0, 0.8);
+}
+
+/* Apply theme variables to elements */
+body {
+  background-color: var(--bs-body-bg) !important;
+  color: var(--bs-body-color) !important;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Cards */
+.card {
+  background-color: var(--bs-card-bg) !important;
+  border-color: var(--bs-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+.card-header {
+  background-color: var(--modal-header-bg) !important;
+  border-color: var(--bs-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+/* Tables */
+.table {
+  --bs-table-bg: var(--table-bg);
+  --bs-table-hover-bg: var(--table-hover-bg);
+  --bs-table-border-color: var(--table-border-color);
+  color: var(--bs-body-color) !important;
+}
+
+.table th {
+  border-color: var(--table-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+.table td {
+  border-color: var(--table-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+/* Modals */
+.modal-content {
+  background-color: var(--modal-bg) !important;
+  border-color: var(--modal-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+.modal-header {
+  background-color: var(--modal-header-bg) !important;
+  border-color: var(--modal-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+.modal-footer {
+  border-color: var(--modal-border-color) !important;
+}
+
+/* Forms */
+.form-control,
+.form-select {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-focus-border-color) !important;
+  color: var(--bs-body-color) !important;
+  box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.form-label {
+  color: var(--bs-body-color) !important;
+}
+
+/* Sidebar theming */
+.app-sidebar {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--sidebar-color) !important;
+  border-color: var(--bs-border-color) !important;
+}
+
+.sidebar-link {
+  color: var(--sidebar-color) !important;
+}
+
+.sidebar-link.active {
+  background-color: var(--sidebar-active-bg) !important;
+  color: var(--sidebar-active-color) !important;
+}
+
+.sidebar-link:hover {
+  background-color: var(--sidebar-active-bg) !important;
+  color: var(--sidebar-active-color) !important;
+}
+
+/* Main header - remove gradients, use simple colors */
+.main-header {
+  background-color: var(--header-bg) !important;
+  background-image: none !important;
+  color: var(--header-color) !important;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+/* Stat cards - remove gradients */
+.stat-card {
+  background-color: var(--bs-card-bg) !important;
+  border-color: var(--bs-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+.stat-icon {
+  background: var(--bs-primary) !important;
+  color: white !important;
+}
+
+.stat-icon.customers { background: var(--bs-primary) !important; }
+.stat-icon.products { background: var(--bs-success) !important; }
+.stat-icon.sales { background: var(--bs-warning) !important; }
+.stat-icon.warning { background: var(--bs-danger) !important; }
+.stat-icon.active { background: var(--bs-info) !important; }
+.stat-icon.outstanding { background: var(--bs-secondary) !important; }
+
+/* Navigation */
+.nav-tabs .nav-link {
+  color: var(--bs-body-color) !important;
+  border-color: var(--bs-border-color) !important;
+}
+
+.nav-tabs .nav-link.active {
+  background-color: var(--bs-card-bg) !important;
+  border-color: var(--bs-border-color) !important;
+  color: var(--bs-primary) !important;
+}
+
+/* Alerts */
+.alert {
+  border-color: var(--bs-border-color) !important;
+}
+
+/* Badges */
+.badge {
+  color: white !important;
+}
+
+/* Buttons - keep original Tabler button colors */
+.btn-primary {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+}
+
+.btn-outline-primary {
+  color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+}
+
+/* Pagination */
+.page-link {
+  background-color: var(--bs-card-bg) !important;
+  border-color: var(--bs-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+.page-link:hover {
+  background-color: var(--table-hover-bg) !important;
+  border-color: var(--bs-border-color) !important;
+  color: var(--bs-primary) !important;
+}
+
+.page-item.active .page-link {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+}
+
+/* Dropdown */
+.dropdown-menu {
+  background-color: var(--modal-bg) !important;
+  border-color: var(--modal-border-color) !important;
+}
+
+.dropdown-item {
+  color: var(--bs-body-color) !important;
+}
+
+.dropdown-item:hover {
+  background-color: var(--table-hover-bg) !important;
+  color: var(--bs-body-color) !important;
+}
+
+/* Footer theming */
+.main-footer {
+  background-color: var(--modal-header-bg) !important;
+  border-color: var(--bs-border-color) !important;
+  color: var(--bs-body-color) !important;
+}
+
+/* Text colors */
+.text-muted {
+  color: #6b7280 !important;
+}
+
+[data-theme="dark"] .text-muted {
+  color: #9ca3af !important;
+}
+
+/* Loading states */
+.loading-overlay {
+  background-color: rgba(var(--bs-card-bg), 0.9) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Theme toggle button - REMOVED
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1050;
+  width: 50px;
+  height: 50px;
+  border-radius: 25px;
+  border: none;
+  background: var(--bs-primary);
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px var(--shadow-color);
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px var(--shadow-color);
+}
+*/
+
+/* Ensure proper contrast for different states */
+[data-theme="dark"] .empty-title {
+  color: var(--bs-body-color) !important;
+}
+
+[data-theme="dark"] .empty-subtitle {
+  color: #9ca3af !important;
+}
+
+/* Override any remaining gradient backgrounds */
+[data-theme="dark"] .main-header,
+[data-theme="dark"] .stat-icon,
+[data-theme="light"] .main-header,
+[data-theme="light"] .stat-icon {
+  background-image: none !important;
+}
+
+/* Mobile responsive theme adjustments */
+@media (max-width: 768px) {
+  .theme-toggle {
+    top: 15px;
+    right: 15px;
+    width: 45px;
+    height: 45px;
+    font-size: 1.1rem;
+  }
+}
