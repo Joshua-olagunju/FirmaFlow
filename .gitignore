@@ -1,0 +1,74 @@
+# Production environment variables (NEVER commit these)
+.env.production
+.env.staging
+.env.live
+
+# Production configuration files with real credentials
+config/email_config_production.php
+includes/email_config_production.php
+includes/db_production.php
+
+# Development files are OK to commit:
+# .env.dev (contains sandbox/test credentials)
+# config/email_config.php (contains dev email credentials)
+# includes/db.php (contains localhost settings)
+
+# Payment gateway configurations
+config/flutterwave_config.php
+config/payment_config.php
+
+# Logs and temporary files
+api/logs/
+logs/
+*.log
+*.tmp
+temp/
+cache/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*.sql.gz
+*.sql.bak
+database/backup/
+
+# Node modules (if using any JS tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Composer (if using PHP dependencies)
+vendor/
+composer.lock
+
+# File uploads and user content
+uploads/
+user_files/
+storage/
+
+# Test files
+test_*.php
+*_test.php
+phpunit.xml
+.phpunit.result.cache
+
+# Configuration templates (keep .example files)
+!*.example
+!config/*.example.php
