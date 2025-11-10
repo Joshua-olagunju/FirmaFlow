@@ -1,0 +1,46 @@
+.stats{
+    background-color: rgb(248, 248, 248);
+    color: rgb(92, 143, 237);
+    text-align: center;
+    padding: 50px 20px;
+    width: 100%;
+}
+.desc{
+    color: rgb(81, 81, 81);
+}
+.group:hover{
+    background-color: rgb(38, 100, 213);
+    color: whitesmoke;
+    border: 1px solid whitesmoke;
+}
+.how{
+    width: 55%;
+    height: auto;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+.how h3{
+    color: rgb(44, 44, 44);
+    font-size: 40px;
+    font-weight: 700;
+}
+.how p{
+    color: rgb(44, 44, 44);
+    opacity: 0.9;
+}
+.logo{
+    border-radius: 50%;
+}
+
+@media (max-width: 768px) {
+    .cards{
+        display: grid;
+        grid-template-columns: 2fr;
+        gap: 20px;
+    }
+}
