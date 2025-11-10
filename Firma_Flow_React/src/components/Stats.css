@@ -36,11 +36,3 @@
 .logo{
     border-radius: 50%;
 }
-
-@media (max-width: 768px) {
-    .cards{
-        display: grid;
-        grid-template-columns: 2fr;
-        gap: 20px;
-    }
-}
