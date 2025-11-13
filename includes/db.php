@@ -18,3 +18,6 @@ try {
     echo json_encode(['error' => 'DB connection failed', 'message' => $e->getMessage()]);
     exit;
 }
+// Always use UTC for consistency (dynamic and global)
+date_default_timezone_set('UTC');
+$pdo->exec("SET time_zone = '+00:00'");
