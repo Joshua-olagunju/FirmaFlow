@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronDown, LogIn, Rocket, Mail, MessageSquare, AlertCircle, Send } from 'lucide-react';
 import SupportModal from './SupportModal.jsx';
 
 export default function Header() {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [modalType, setModalType] = useState(null);
@@ -22,6 +24,10 @@ export default function Header() {
     setIsSupportOpen(false);
   };
 
+  const handleSignIn = () => {
+    navigate('/login');
+  };
+
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
@@ -29,7 +35,14 @@ export default function Header() {
           <div className="flex items-center justify-between">
             <div className="flex gap-2 text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
               <img src="./firmaflow-logo.jpg" className="w-8 h-8" alt="" />
-              <span>FirmaFlow Ledger</span>
+              <span>
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  FirmaFlow Ledger
+                </button>
+              </span>
             </div>
 
             <div className="hidden lg:flex items-center space-x-8">
@@ -99,11 +112,11 @@ export default function Header() {
                 )}
               </div>
 
-              <button className="text-gray-700 hover:text-purple-600 transition-colors font-medium flex items-center">
+              <button onClick={handleSignIn} className="text-gray-700 hover:text-purple-600 transition-colors font-medium flex items-center">
                 <LogIn size={16} className="mr-1" />
                 Sign In
               </button>
-              <button className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all flex items-center font-medium">
+              <button onClick={() => navigate('/signup')} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all flex items-center font-medium">
                 <Rocket size={16} className="mr-1" />
                 Get Started
               </button>
@@ -177,7 +190,7 @@ export default function Header() {
                 <LogIn size={16} className="mr-2" />
                 Sign In
               </button>
-              <button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium flex items-center justify-center">
+              <button onClick={() => navigate('/signup')} className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-medium flex items-center justify-center">
                 <Rocket size={16} className="mr-1" />
                 Get Started
               </button>
