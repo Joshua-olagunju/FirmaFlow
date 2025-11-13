@@ -6,7 +6,7 @@
 $DB_HOST = 'localhost';   // MySQL host
 $DB_NAME = 'ledgerly';    // Database name
 $DB_USER = 'root';        // Default XAMPP MySQL user
-$DB_PASS = '';            // Default XAMPP MySQL password (empty) 
+$DB_PASS = 'root';            // Default XAMPP MySQL password (empty) 
 
 try {
     $pdo = new PDO("mysql:host={$DB_HOST};dbname={$DB_NAME};charset=utf8mb4", $DB_USER, $DB_PASS, [

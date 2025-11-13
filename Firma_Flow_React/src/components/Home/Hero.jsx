@@ -1,7 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Download, Smartphone, Rocket } from 'lucide-react';
 import './Stats.css'
 
 export default function Hero() {
+  const navigate = useNavigate();
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
     if (element) {
@@ -30,7 +32,7 @@ export default function Hero() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-delay-2 flex-wrap">
-              <button className="group bg-white text-purple-600 px-8 py-4 rounded-lg font-semibold hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center">
+              <button onClick={() => navigate('/signup')} className="group bg-white text-purple-600 px-8 py-4 rounded-lg font-semibold hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center">
                 <Rocket size={18} className="mr-2" />
                 Start Free Trial
               </button>
