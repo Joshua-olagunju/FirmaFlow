@@ -1,5 +1,5 @@
 import { UserPlus, Settings, BarChart3, CheckCircle } from 'lucide-react';
-import { useScrollAnimation } from '../hooks/useScrollAnimation';
+import { useScrollAnimation } from '../../hooks/useScrollAnimation';
 import './Stats.css';
 
 const steps = [

@@ -1,5 +1,5 @@
 import { BarChart3, Package, FileText, Users, TrendingUp, Smartphone } from 'lucide-react';
-import { useScrollAnimation } from '../hooks/useScrollAnimation';
+import { useScrollAnimation } from '../../hooks/useScrollAnimation';
 
 const features = [
   {

@@ -1,28 +1,20 @@
-import Header from './components/Header.jsx';
-import Hero from './components/Hero.jsx';
-import Features from './components/Features.jsx';
-import HowToUse from './components/HowToUse.jsx';
-import Pricing from './components/Pricing.jsx';
-import Testimonials from './components/Testimonials.jsx';
-import CTA from './components/CTA.jsx';
-import Footer from './components/Footer.jsx';
-import SupportWidget from './components/SupportWidget.jsx';
-import Stats  from './components/Stats.jsx';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import Signup from './pages/auth/Signup';
+import EmailVerification from './pages/auth/EmailVerification';
+import Login from './pages/auth/Login';
 
 function App() {
   return (
-    <div className="min-h-screen">
-      <Header />
-      <Hero />
-      <Stats />
-      <Features />
-      <HowToUse />
-      <Pricing />
-      <Testimonials />
-      <CTA />
-      <Footer />
-      <SupportWidget />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/email-verification" element={<EmailVerification />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<div className="min-h-screen bg-gray-100 flex items-center justify-center pt-24"><h1 className="text-4xl font-bold text-gray-800">Dashboard Coming Soon</h1></div>} />
+      </Routes>
+    </Router>
   );
 }
 

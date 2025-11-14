@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react';
-import { useScrollAnimation } from '../hooks/useScrollAnimation';
+import { useScrollAnimation } from '../../hooks/useScrollAnimation';
 
 export default function CTA() {
   const { ref, isVisible } = useScrollAnimation(0.1);
