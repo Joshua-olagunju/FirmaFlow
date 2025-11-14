@@ -158,6 +158,7 @@ export default function EmailVerification() {
       } else {
         setError(data?.error || "Failed to resend OTP. Try again.");
       }
+    // eslint-disable-next-line no-unused-vars
     } catch (err) {
       setError("Network error while resending OTP.");
     }

@@ -66,8 +66,8 @@ export default function Login() {
 
       if (data.success) {
         setMessage({ text: "Login successful! Redirecting...", type: "success" });
-        // Redirect after 1s to allow user to see message
-        setTimeout(() => navigate("/dashboard"), 1000);
+        // Redirect after 2s to allow user to see message
+        setTimeout(() => navigate("/dashboard"), 2000);
       } else {
         setMessage({ text: data.error || "Invalid credentials", type: "error" });
       }
