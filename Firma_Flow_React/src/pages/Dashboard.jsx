@@ -38,6 +38,7 @@ const Dashboard = () => {
   const toggleDropdown = () => setOpen(!open);
 
     // const dateString = new Date().toLocaleString();
+     // const dateString = new Date().toLocaleString();
 
   const getInitials = (name) => {
     if (!name) return "";
