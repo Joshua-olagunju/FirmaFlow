@@ -15,11 +15,8 @@ export default function EmailVerification() {
   const [success, setSuccess] = useState("");
   const inputsRef = useRef([]);
 
-  // ✅ Use environment variable or fallback to localhost
-  const API_BASE =
-    import.meta.env.VITE_API_BASE ||
-    "http://localhost:8888/firmaflow-React/FirmaFlow";
-  const API_ENDPOINT = `${API_BASE}/api/auth.php`;
+  // ✅ Use Vite proxy
+  const API_ENDPOINT = "/api/auth.php";
 
   // Countdown timer logic
   useEffect(() => {
@@ -101,6 +98,7 @@ export default function EmailVerification() {
     try {
       const res = await fetch(API_ENDPOINT, {
         method: "POST",
+        credentials: "include", // allow cookies (session) to be set by PHP
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "verify_otp",
@@ -145,6 +143,7 @@ export default function EmailVerification() {
     try {
       const res = await fetch(API_ENDPOINT, {
         method: "POST",
+        credentials: "include", // allow cookies (session) to be set by PHP
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "resend_otp",
