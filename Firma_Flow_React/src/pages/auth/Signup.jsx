@@ -75,10 +75,7 @@ export default function Signup() {
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
-  const API_BASE =
-    import.meta.env.VITE_API_BASE ||
-    "http://localhost:8888/firmaflow-React/FirmaFlow";
-  const API_ENDPOINT = `${API_BASE}/api/auth.php`;
+  const API_ENDPOINT = "/api/auth.php"; // Use Vite proxy
 
   const features = [
     { label: "14-day free trial" },
@@ -137,6 +134,7 @@ export default function Signup() {
 
       const res = await fetch(API_ENDPOINT, {
         method: "POST",
+        credentials: "include", // allow cookies (session) to be set by PHP
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });

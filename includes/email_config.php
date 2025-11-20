@@ -4,12 +4,15 @@
  * Configure your hosting email settings here
  */
 
-// Email Configuration - Production Server Settings
-define('EMAIL_HOST', 'mail.firmaflowledger.com');
-define('EMAIL_PORT', 587);
-define('EMAIL_USERNAME', 'test@firmaflowledger.com');
-define('EMAIL_PASSWORD', 'Firmaflow123');
-define('EMAIL_ENCRYPTION', 'tls');
+// Load environment variables
+require_once __DIR__ . '/env_loader.php';
+
+// Email Configuration - Uses environment variables from .env file
+define('EMAIL_HOST', getenv('EMAIL_HOST') ?: 'mail.firmaflowledger.com');
+define('EMAIL_PORT', (int)(getenv('EMAIL_PORT') ?: 587));
+define('EMAIL_USERNAME', getenv('EMAIL_USERNAME') ?: 'test@firmaflowledger.com');
+define('EMAIL_PASSWORD', getenv('EMAIL_PASSWORD') ?: 'Firmaflow123');
+define('EMAIL_ENCRYPTION', getenv('EMAIL_ENCRYPTION') ?: 'tls');
                   // TLS encryption for port 587
 
 // Alternative ports for fallback (if main port fails)
@@ -17,19 +20,19 @@ define('EMAIL_ENCRYPTION', 'tls');
 // define('EMAIL_ENCRYPTION', 'ssl');                    // SSL encryption
 
 // Legacy SMTP constants for backward compatibility
-define('SMTP_HOST', 'mail.firmaflowledger.com');        // Production server
-define('SMTP_PORT', 587);                               // Updated SMTP port  
-define('SMTP_USERNAME', 'test@firmaflowledger.com');    // Full email address as username
-define('SMTP_PASSWORD', 'Firmaflow123');                // Updated email password
-define('SMTP_ENCRYPTION', 'tls');                       // TLS encryption for production
+define('SMTP_HOST', getenv('EMAIL_HOST') ?: 'mail.firmaflowledger.com');        // Production server
+define('SMTP_PORT', (int)(getenv('EMAIL_PORT') ?: 587));                        // Updated SMTP port  
+define('SMTP_USERNAME', getenv('EMAIL_USERNAME') ?: 'test@firmaflowledger.com'); // Full email address as username
+define('SMTP_PASSWORD', getenv('EMAIL_PASSWORD') ?: 'Firmaflow123');            // Updated email password
+define('SMTP_ENCRYPTION', getenv('EMAIL_ENCRYPTION') ?: 'tls');                 // TLS encryption for production
 // Email Addresses
-define('EMAIL_FROM_ADDRESS', 'test@firmaflowledger.com');    // From email address
-define('EMAIL_FROM_NAME', 'Firmaflow Ledger');               // From name
-define('EMAIL_REPLY_TO', 'test@firmaflowledger.com');        // Reply-to address
-define('SMTP_FROM_EMAIL', 'test@firmaflowledger.com');       // Legacy compatibility
-define('SMTP_FROM_NAME', 'Firmaflow Ledger');                // Legacy compatibility
-define('SUPPORT_EMAIL', 'test@firmaflowledger.com');         // Support email
-define('ADMIN_EMAIL', 'test@firmaflowledger.com');           // Admin email
+define('EMAIL_FROM_ADDRESS', getenv('EMAIL_USERNAME') ?: 'test@firmaflowledger.com');    // From email address
+define('EMAIL_FROM_NAME', 'FirmaFlow Ledger');               // From name
+define('EMAIL_REPLY_TO', getenv('EMAIL_USERNAME') ?: 'test@firmaflowledger.com');        // Reply-to address
+define('SMTP_FROM_EMAIL', getenv('EMAIL_USERNAME') ?: 'test@firmaflowledger.com');       // Legacy compatibility
+define('SMTP_FROM_NAME', 'FirmaFlow Ledger');                // Legacy compatibility
+define('SUPPORT_EMAIL', getenv('EMAIL_USERNAME') ?: 'test@firmaflowledger.com');         // Support email
+define('ADMIN_EMAIL', getenv('EMAIL_USERNAME') ?: 'test@firmaflowledger.com');           // Admin email
 
 // IMAP Configuration (for reading emails if needed) - Production Server
 define('IMAP_HOST', 'mail.firmaflowledger.com');
@@ -46,8 +49,8 @@ define('POP3_PASSWORD', 'Firmaflow123');                 // Updated email passwo
 define('POP3_ENCRYPTION', 'ssl');
 
 // Email Settings
-define('EMAIL_ENABLED', true);                      // Set to false to disable emails
-define('EMAIL_DEBUG', true);                        // Set to true for debugging
+define('EMAIL_ENABLED', filter_var(getenv('EMAIL_ENABLED') ?: 'true', FILTER_VALIDATE_BOOLEAN));  // Set to false to disable emails
+define('EMAIL_DEBUG', filter_var(getenv('EMAIL_DEBUG') ?: 'true', FILTER_VALIDATE_BOOLEAN));      // Set to true for debugging
 
 // Email Templates Directory
 define('EMAIL_TEMPLATES_DIR', __DIR__ . '/email_templates/');
