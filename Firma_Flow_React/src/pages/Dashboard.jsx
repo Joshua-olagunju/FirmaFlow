@@ -5,6 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LabelList
 } from 'recharts';
+import DashboardModal from '../components/modals/DashboardModal';
 
 // Sample data matching your design
 const salesData = [
@@ -36,9 +37,7 @@ const Dashboard = () => {
     const [open, setOpen] = useState(false);
 
   const toggleDropdown = () => setOpen(!open);
-
-    // const dateString = new Date().toLocaleString();
-     // const dateString = new Date().toLocaleString();
+ const [modalopen, setModalOpen] = useState(true);
 
   const getInitials = (name) => {
     if (!name) return "";
@@ -47,7 +46,13 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className='w-full flex flex-col items-center justify-center gap-8'>
+     {modalopen && (
+        <DashboardModal
+          type="install"
+          onClose={() => setModalOpen(false)}
+        />
+      )}
+      <div className='w-full md:flex flex-col flex-1 items-center justify-center gap-8'>
     <div className='w-full flex justify-between items-center rounded-b-lg align-top p-4 bg-gradient-to-br from-[#667eea] to-[#764ba2] mt-0'>
       <div className='w-full flex-col items-center pb-4'>
         <h2 className='text-white font-bold text-3xl '>Administrator Dashboard</h2>
@@ -96,8 +101,8 @@ const Dashboard = () => {
     </div>
     </div>
 
-<div className='flex items-center justify-between w-full'>
-<div className='flex shadow-lg rounded-lg items-center justify-center bg-white p-4'>
+<div className='md:flex items-center justify-between w-full'>
+<div className='flex shadow-lg rounded-lg items-center justify-center bg-white md:p-4 mb-4 mt-4'>
   <div className='flex p-3 items-center gap-4'>
     <div className='flex shadow-lg rounded-lg items-center justify-center bg-gradient-to-br from-[#667eea] to-[#764ba2] p-6'></div>
     <div className='flex flex-col gap-2'>
@@ -107,7 +112,7 @@ const Dashboard = () => {
     </div>
   </div>
 </div>
-<div className='flex shadow-lg rounded-lg items-center justify-center bg-white p-4'>
+<div className='flex shadow-lg rounded-lg items-center justify-center bg-white p-4 mb-4'>
   <div className='flex p-3 items-center gap-4'>
     <div className='flex shadow-lg rounded-lg items-center justify-center bg-gradient-to-br from-[#667eea] to-[#764ba2] p-6'></div>
     <div className='flex flex-col gap-2'>
@@ -119,7 +124,7 @@ const Dashboard = () => {
 </div>
 
 
-<div className='flex shadow-lg rounded-lg items-center justify-center bg-white p-4'>
+<div className='flex shadow-lg rounded-lg items-center justify-center bg-white p-4 mb-4'>
   <div className='flex p-3 items-center gap-4'>
     <div className='flex shadow-lg rounded-lg items-center justify-center bg-gradient-to-br from-[#667eea] to-[#764ba2] p-6'></div>
     <div className='flex flex-col gap-2'>
@@ -178,8 +183,8 @@ const Dashboard = () => {
   </div>
 
   {/* TOP 10 PRODUCTS CARD - Takes 1/3 of the space */}
-  <div className="bg-white mr-2 rounded-2xl shadow-lg p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-24 after:mb-8 after:bg-slate-100 after:z-0">
-    <h2 className="text-2xl items-center font-semibold text-slate-800 mb-4 relative z-10 w-2/3 ml-5">
+  <div className="bg-white md:mr-2 rounded-2xl shadow-lg p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-24 after:mb-8 after:bg-slate-100 after:z-0">
+    <h2 className="text-2xl items-center font-semibold text-slate-800 mb-4 relative z-10 w-4/5 md:ml-5">
       Top 10 Products (Last 30 Days)
     </h2>
 
@@ -232,6 +237,42 @@ const Dashboard = () => {
       </div>
     </div>
   </div>
+</div>
+<div className="bg-white mr-2 rounded-2xl shadow-lg p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-14 after:mb-8 after:bg-slate-100 after:z-0 w-full">
+    <h2 className='relative z-10 font-semibold text-3xl'>Quick Actions</h2>
+    <div className='md:mt-8 md:flex items-center gap-2 w-full'>
+        <button className='items-center px-4 py-2 rounded-md border-none bg-gradient-to-br from-[#667eea] to-[#764ba2] text-slate-50 md:m-0 m-2'>New Sales</button>
+         <button className='items-center px-4 py-2 rounded-md border border-[#667eea] text-[#667eea] hover:bg-[#0d6efd] hover:text-white md:m-0 m-2'>Manage Customers</button>
+          <button  className='items-center px-4 py-2 rounded-md border border-[#667eea] text-[#667eea] hover:bg-[#0d6efd] hover:text-white md:m-0 m-2'>Products</button>
+           <button  className='items-center px-4 py-2 rounded-md border border-[#6c757d] text-[#6c757d] hover:bg-[#6c757d] hover:text-white md:m-0 m-2'>Reports</button>
+            <button className='items-center px-4 py-2 rounded-md border border-[#6c757d] text-[#6c757d] hover:bg-[#6c757d] hover:text-white md:m-0 m-2'>Settings</button>
+    </div>
+</div>
+<div className='md:flex w-full items-center gap-8'>
+<div className="bg-white md:mr-2 rounded-2xl shadow-lg p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-18 after:mb-8 after:bg-slate-100 after:z-0 w-full">
+    <div className='flex w-full items-center justify-between relative z-10'>
+    <h2 className='font-semibold text-3xl'>Recent Sales</h2>
+    <button className='flex items-center px-3 py-2 border border-[#667eea] text-[#667eea] text-sm rounded-md'>View All</button>
+    </div>
+<div className='flex flex-col items-center justify-center mt-5 gap-2 p-16'>
+    <p className='text-slate-600 font-semibold text-xl'>
+        No recent sales
+ </p>
+ <p>
+Sales will appear here once you start making transactions
+    </p>
+    <button className='mt-5 flex bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-md px-2 py-1 text-sm text-slate-100'>
+      Renew Subscription
+    </button>
+    </div>
+</div>
+<div className="bg-white md:mr-2 rounded-2xl shadow-lg p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-18 after:mb-8 after:bg-slate-100 after:z-0 w-[400px]">
+    <h2 className='relative z-10 font-semibold text-3xl'>Top Customers</h2>
+    <div className='flex flex-col items-center justify-center w-full mt-5 gap-2 py-14'>
+       <p className='text-slate-600 font-semibold text-xl'> No customer data</p>
+<p className='flex text-center'>Top customers will appear here based on purchase history</p>
+    </div>
+</div>
 </div>
     </div>
     </Layout>
