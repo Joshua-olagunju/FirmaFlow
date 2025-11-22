@@ -48,19 +48,17 @@ export default function Login() {
     setMessage({ text: "", type: "" }); // Clear previous messages
 
     try {
-      const response = await fetch(
-        "http://localhost:8888/firmaflow-React/FirmaFlow/api/auth.php",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "login",
-            email: formData.email,
-            password: formData.password,
-            rememberMe: formData.rememberMe,
-          }),
-        }
-      );
+      const response = await fetch("/api/auth.php", {
+        method: "POST",
+        credentials: "include", // allow cookies (session) to be set by PHP
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "login",
+          email: formData.email,
+          password: formData.password,
+          rememberMe: formData.rememberMe,
+        }),
+      });
 
       const data = await response.json();
 

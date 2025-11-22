@@ -10,8 +10,27 @@ header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
-// Add CORS headers for React frontend
-header('Access-Control-Allow-Origin: *');
+// CORS: allow frontend during development and production
+// NOTE: when sending credentials, Access-Control-Allow-Origin cannot be '*'
+$allowed_origins = [
+    // Development origins
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+    // Production origins (update these with your actual domain)
+    'https://firmaflowledger.com',
+    'https://www.firmaflowledger.com'
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && in_array($origin, $allowed_origins, true)) {
+    header('Vary: Origin');
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+} else {
+    // For same-origin requests (when frontend and backend are on same domain)
+    // CORS headers are not needed, so this is fine
+}
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 // Note: X-XSS-Protection is deprecated in modern browsers; kept out for clarity.
