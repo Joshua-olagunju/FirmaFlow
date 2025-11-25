@@ -2,7 +2,7 @@
 
 ⚠️ **CRITICAL: Security Configuration Required**
 
-This project contains sensitive configuration that must be properly secured before deployment or sharing.
+This project contains sensitive configuration that must be properly secured before deployment or sharing..
 
 ## 📋 **Setup Checklist**
 
