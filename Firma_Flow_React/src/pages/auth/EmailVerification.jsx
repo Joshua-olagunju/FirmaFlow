@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Send, RotateCcw, ArrowLeft } from "lucide-react";
+import { buildApiUrl } from "../../config/api.config";
 
 export default function EmailVerification() {
   const navigate = useNavigate();
@@ -15,8 +16,8 @@ export default function EmailVerification() {
   const [success, setSuccess] = useState("");
   const inputsRef = useRef([]);
 
-  // ✅ Use Vite proxy
-  const API_ENDPOINT = "/api/auth.php";
+  // ✅ Use centralized API config
+  const API_ENDPOINT = buildApiUrl("api/auth.php");
 
   // Countdown timer logic
   useEffect(() => {
@@ -157,7 +158,7 @@ export default function EmailVerification() {
       } else {
         setError(data?.error || "Failed to resend OTP. Try again.");
       }
-    // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars
     } catch (err) {
       setError("Network error while resending OTP.");
     }
@@ -181,7 +182,9 @@ export default function EmailVerification() {
           <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 mb-6 text-center">
             <div className="flex items-center justify-center gap-2 text-gray-600 mb-1">
               <Send size={16} className="text-indigo-500" />
-              <span className="text-sm">We’ve sent a verification code to:</span>
+              <span className="text-sm">
+                We’ve sent a verification code to:
+              </span>
             </div>
             <div className="font-medium text-gray-800">{email}</div>
           </div>
@@ -211,7 +214,9 @@ export default function EmailVerification() {
               <div className="text-sm text-red-500 text-center">{error}</div>
             )}
             {success && (
-              <div className="text-sm text-green-600 text-center">{success}</div>
+              <div className="text-sm text-green-600 text-center">
+                {success}
+              </div>
             )}
 
             <button

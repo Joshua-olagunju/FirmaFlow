@@ -13,6 +13,7 @@ import {
   LogIn,
   Home,
 } from "lucide-react";
+import { buildApiUrl } from "../../config/api.config";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ export default function Login() {
     setMessage({ text: "", type: "" }); // Clear previous messages
 
     try {
-      const response = await fetch("/api/auth.php", {
+      const response = await fetch(buildApiUrl("api/auth.php"), {
         method: "POST",
         credentials: "include", // allow cookies (session) to be set by PHP
         headers: { "Content-Type": "application/json" },
@@ -63,15 +64,24 @@ export default function Login() {
       const data = await response.json();
 
       if (data.success) {
-        setMessage({ text: "Login successful! Redirecting...", type: "success" });
+        setMessage({
+          text: "Login successful! Redirecting...",
+          type: "success",
+        });
         // Redirect after 2s to allow user to see message
         setTimeout(() => navigate("/dashboard"), 2000);
       } else {
-        setMessage({ text: data.error || "Invalid credentials", type: "error" });
+        setMessage({
+          text: data.error || "Invalid credentials",
+          type: "error",
+        });
       }
     } catch (error) {
       console.error("Login error:", error);
-      setMessage({ text: "Network error. Please check your connection.", type: "error" });
+      setMessage({
+        text: "Network error. Please check your connection.",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +104,8 @@ export default function Login() {
               onClick={() => navigate("/")}
               className="w-20 flex align-center justify-center gap-1 border-2 rounded-md hover:transition-2 hover:bg-blue-50 hover:text-gray-500"
             >
-              <Home size={18} className="mt-0.5 " />Home
+              <Home size={18} className="mt-0.5 " />
+              Home
             </button>
           </div>
           <div className="m-auto w-75 gap-3 flex items-start justify-center mb-2">
@@ -107,10 +118,14 @@ export default function Login() {
             </span>
             <span className="flex flex-col align-start">
               <h1 className="text-4xl font-semibold">FirmaFlow</h1>
-              <p className="text-xs opacity-100 mt-1 flex align-start">LEDGER</p>
+              <p className="text-xs opacity-100 mt-1 flex align-start">
+                LEDGER
+              </p>
             </span>
           </div>
-          <p className="mt-3 text-sm w-75 m-auto">Welcome back! Sign in to your business dashboard</p>
+          <p className="mt-3 text-sm w-75 m-auto">
+            Welcome back! Sign in to your business dashboard
+          </p>
         </div>
 
         {/* form */}
@@ -150,7 +165,9 @@ export default function Login() {
           {/* password */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
               <a href="#" className="text-sm text-purple-600 hover:underline">
                 Forgot password?
               </a>
@@ -172,7 +189,11 @@ export default function Login() {
                 className="absolute right-3 top-3 text-gray-500"
                 aria-label="toggle password visibility"
               >
-                {showPassword ? <EyeOff size={18} className="mt-1" /> : <Eye size={18} className="mt-1" />}
+                {showPassword ? (
+                  <EyeOff size={18} className="mt-1" />
+                ) : (
+                  <Eye size={18} className="mt-1" />
+                )}
               </button>
             </div>
           </div>
@@ -198,11 +219,11 @@ export default function Login() {
             disabled={isLoading}
             className="w-full flex align-center justify-center gap-1 rounded-xl py-3 font-semibold text-white bg-gradient-to-r from-purple-600 to-purple-500 shadow-sm hover:opacity-90"
           >
-            <LogIn size={15} className="mt-1"/>
+            <LogIn size={15} className="mt-1" />
             {isLoading ? "Signing in..." : "Sign In to Dashboard"}
           </button>
 
-                    {/* small divider line */}
+          {/* small divider line */}
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-gray-200" />
             <div className="text-xs text-gray-400">Don't have an account?</div>
@@ -216,7 +237,8 @@ export default function Login() {
               onClick={() => navigate("/signup")}
               className="w-full flex items-center justify-center rounded-lg py-3 border border-gray-200 bg-white text-gray-800 font-medium hover:bg-blue-50 hover:border-blue-600 border-2"
             >
-              <User size={16} /><span>+ Create Free Account</span>
+              <User size={16} />
+              <span>+ Create Free Account</span>
             </button>
           </div>
 
@@ -224,7 +246,9 @@ export default function Login() {
           <div className="mt-1 bg-purple-50 border border-transparent rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <Star size={14} className="text-purple-600" />
-              <div className="text-xs font-medium text-purple-700">What you get with FirmaFlow Ledger</div>
+              <div className="text-xs font-medium text-purple-700">
+                What you get with FirmaFlow Ledger
+              </div>
             </div>
 
             <ul className="space-y-3 text-sm text-gray-700">
@@ -248,7 +272,8 @@ export default function Login() {
               <HelpCircle size={14} /> Need Help Accessing Your Account?
             </div>
             <p className="mt-2 text-xs text-gray-600">
-              Can't log in? Account suspended or deactivated? We're here to help.
+              Can't log in? Account suspended or deactivated? We're here to
+              help.
             </p>
           </div>
 
@@ -274,7 +299,8 @@ export default function Login() {
           </div>
 
           <div className="text-xs text-gray-500 mt-2">
-            For password resets, use our secure OTP system. For other issues, contact support@firmaflowledger.com
+            For password resets, use our secure OTP system. For other issues,
+            contact support@firmaflowledger.com
           </div>
 
           <div className="h-px bg-gray-200 my-4" />
@@ -293,15 +319,18 @@ export default function Login() {
 
           {/* lock row */}
           <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-500">
-            <div className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-100">🔒</div>
-            <div>Your data is secure and protected with enterprise-grade encryption</div>
+            <div className="w-5 h-5 flex items-center justify-center rounded-full bg-gray-100">
+              🔒
+            </div>
+            <div>
+              Your data is secure and protected with enterprise-grade encryption
+            </div>
           </div>
         </form>
       </div>
     </div>
   );
 }
-
 
 // import { useState } from "react";
 // import { useNavigate } from "react-router-dom";
@@ -317,7 +346,7 @@ export default function Login() {
 //   KeyIcon,
 //   LogIn,
 //   Home,
-// } 
+// }
 // from "lucide-react";
 
 // export default function Login() {
@@ -562,4 +591,3 @@ export default function Login() {
 //     </div>
 //   );
 // }
-
