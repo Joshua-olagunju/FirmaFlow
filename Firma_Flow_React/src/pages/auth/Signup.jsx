@@ -17,6 +17,7 @@ import {
   X,
   Shield,
 } from "lucide-react";
+import { buildApiUrl } from "../../config/api.config";
 
 // ✅ Reusable Modal Component
 function TermsModal({ title, onClose, content }) {
@@ -75,7 +76,7 @@ export default function Signup() {
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
-  const API_ENDPOINT = "/api/auth.php"; // Use Vite proxy
+  const API_ENDPOINT = buildApiUrl("api/auth.php");
 
   const features = [
     { label: "14-day free trial" },
@@ -139,7 +140,10 @@ export default function Signup() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json().catch(() => null);
+      const data = await res.json().catch((parseError) => {
+        console.error("JSON parse error:", parseError);
+        return null;
+      });
 
       if (!res.ok) {
         const msg = (data && data.error) || `Server returned ${res.status}`;
@@ -148,7 +152,9 @@ export default function Signup() {
       }
 
       if (data?.success) {
-        navigate("/email-verification", { state: { email: data.email || form.email } });
+        navigate("/email-verification", {
+          state: { email: data.email || form.email },
+        });
       } else {
         setGeneralError(data?.error || "Unable to complete registration");
       }
@@ -204,7 +210,8 @@ export default function Signup() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                <User size={14} /> First Name <span className="text-red-500">*</span>
+                <User size={14} /> First Name{" "}
+                <span className="text-red-500">*</span>
               </label>
               <input
                 name="firstName"
@@ -241,7 +248,8 @@ export default function Signup() {
           {/* Company */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-              <Briefcase size={14} /> Company Name <span className="text-red-500">*</span>
+              <Briefcase size={14} /> Company Name{" "}
+              <span className="text-red-500">*</span>
             </label>
             <input
               name="company"
@@ -261,7 +269,8 @@ export default function Signup() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                <Mail size={14} /> Email Address <span className="text-red-500">*</span>
+                <Mail size={14} /> Email Address{" "}
+                <span className="text-red-500">*</span>
               </label>
               <input
                 name="email"
@@ -295,7 +304,8 @@ export default function Signup() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                <Lock size={14} /> Password <span className="text-red-500">*</span>
+                <Lock size={14} /> Password{" "}
+                <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -333,7 +343,9 @@ export default function Signup() {
                   onChange={handleChange}
                   placeholder="Confirm password"
                   className={`w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-                    errors.confirmPassword ? "border-red-400" : "border-gray-200"
+                    errors.confirmPassword
+                      ? "border-red-400"
+                      : "border-gray-200"
                   }`}
                 />
                 <button
@@ -394,7 +406,13 @@ export default function Signup() {
             disabled={isSubmitting}
             className="w-full py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-purple-600 to-purple-500 hover:opacity-95 transition flex items-center justify-center gap-1"
           >
-            {isSubmitting ? "Starting trial..." : <><Rocket size={18} /> Start Free Trial</>}
+            {isSubmitting ? (
+              "Starting trial..."
+            ) : (
+              <>
+                <Rocket size={18} /> Start Free Trial
+              </>
+            )}
           </button>
 
           {/* Features */}
@@ -411,7 +429,9 @@ export default function Signup() {
           <div className="text-center">
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-gray-200" />
-              <div className="text-xs text-gray-400">Already have an account?</div>
+              <div className="text-xs text-gray-400">
+                Already have an account?
+              </div>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
             <button
@@ -430,7 +450,8 @@ export default function Signup() {
                 <ShieldCheck size={16} />
               </div>
               <div>
-                Your data is secure and protected with enterprise-grade encryption
+                Your data is secure and protected with enterprise-grade
+                encryption
               </div>
             </div>
           </div>
@@ -449,12 +470,12 @@ export default function Signup() {
               </p>
               <p>
                 <strong>1. Acceptance of Terms</strong> — By accessing and using
-                FirmaFlow Ledger ("the Service"), you accept and agree to be bound by the
-                terms and provision of this agreement.
+                FirmaFlow Ledger ("the Service"), you accept and agree to be
+                bound by the terms and provision of this agreement.
               </p>
               <p>
-                <strong>2. Description of Service</strong> — FirmaFlow Ledger is a
-                comprehensive business management platform that provides:
+                <strong>2. Description of Service</strong> — FirmaFlow Ledger is
+                a comprehensive business management platform that provides:
               </p>
               <ul className="list-disc pl-6 space-y-1">
                 <li>Inventory and sales management</li>
@@ -464,39 +485,45 @@ export default function Signup() {
                 <li>Business analytics and insights</li>
               </ul>
               <p>
-                <strong>3. User Accounts and Security</strong> — You are responsible for
-                maintaining the confidentiality of your account credentials and all
-                activities that occur under your account.
+                <strong>3. User Accounts and Security</strong> — You are
+                responsible for maintaining the confidentiality of your account
+                credentials and all activities that occur under your account.
               </p>
               <p>
-                <strong>4. Data Security and Privacy</strong> — We use 256-bit SSL
-                encryption, regular audits, secure cloud infrastructure, and role-based
-                access controls.
+                <strong>4. Data Security and Privacy</strong> — We use 256-bit
+                SSL encryption, regular audits, secure cloud infrastructure, and
+                role-based access controls.
               </p>
               <p>
-                <strong>5. Service Availability</strong> — We maintain 99.9% uptime with
-                advance notice for maintenance.
+                <strong>5. Service Availability</strong> — We maintain 99.9%
+                uptime with advance notice for maintenance.
               </p>
               <p>
-                <strong>6. Payment Terms</strong> — Subscription fees are billed monthly or
-                annually, non-refundable except as required by law.
+                <strong>6. Payment Terms</strong> — Subscription fees are billed
+                monthly or annually, non-refundable except as required by law.
               </p>
               <p>
-                <strong>7. Limitation of Liability</strong> — FirmaFlow Ledger shall not be
-                liable for indirect, incidental, or consequential damages.
+                <strong>7. Limitation of Liability</strong> — FirmaFlow Ledger
+                shall not be liable for indirect, incidental, or consequential
+                damages.
               </p>
               <p>
-                <strong>8. Termination</strong> — Either party may terminate this agreement
-                anytime. Data available for export for 30 days post-termination.
+                <strong>8. Termination</strong> — Either party may terminate
+                this agreement anytime. Data available for export for 30 days
+                post-termination.
               </p>
               <p>
-                <strong>9. Changes to Terms</strong> — We reserve the right to modify these
-                terms at any time. Users will be notified of significant changes via
-                email.
+                <strong>9. Changes to Terms</strong> — We reserve the right to
+                modify these terms at any time. Users will be notified of
+                significant changes via email.
               </p>
               <p>
-                <strong>10. Contact Information</strong> — For questions, contact us at{" "}
-                <a href="mailto:legal@firmaflowledger.com" className="text-purple-600">
+                <strong>10. Contact Information</strong> — For questions,
+                contact us at{" "}
+                <a
+                  href="mailto:legal@firmaflowledger.com"
+                  className="text-purple-600"
+                >
                   legal@firmaflowledger.com
                 </a>
               </p>
@@ -516,8 +543,8 @@ export default function Signup() {
                 <strong>Last updated:</strong> November 13, 2025
               </p>
               <p>
-                <strong>Your Privacy is Protected:</strong> We use bank-level security to
-                safeguard your business data.
+                <strong>Your Privacy is Protected:</strong> We use bank-level
+                security to safeguard your business data.
               </p>
               <p>
                 <strong>1. Information We Collect</strong> — We collect:
@@ -529,28 +556,32 @@ export default function Signup() {
                 <li>Communication preferences and support interactions</li>
               </ul>
               <p>
-                <strong>2. How We Use Your Information</strong> — To provide services,
-                process payments, offer support, send updates, and improve our platform.
+                <strong>2. How We Use Your Information</strong> — To provide
+                services, process payments, offer support, send updates, and
+                improve our platform.
               </p>
               <p>
-                <strong>3. Data Security Measures</strong> — 256-bit SSL encryption, secure
-                cloud infrastructure, daily backups, and access monitoring.
+                <strong>3. Data Security Measures</strong> — 256-bit SSL
+                encryption, secure cloud infrastructure, daily backups, and
+                access monitoring.
               </p>
               <p>
-                <strong>4. Information Sharing</strong> — We do not sell or rent data. We
-                share only with consent, for legal compliance, or with trusted providers.
+                <strong>4. Information Sharing</strong> — We do not sell or rent
+                data. We share only with consent, for legal compliance, or with
+                trusted providers.
               </p>
               <p>
-                <strong>5. Data Retention</strong> — We retain your data while your account
-                is active and delete it 30 days after termination.
+                <strong>5. Data Retention</strong> — We retain your data while
+                your account is active and delete it 30 days after termination.
               </p>
               <p>
-                <strong>6. Your Rights</strong> — You can access, update, export, or delete
-                your data, and opt out of marketing communications.
+                <strong>6. Your Rights</strong> — You can access, update,
+                export, or delete your data, and opt out of marketing
+                communications.
               </p>
               <p>
-                <strong>7. Compliance</strong> — We comply with GDPR, CCPA, and applicable
-                privacy laws.
+                <strong>7. Compliance</strong> — We comply with GDPR, CCPA, and
+                applicable privacy laws.
               </p>
               <p>
                 <strong>8. Contact Us</strong> — For privacy inquiries, email{" "}
@@ -568,7 +599,6 @@ export default function Signup() {
     </div>
   );
 }
-
 
 // import { useState } from "react";
 // import { useNavigate } from "react-router-dom";
