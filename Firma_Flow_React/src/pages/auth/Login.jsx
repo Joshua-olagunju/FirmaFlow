@@ -14,9 +14,11 @@ import {
   Home,
 } from "lucide-react";
 import { buildApiUrl } from "../../config/api.config";
+import { useUserStore } from "../../stores/useUserStore";
 
 export default function Login() {
   const navigate = useNavigate();
+  const login = useUserStore((state) => state.login);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
@@ -64,6 +66,15 @@ export default function Login() {
       const data = await response.json();
 
       if (data.success) {
+        // Store user data in Zustand
+        login({
+          user: data.user,
+          token: data.token || null,
+          role: data.user?.role || null,
+          company_id: data.user?.company_id || null,
+          user_id: data.user?.id || null,
+        });
+
         setMessage({
           text: "Login successful! Redirecting...",
           type: "success",
