@@ -5,6 +5,7 @@ import EmailVerification from "./pages/auth/EmailVerification";
 import Login from "./pages/auth/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Customers from "./pages/customers/Customers";
+import Suppliers from "./pages/suppliers/Suppliers";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/customers" element={<Customers />} />
+      <Route path="/suppliers" element={<Suppliers />} />
     </Routes>
   );
 }
