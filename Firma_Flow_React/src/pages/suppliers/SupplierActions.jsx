@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { MoreHorizontal, Edit, FileText, Trash2 } from "lucide-react";
 import DeleteConfirmationModal from "../../components/modals/DeleteConfirmationModal";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const SupplierActions = ({ supplier, onEdit, onDelete, onViewReport }) => {
+  const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -36,16 +38,18 @@ const SupplierActions = ({ supplier, onEdit, onDelete, onViewReport }) => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 hover:bg-slate-100 rounded-lg transition"
+        className={`p-2 ${theme.bgHover} rounded-lg transition`}
       >
-        <MoreHorizontal size={18} className="text-slate-600" />
+        <MoreHorizontal size={18} className={theme.textSecondary} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-[9999]">
+        <div
+          className={`absolute right-0 top-full mt-2 w-48 ${theme.bgCard} rounded-lg ${theme.shadow} border ${theme.borderPrimary} py-1 z-[9999]`}
+        >
           <button
             onClick={handleEdit}
-            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
+            className={`w-full flex items-center gap-3 px-4 py-2 text-sm ${theme.textPrimary} ${theme.bgHover} transition`}
           >
             <Edit size={16} className="text-blue-600" />
             Edit Supplier
@@ -56,13 +60,13 @@ const SupplierActions = ({ supplier, onEdit, onDelete, onViewReport }) => {
               setIsOpen(false);
               onViewReport(supplier);
             }}
-            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
+            className={`w-full flex items-center gap-3 px-4 py-2 text-sm ${theme.textPrimary} ${theme.bgHover} transition`}
           >
             <FileText size={16} className="text-green-600" />
             Supplier Report
           </button>
 
-          <div className="border-t border-slate-100 my-1"></div>
+          <div className={`border-t ${theme.borderPrimary} my-1`}></div>
 
           <button
             onClick={handleDelete}

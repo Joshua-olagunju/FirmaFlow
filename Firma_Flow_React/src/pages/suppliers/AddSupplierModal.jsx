@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
+  const { theme } = useTheme();
   const [formData, setFormData] = useState({
     companyName: "",
     contactPerson: "",
@@ -79,7 +81,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div
+        className={`${theme.bgCard} rounded-xl ${theme.shadow} max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
+      >
         {/* Header */}
         <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] p-6 flex justify-between items-center rounded-t-xl sticky top-0">
           <h2 className="text-2xl font-bold text-white">Add Supplier</h2>
@@ -96,7 +100,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
           {/* Row 1: Company Name & Contact Person */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label
+                className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+              >
                 Company Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -105,7 +111,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
                 value={formData.companyName}
                 onChange={handleChange}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#667eea] ${
-                  errors.companyName ? "border-red-500" : "border-slate-300"
+                  theme.bgInput
+                } ${theme.textPrimary} ${
+                  errors.companyName ? "border-red-500" : theme.borderSecondary
                 }`}
                 placeholder="Enter company name"
               />
@@ -117,7 +125,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label
+                className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+              >
                 Contact Person <span className="text-red-500">*</span>
               </label>
               <input
@@ -126,7 +136,11 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
                 value={formData.contactPerson}
                 onChange={handleChange}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#667eea] ${
-                  errors.contactPerson ? "border-red-500" : "border-slate-300"
+                  theme.bgInput
+                } ${theme.textPrimary} ${
+                  errors.contactPerson
+                    ? "border-red-500"
+                    : theme.borderSecondary
                 }`}
                 placeholder="Enter contact person name"
               />
@@ -141,7 +155,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
           {/* Row 2: Phone & Email */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label
+                className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+              >
                 Phone Number <span className="text-red-500">*</span>
               </label>
               <input
@@ -150,7 +166,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
                 value={formData.phone}
                 onChange={handleChange}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#667eea] ${
-                  errors.phone ? "border-red-500" : "border-slate-300"
+                  theme.bgInput
+                } ${theme.textPrimary} ${
+                  errors.phone ? "border-red-500" : theme.borderSecondary
                 }`}
                 placeholder="Enter phone number"
               />
@@ -160,7 +178,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label
+                className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+              >
                 Email Address <span className="text-red-500">*</span>
               </label>
               <input
@@ -169,7 +189,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
                 value={formData.email}
                 onChange={handleChange}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#667eea] ${
-                  errors.email ? "border-red-500" : "border-slate-300"
+                  theme.bgInput
+                } ${theme.textPrimary} ${
+                  errors.email ? "border-red-500" : theme.borderSecondary
                 }`}
                 placeholder="supplier@example.com"
               />
@@ -181,7 +203,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
 
           {/* Row 3: Address */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label
+              className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+            >
               Address <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -190,7 +214,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
               onChange={handleChange}
               rows="3"
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#667eea] ${
-                errors.address ? "border-red-500" : "border-slate-300"
+                theme.bgInput
+              } ${theme.textPrimary} ${
+                errors.address ? "border-red-500" : theme.borderSecondary
               }`}
               placeholder="Enter complete address"
             ></textarea>
@@ -202,7 +228,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
           {/* Row 4: Tax Number & Payment Terms */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label
+                className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+              >
                 Tax Number
               </label>
               <input
@@ -210,20 +238,22 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
                 name="taxNumber"
                 value={formData.taxNumber}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                className={`w-full px-4 py-2 border ${theme.borderSecondary} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#667eea] ${theme.bgInput} ${theme.textPrimary}`}
                 placeholder="Enter tax number"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label
+                className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+              >
                 Payment Terms
               </label>
               <select
                 name="paymentTerms"
                 value={formData.paymentTerms}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#667eea]"
+                className={`w-full px-4 py-2 border ${theme.borderSecondary} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#667eea] ${theme.bgInput} ${theme.textPrimary}`}
               >
                 <option value="Net 15 days">Net 15 days</option>
                 <option value="Net 30 days">Net 30 days</option>
@@ -235,7 +265,9 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
           </div>
 
           {/* Row 5: Active Supplier Toggle */}
-          <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg">
+          <div
+            className={`flex items-center gap-3 p-4 ${theme.bgAccent} rounded-lg`}
+          >
             <label className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -245,18 +277,20 @@ const AddSupplierModal = ({ isOpen, onClose, onSave }) => {
                 className="sr-only peer"
               />
               <div className="relative w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#667eea]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-[#667eea] peer-checked:to-[#764ba2]"></div>
-              <span className="ml-3 text-sm font-medium text-slate-700">
+              <span className={`ml-3 text-sm font-medium ${theme.textPrimary}`}>
                 Active Supplier
               </span>
             </label>
           </div>
 
           {/* Footer Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+          <div
+            className={`flex justify-end gap-3 pt-4 border-t ${theme.borderPrimary}`}
+          >
             <button
               type="button"
               onClick={handleClose}
-              className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition"
+              className={`px-6 py-2 border ${theme.borderSecondary} ${theme.textPrimary} rounded-lg ${theme.bgHover} transition`}
             >
               Cancel
             </button>
