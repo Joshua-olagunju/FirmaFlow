@@ -6,8 +6,10 @@ import AddCustomerModal from "./AddCustomerModal";
 import EditCustomerModal from "./EditCustomerModal";
 import CustomerReportModal from "./CustomerReportModal";
 import { buildApiUrl } from "../../config/api.config";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const Customers = () => {
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [customers, setCustomers] = useState([]);
@@ -260,7 +262,9 @@ const Customers = () => {
         {/* Top Row: Currency + Counts + Add Customer Button */}
         <div className="flex justify-between items-center flex-wrap gap-4 mb-6 mt-4 w-full">
           <div className="flex items-center gap-3">
-            <span className="text-sm bg-slate-100 text-slate-700 px-4 py-2 rounded-lg font-medium border border-slate-200">
+            <span
+              className={`text-sm ${theme.bgAccent} ${theme.textPrimary} px-4 py-2 rounded-lg font-medium border ${theme.borderSecondary}`}
+            >
               Currency: NGN
             </span>
 
@@ -280,13 +284,15 @@ const Customers = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex w-full gap-4 border-b border-slate-200 mb-6">
+        <div
+          className={`flex w-full gap-4 border-b ${theme.borderSecondary} mb-6`}
+        >
           <button
             onClick={() => setActiveTab("all")}
             className={`pb-3 px-4 font-medium transition-all ${
               activeTab === "all"
                 ? "border-b-2 border-[#667eea] text-[#667eea]"
-                : "text-slate-600 hover:text-[#667eea]"
+                : `${theme.textSecondary} hover:text-[#667eea]`
             }`}
           >
             All Customers
@@ -296,7 +302,7 @@ const Customers = () => {
             className={`pb-3 px-4 font-medium transition-all ${
               activeTab === "active"
                 ? "border-b-2 border-[#667eea] text-[#667eea]"
-                : "text-slate-600 hover:text-[#667eea]"
+                : `${theme.textSecondary} hover:text-[#667eea]`
             }`}
           >
             Active
@@ -306,7 +312,7 @@ const Customers = () => {
             className={`pb-3 px-4 font-medium transition-all ${
               activeTab === "balance"
                 ? "border-b-2 border-[#667eea] text-[#667eea]"
-                : "text-slate-600 hover:text-[#667eea]"
+                : `${theme.textSecondary} hover:text-[#667eea]`
             }`}
           >
             With Balance
@@ -314,12 +320,16 @@ const Customers = () => {
         </div>
 
         {/* Customer Directory Section */}
-        <div className="bg-white shadow-lg rounded-xl p-6 mr-2 w-full">
+        <div
+          className={`${theme.bgCard} ${theme.shadow} rounded-xl p-6 mr-2 w-full`}
+        >
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-slate-800">
+            <h2 className={`text-2xl font-semibold ${theme.textPrimary}`}>
               Customer Directory
             </h2>
-            <div className="flex items-center gap-2 text-sm text-slate-500">
+            <div
+              className={`flex items-center gap-2 text-sm ${theme.textTertiary}`}
+            >
               <TrendingUp size={16} />
               <span>Last updated: {new Date().toLocaleTimeString()}</span>
             </div>
@@ -328,7 +338,7 @@ const Customers = () => {
           {/* Search Bar */}
           <div className="relative mb-6">
             <Search
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400"
+              className={`absolute left-4 top-1/2 transform -translate-y-1/2 ${theme.textTertiary}`}
               size={20}
             />
             <input
@@ -336,7 +346,7 @@ const Customers = () => {
               placeholder="Search customers by name, email, or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className=" border border-slate-300 rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#667eea] focus:border-transparent transition"
+              className={`w-full ${theme.bgInput} ${theme.textPrimary} border ${theme.borderSecondary} rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:ring-2 ${theme.ring} focus:border-transparent transition`}
             />
           </div>
 
@@ -351,7 +361,9 @@ const Customers = () => {
           {isLoading && (
             <div className="text-center py-8">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#667eea]"></div>
-              <p className="mt-2 text-slate-600">Loading customers...</p>
+              <p className={`mt-2 ${theme.textSecondary}`}>
+                Loading customers...
+              </p>
             </div>
           )}
 
@@ -365,15 +377,17 @@ const Customers = () => {
             />
           ) : customers.length === 0 ? (
             /* Empty State */
-            <div className="text-center py-16 bg-slate-50 rounded-lg border-1  border-slate-200">
+            <div
+              className={`text-center py-16 ${theme.bgAccent} rounded-lg border-1 ${theme.borderSecondary}`}
+            >
               <div className="w-20 h-20 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Users size={40} className="text-white" />
               </div>
 
-              <p className="text-slate-600 text-xl font-semibold mb-2">
+              <p className={`${theme.textPrimary} text-xl font-semibold mb-2`}>
                 No customers yet
               </p>
-              <p className="text-slate-500 mb-6 max-w-md mx-auto">
+              <p className={`${theme.textSecondary} mb-6 max-w-md mx-auto`}>
                 Start building your customer base by adding your first customer.
                 Track their purchases, manage relationships, and grow your
                 business.
@@ -390,7 +404,7 @@ const Customers = () => {
           ) : (
             /* No Search Results */
             <div className="text-center py-16">
-              <p className="text-slate-500 text-lg">
+              <p className={`${theme.textSecondary} text-lg`}>
                 No customers match your search criteria
               </p>
             </div>
