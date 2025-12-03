@@ -1,4 +1,5 @@
 import { X, AlertTriangle } from "lucide-react";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const DeleteConfirmationModal = ({
   isOpen,
@@ -8,11 +9,14 @@ const DeleteConfirmationModal = ({
   message,
   itemName,
 }) => {
+  const { theme } = useTheme();
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full animate-fadeIn">
+      <div
+        className={`${theme.bgCard} rounded-xl ${theme.shadow} max-w-md w-full animate-fadeIn`}
+      >
         {/* Header */}
         <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -33,14 +37,18 @@ const DeleteConfirmationModal = ({
 
         {/* Body */}
         <div className="p-6">
-          <p className="text-slate-700 text-base mb-4">
+          <p className={`${theme.textPrimary} text-base mb-4`}>
             {message || "Are you sure you want to delete this item?"}
           </p>
 
           {itemName && (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-slate-600 mb-1">Item to be deleted:</p>
-              <p className="font-semibold text-slate-800">{itemName}</p>
+            <div
+              className={`${theme.bgAccent} border ${theme.borderSecondary} rounded-lg p-4 mb-4`}
+            >
+              <p className={`text-sm ${theme.textSecondary} mb-1`}>
+                Item to be deleted:
+              </p>
+              <p className={`font-semibold ${theme.textPrimary}`}>{itemName}</p>
             </div>
           )}
 
@@ -53,10 +61,12 @@ const DeleteConfirmationModal = ({
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-50 p-6 rounded-b-xl flex gap-3 justify-end">
+        <div
+          className={`${theme.bgAccent} p-6 rounded-b-xl flex gap-3 justify-end`}
+        >
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition font-medium"
+            className={`px-6 py-2 ${theme.bgCard} border ${theme.borderSecondary} ${theme.textPrimary} rounded-lg ${theme.bgHover} transition font-medium`}
           >
             Cancel
           </button>

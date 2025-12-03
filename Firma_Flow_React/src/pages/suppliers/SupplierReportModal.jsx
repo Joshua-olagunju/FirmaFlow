@@ -11,8 +11,10 @@ import {
 import InvoiceHistory from "./InvoiceHistory";
 import PaymentHistory from "./PaymentHistory";
 import { exportToPDF, printPDF } from "./pdfUtils";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const SupplierReportModal = ({ supplier, onClose }) => {
+  const { theme } = useTheme();
   const [invoiceFilter, setInvoiceFilter] = useState("30days");
   const [paymentFilter, setPaymentFilter] = useState("30days");
 
@@ -46,7 +48,9 @@ const SupplierReportModal = ({ supplier, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+      <div
+        className={`${theme.bgCard} rounded-xl ${theme.shadow} w-full max-w-6xl max-h-[90vh] overflow-y-auto`}
+      >
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white p-6 rounded-t-xl flex items-center justify-between z-[60]">
           <div>
@@ -62,23 +66,25 @@ const SupplierReportModal = ({ supplier, onClose }) => {
         </div>
 
         {/* Supplier Info Row */}
-        <div className="p-6 bg-slate-50 border-b border-slate-200">
+        <div
+          className={`p-6 ${theme.bgAccent} border-b ${theme.borderPrimary}`}
+        >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <span className="text-slate-500">Contact Person:</span>
-              <p className="font-medium text-slate-700">
+              <span className={theme.textSecondary}>Contact Person:</span>
+              <p className={`font-medium ${theme.textPrimary}`}>
                 {supplier.contactPerson || "N/A"}
               </p>
             </div>
             <div>
-              <span className="text-slate-500">Email:</span>
-              <p className="font-medium text-slate-700">
+              <span className={theme.textSecondary}>Email:</span>
+              <p className={`font-medium ${theme.textPrimary}`}>
                 {supplier.email || "N/A"}
               </p>
             </div>
             <div>
-              <span className="text-slate-500">Phone:</span>
-              <p className="font-medium text-slate-700">
+              <span className={theme.textSecondary}>Phone:</span>
+              <p className={`font-medium ${theme.textPrimary}`}>
                 {supplier.phone || "N/A"}
               </p>
             </div>
@@ -145,44 +151,54 @@ const SupplierReportModal = ({ supplier, onClose }) => {
         </div>
 
         {/* Supplier Details Section */}
-        <div className="p-6 border-t border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">
+        <div className={`p-6 border-t ${theme.borderPrimary}`}>
+          <h3 className={`text-lg font-semibold ${theme.textPrimary} mb-4`}>
             Supplier Details
           </h3>
 
           {/* Force ALWAYS 2 per row */}
-          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg">
+          <div
+            className={`grid grid-cols-2 gap-4 ${theme.bgAccent} p-4 rounded-lg`}
+          >
             <div>
-              <p className="text-xs text-slate-500 mb-1">Company Name</p>
-              <p className="font-medium text-slate-700">
+              <p className={`text-xs ${theme.textSecondary} mb-1`}>
+                Company Name
+              </p>
+              <p className={`font-medium ${theme.textPrimary}`}>
                 {supplier.companyName || "N/A"}
               </p>
             </div>
 
             <div>
-              <p className="text-xs text-slate-500 mb-1">Contact Person</p>
-              <p className="font-medium text-slate-700">
+              <p className={`text-xs ${theme.textSecondary} mb-1`}>
+                Contact Person
+              </p>
+              <p className={`font-medium ${theme.textPrimary}`}>
                 {supplier.contactPerson || "N/A"}
               </p>
             </div>
 
             <div>
-              <p className="text-xs text-slate-500 mb-1">Payment Terms</p>
-              <p className="font-medium text-slate-700">
+              <p className={`text-xs ${theme.textSecondary} mb-1`}>
+                Payment Terms
+              </p>
+              <p className={`font-medium ${theme.textPrimary}`}>
                 {supplier.paymentTerms || "N/A"}
               </p>
             </div>
 
             <div>
-              <p className="text-xs text-slate-500 mb-1">Tax Number</p>
-              <p className="font-medium text-slate-700">
+              <p className={`text-xs ${theme.textSecondary} mb-1`}>
+                Tax Number
+              </p>
+              <p className={`font-medium ${theme.textPrimary}`}>
                 {supplier.taxNumber || "N/A"}
               </p>
             </div>
 
             <div className="col-span-2">
-              <p className="text-xs text-slate-500 mb-1">Address</p>
-              <p className="font-medium text-slate-700">
+              <p className={`text-xs ${theme.textSecondary} mb-1`}>Address</p>
+              <p className={`font-medium ${theme.textPrimary}`}>
                 {supplier.address || "N/A"}
               </p>
             </div>
@@ -190,7 +206,7 @@ const SupplierReportModal = ({ supplier, onClose }) => {
         </div>
 
         {/* Purchase History */}
-        <div className="p-6 border-t border-slate-200">
+        <div className={`p-6 border-t ${theme.borderPrimary}`}>
           <InvoiceHistory
             invoices={invoices}
             selectedFilter={invoiceFilter}
@@ -200,7 +216,7 @@ const SupplierReportModal = ({ supplier, onClose }) => {
         </div>
 
         {/* Payment History */}
-        <div className="p-6 border-t border-slate-200">
+        <div className={`p-6 border-t ${theme.borderPrimary}`}>
           <PaymentHistory
             payments={payments}
             selectedFilter={paymentFilter}
@@ -209,10 +225,12 @@ const SupplierReportModal = ({ supplier, onClose }) => {
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 bg-slate-50 p-6 rounded-b-xl border-t border-slate-200 flex gap-3 justify-end z-[60]">
+        <div
+          className={`sticky bottom-0 ${theme.bgAccent} p-6 rounded-b-xl border-t ${theme.borderPrimary} flex gap-3 justify-end z-[60]`}
+        >
           <button
             onClick={handlePrint}
-            className="px-6 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition flex items-center gap-2"
+            className={`px-6 py-2 ${theme.bgCard} border ${theme.borderSecondary} ${theme.textPrimary} rounded-lg ${theme.bgHover} transition flex items-center gap-2`}
           >
             <Printer size={18} />
             Print
@@ -226,7 +244,7 @@ const SupplierReportModal = ({ supplier, onClose }) => {
           </button>
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition"
+            className={`px-6 py-2 ${theme.bgAccent} ${theme.textPrimary} rounded-lg ${theme.bgHover} transition`}
           >
             Close
           </button>

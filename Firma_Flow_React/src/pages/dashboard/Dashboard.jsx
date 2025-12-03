@@ -15,6 +15,7 @@ import {
   LabelList,
 } from "recharts";
 import DashboardModal from "../../components/modals/DashboardModal";
+import { useTheme } from "../../contexts/ThemeContext";
 
 // Sample data matching your design
 const salesData = [
@@ -43,6 +44,7 @@ const user = {
 };
 
 const Dashboard = () => {
+  const { theme } = useTheme();
   const [open, setOpen] = useState(false);
   const openSidebarRef = useRef(null);
 
@@ -144,53 +146,85 @@ const Dashboard = () => {
         </div>
 
         <div className="md:flex items-center justify-between w-full">
-          <div className="flex shadow-lg rounded-lg items-center justify-center bg-white md:p-4 mb-4 mt-4">
+          <div
+            className={`flex ${theme.shadow} rounded-lg items-center justify-center ${theme.bgCard} md:p-4 mb-4 mt-4`}
+          >
             <div className="flex p-3 items-center gap-4">
               <div className="flex shadow-lg rounded-lg items-center justify-center bg-gradient-to-br from-[#667eea] to-[#764ba2] p-6"></div>
               <div className="flex flex-col gap-2">
-                <p className="m-0 font-bold text-slate-900 text-3xl">0</p>
-                <p className="m-0 font-normal text-slate-600 text-normal">
+                <p className={`m-0 font-bold ${theme.textPrimary} text-3xl`}>
+                  0
+                </p>
+                <p
+                  className={`m-0 font-normal ${theme.textSecondary} text-normal`}
+                >
                   Total Customer
                 </p>
-                <p className="font-normal text-sm text-slate-700">0</p>
+                <p className={`font-normal text-sm ${theme.textSecondary}`}>
+                  0
+                </p>
               </div>
             </div>
           </div>
-          <div className="flex shadow-lg rounded-lg items-center justify-center bg-white p-4 mb-4">
+          <div
+            className={`flex ${theme.shadow} rounded-lg items-center justify-center ${theme.bgCard} p-4 mb-4`}
+          >
             <div className="flex p-3 items-center gap-4">
               <div className="flex shadow-lg rounded-lg items-center justify-center bg-gradient-to-br from-[#667eea] to-[#764ba2] p-6"></div>
               <div className="flex flex-col gap-2">
-                <p className="m-0 font-bold text-slate-900 text-3xl">0</p>
-                <p className="m-0 font-normal text-slate-600 text-normal">
+                <p className={`m-0 font-bold ${theme.textPrimary} text-3xl`}>
+                  0
+                </p>
+                <p
+                  className={`m-0 font-normal ${theme.textSecondary} text-normal`}
+                >
                   Products
                 </p>
-                <p className="font-normal text-sm text-slate-700">0</p>
+                <p className={`font-normal text-sm ${theme.textSecondary}`}>
+                  0
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="flex shadow-lg rounded-lg items-center justify-center bg-white p-4 mb-4">
+          <div
+            className={`flex ${theme.shadow} rounded-lg items-center justify-center ${theme.bgCard} p-4 mb-4`}
+          >
             <div className="flex p-3 items-center gap-4">
               <div className="flex shadow-lg rounded-lg items-center justify-center bg-gradient-to-br from-[#667eea] to-[#764ba2] p-6"></div>
               <div className="flex flex-col gap-2">
-                <p className="m-0 font-bold text-slate-900 text-3xl">₦0.00</p>
-                <p className="m-0 font-normal text-slate-600 text-normal">
+                <p className={`m-0 font-bold ${theme.textPrimary} text-3xl`}>
+                  ₦0.00
+                </p>
+                <p
+                  className={`m-0 font-normal ${theme.textSecondary} text-normal`}
+                >
                   Total Sales
                 </p>
-                <p className="font-normal text-sm text-slate-700">₦0.00</p>
+                <p className={`font-normal text-sm ${theme.textSecondary}`}>
+                  ₦0.00
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="relative flex shadow-lg rounded-lg items-center justify-center bg-white p-4 mr-2">
+          <div
+            className={`relative flex ${theme.shadow} rounded-lg items-center justify-center ${theme.bgCard} p-4 mr-2`}
+          >
             <div className="flex p-3 items-center gap-4">
               <div className="flex shadow-lg rounded-lg items-center justify-center bg-gradient-to-br from-[#667eea] to-[#764ba2] p-6"></div>
               <div className="flex flex-col gap-2">
-                <p className="m-0 font-bold text-slate-900 text-3xl">0</p>
-                <p className="m-0 font-normal text-slate-600 text-normal">
+                <p className={`m-0 font-bold ${theme.textPrimary} text-3xl`}>
+                  0
+                </p>
+                <p
+                  className={`m-0 font-normal ${theme.textSecondary} text-normal`}
+                >
                   Low Stock Items
                 </p>
-                <p className="font-normal text-sm text-slate-700">0</p>
+                <p className={`font-normal text-sm ${theme.textSecondary}`}>
+                  0
+                </p>
               </div>
             </div>
             <div className="absolute text-normal text-sm text-blue-400 top-0 right-0 p-2">
@@ -201,12 +235,18 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
           {/* SALES TREND CARD - Takes 2/3 of the space */}
-          <div className="bg-white relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-24 after:mb-2 after:bg-slate-100 after:z-0 rounded-2xl shadow-2xl p-6 md:col-span-2">
+          <div
+            className={`${
+              theme.bgCard
+            } relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-24 after:mb-2 after:${
+              theme.mode === "light" ? "bg-slate-100" : "bg-slate-800"
+            } after:z-0 rounded-2xl ${theme.shadow} p-6 md:col-span-2`}
+          >
             <div className="flex justify-between items-center py-4 mb-4 relative z-10">
-              <h2 className="text-3xl font-semibold text-slate-800">
+              <h2 className={`text-3xl font-semibold ${theme.textPrimary}`}>
                 Sales Trend (Last 7 Days)
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className={`text-sm ${theme.textSecondary}`}>
                 Updated: {new Date().toLocaleString()}
               </p>
             </div>
@@ -236,8 +276,16 @@ const Dashboard = () => {
           </div>
 
           {/* TOP 10 PRODUCTS CARD - Takes 1/3 of the space */}
-          <div className="bg-white md:mr-2 rounded-2xl shadow-lg p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-24 after:mb-8 after:bg-slate-100 after:z-0">
-            <h2 className="text-2xl items-center font-semibold text-slate-800 mb-4 relative z-10 w-4/5 md:ml-5">
+          <div
+            className={`${theme.bgCard} md:mr-2 rounded-2xl ${
+              theme.shadow
+            } p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-24 after:mb-8 after:${
+              theme.mode === "light" ? "bg-slate-100" : "bg-slate-800"
+            } after:z-0`}
+          >
+            <h2
+              className={`text-2xl items-center font-semibold ${theme.textPrimary} mb-4 relative z-10 w-4/5 md:ml-5`}
+            >
               Top 10 Products (Last 30 Days)
             </h2>
 
@@ -270,8 +318,10 @@ const Dashboard = () => {
 
               {/* Smaller center text */}
               <div className="relative -top-24 text-center">
-                <div className="text-lg font-bold text-slate-700">Total</div>
-                <div className="text-md text-slate-600">
+                <div className={`text-lg font-bold ${theme.textPrimary}`}>
+                  Total
+                </div>
+                <div className={`text-md ${theme.textSecondary}`}>
                   {productData.reduce((sum, item) => sum + item.value, 0)}%
                 </div>
               </div>
@@ -284,15 +334,25 @@ const Dashboard = () => {
                       className="w-2 h-2 rounded-full"
                       style={{ background: COLORS[index % COLORS.length] }}
                     ></span>
-                    <span className="text-xs text-slate-600">{entry.name}</span>
+                    <span className={`text-xs ${theme.textSecondary}`}>
+                      {entry.name}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
         </div>
-        <div className="bg-white mr-2 rounded-2xl shadow-lg p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-14 after:mb-8 after:bg-slate-100 after:z-0 w-full">
-          <h2 className="relative z-10 font-semibold text-3xl">
+        <div
+          className={`${theme.bgCard} mr-2 rounded-2xl ${
+            theme.shadow
+          } p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-14 after:mb-8 after:${
+            theme.mode === "light" ? "bg-slate-100" : "bg-slate-800"
+          } after:z-0 w-full`}
+        >
+          <h2
+            className={`relative z-10 font-semibold text-3xl ${theme.textPrimary}`}
+          >
             Quick Actions
           </h2>
           <div className="md:mt-8 md:flex items-center gap-2 w-full">
@@ -314,33 +374,51 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="md:flex w-full items-center gap-8">
-          <div className="bg-white md:mr-2 rounded-2xl shadow-lg p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-18 after:mb-8 after:bg-slate-100 after:z-0 w-full">
+          <div
+            className={`${theme.bgCard} md:mr-2 rounded-2xl ${
+              theme.shadow
+            } p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-18 after:mb-8 after:${
+              theme.mode === "light" ? "bg-slate-100" : "bg-slate-800"
+            } after:z-0 w-full`}
+          >
             <div className="flex w-full items-center justify-between relative z-10">
-              <h2 className="font-semibold text-3xl">Recent Sales</h2>
+              <h2 className={`font-semibold text-3xl ${theme.textPrimary}`}>
+                Recent Sales
+              </h2>
               <button className="flex items-center px-3 py-2 border border-[#667eea] text-[#667eea] text-sm rounded-md">
                 View All
               </button>
             </div>
             <div className="flex flex-col items-center justify-center mt-5 gap-2 p-16">
-              <p className="text-slate-600 font-semibold text-xl">
+              <p className={`${theme.textSecondary} font-semibold text-xl`}>
                 No recent sales
               </p>
-              <p>Sales will appear here once you start making transactions</p>
+              <p className={theme.textSecondary}>
+                Sales will appear here once you start making transactions
+              </p>
               <button className="mt-5 flex bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-md px-2 py-1 text-sm text-slate-100">
                 Renew Subscription
               </button>
             </div>
           </div>
-          <div className="bg-white md:mr-2 rounded-2xl shadow-lg p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-18 after:mb-8 after:bg-slate-100 after:z-0 w-[400px]">
-            <h2 className="relative z-10 font-semibold text-3xl">
+          <div
+            className={`${theme.bgCard} md:mr-2 rounded-2xl ${
+              theme.shadow
+            } p-4 relative after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-18 after:mb-8 after:${
+              theme.mode === "light" ? "bg-slate-100" : "bg-slate-800"
+            } after:z-0 w-[400px]`}
+          >
+            <h2
+              className={`relative z-10 font-semibold text-3xl ${theme.textPrimary}`}
+            >
               Top Customers
             </h2>
             <div className="flex flex-col items-center justify-center w-full mt-5 gap-2 py-14">
-              <p className="text-slate-600 font-semibold text-xl">
+              <p className={`${theme.textSecondary} font-semibold text-xl`}>
                 {" "}
                 No customer data
               </p>
-              <p className="flex text-center">
+              <p className={`flex text-center ${theme.textSecondary}`}>
                 Top customers will appear here based on purchase history
               </p>
             </div>
