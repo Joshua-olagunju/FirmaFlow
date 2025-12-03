@@ -34,10 +34,11 @@ class EmailHelper
             return false;
         }
 
-        if (self::isLocalhost()) {
-            if (EMAIL_DEBUG) error_log('[EmailHelper] Skipping email on localhost for: ' . $toEmail);
-            return true;
-        }
+        // Allow emails on localhost if EMAIL_ENABLED is true (for development testing)
+        // if (self::isLocalhost()) {
+        //     if (EMAIL_DEBUG) error_log('[EmailHelper] Skipping email on localhost for: ' . $toEmail);
+        //     return true;
+        // }
 
         $subject = 'Welcome to FirmaFlow!';
         $html = self::getWelcomeHtml($recipientName);
@@ -171,10 +172,11 @@ class EmailHelper
             return false;
         }
 
-        if (self::isLocalhost()) {
-            if (EMAIL_DEBUG) error_log('[EmailHelper] Skipping expiry warning email on localhost for: ' . $toEmail);
-            return true;
-        }
+        // Allow emails on localhost if EMAIL_ENABLED is true (for development testing)
+        // if (self::isLocalhost()) {
+        //     if (EMAIL_DEBUG) error_log('[EmailHelper] Skipping expiry warning email on localhost for: ' . $toEmail);
+        //     return true;
+        // }
 
         $subject = "⚠️ FirmaFlow Subscription Expiring in {$daysRemaining} Days";
         $html = self::getExpiryWarningHtml($recipientName, $planType, $expiryDate, $daysRemaining);
@@ -198,10 +200,11 @@ class EmailHelper
             return false;
         }
 
-        if (self::isLocalhost()) {
-            if (EMAIL_DEBUG) error_log('[EmailHelper] Skipping expiry notice email on localhost for: ' . $toEmail);
-            return true;
-        }
+        // Allow emails on localhost if EMAIL_ENABLED is true (for development testing)
+        // if (self::isLocalhost()) {
+        //     if (EMAIL_DEBUG) error_log('[EmailHelper] Skipping expiry notice email on localhost for: ' . $toEmail);
+        //     return true;
+        // }
 
         $subject = "🔒 FirmaFlow Subscription Expired - Renew Now";
         $html = self::getExpiryNoticeHtml($recipientName, $planType);
