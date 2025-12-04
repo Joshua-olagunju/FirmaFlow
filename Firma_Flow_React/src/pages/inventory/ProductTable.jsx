@@ -1,8 +1,10 @@
 import ProductActions from "./ProductActions";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useSettings } from "../../contexts/SettingsContext";
 
 const ProductTable = ({ products, onEdit, onDelete }) => {
   const { theme } = useTheme();
+  const { formatCurrency } = useSettings();
 
   if (!products || products.length === 0) {
     return null;
@@ -82,16 +84,10 @@ const ProductTable = ({ products, onEdit, onDelete }) => {
                   {product.description || "N/A"}
                 </td>
                 <td className={`p-4 ${theme.textSecondary}`}>
-                  ₦
-                  {parseFloat(product.costPrice).toLocaleString("en-NG", {
-                    minimumFractionDigits: 2,
-                  })}
+                  {formatCurrency(product.costPrice)}
                 </td>
                 <td className={`p-4 ${theme.textPrimary} font-semibold`}>
-                  ₦
-                  {parseFloat(product.sellingPrice).toLocaleString("en-NG", {
-                    minimumFractionDigits: 2,
-                  })}
+                  {formatCurrency(product.sellingPrice)}
                 </td>
                 <td className={`p-4 ${theme.textPrimary}`}>
                   {product.stockQuantity} {product.unit}
