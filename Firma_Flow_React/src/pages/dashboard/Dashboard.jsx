@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import DashboardModal from "../../components/modals/DashboardModal";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useSettings } from "../../contexts/SettingsContext";
 
 // Sample data matching your design
 const salesData = [
@@ -45,6 +46,7 @@ const user = {
 
 const Dashboard = () => {
   const { theme } = useTheme();
+  const { formatCurrency } = useSettings();
   const [open, setOpen] = useState(false);
   const openSidebarRef = useRef(null);
 
@@ -194,7 +196,7 @@ const Dashboard = () => {
               <div className="flex shadow-lg rounded-lg items-center justify-center bg-gradient-to-br from-[#667eea] to-[#764ba2] p-6"></div>
               <div className="flex flex-col gap-2">
                 <p className={`m-0 font-bold ${theme.textPrimary} text-3xl`}>
-                  ₦0.00
+                  {formatCurrency(0)}
                 </p>
                 <p
                   className={`m-0 font-normal ${theme.textSecondary} text-normal`}
@@ -202,7 +204,7 @@ const Dashboard = () => {
                   Total Sales
                 </p>
                 <p className={`font-normal text-sm ${theme.textSecondary}`}>
-                  ₦0.00
+                  {formatCurrency(0)}
                 </p>
               </div>
             </div>
