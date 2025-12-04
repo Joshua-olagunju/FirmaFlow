@@ -2,6 +2,29 @@
 // Start session first
 session_start();
 header('Content-Type: application/json');
+
+// CORS Headers
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && in_array($origin, $allowed_origins, true)) {
+    header('Vary: Origin');
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+}
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/AccountResolver.php';
 require_once __DIR__ . '/journal_helpers.php';
@@ -84,13 +107,13 @@ try {
                         $where[] = "is_active = 0";
                         break;
                     case 'in_stock':
-                        $where[] = "stock_quantity > reorder_level";
+                        $where[] = "stock_quantity > 0";
                         break;
                     case 'low_stock':
                         $where[] = "stock_quantity > 0 AND stock_quantity <= reorder_level";
                         break;
                     case 'out_of_stock':
-                        $where[] = "stock_quantity <= 0";
+                        $where[] = "stock_quantity = 0";
                         break;
                 }
             }
@@ -105,7 +128,13 @@ try {
                 $stmt->execute($params);
             }
             
-            echo json_encode($stmt->fetchAll());
+            $rows = $stmt->fetchAll();
+            
+            // Return response with success wrapper
+            echo json_encode([
+                'success' => true,
+                'data' => $rows
+            ]);
         }
         exit;
     }
@@ -230,7 +259,7 @@ try {
             ]);
         }
         
-        echo json_encode($product);
+        echo json_encode(['success' => true, 'data' => $product]);
         exit;
     }
 
@@ -299,7 +328,7 @@ try {
             }
         }
         
-        echo json_encode($product);
+        echo json_encode(['success' => true, 'data' => $product]);
         exit;
     }
 
