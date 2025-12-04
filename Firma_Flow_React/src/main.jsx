@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import { BrowserRouter } from "react-router-dom";
 import { UserProvider } from "./contexts/UserContext.jsx";
 import { ThemeProvider } from "./contexts/ThemeContext.jsx";
+import { SettingsProvider } from "./contexts/SettingsContext.jsx";
 
 const rootElement = document.getElementById("root");
 if (rootElement) {
@@ -13,7 +14,9 @@ if (rootElement) {
       <BrowserRouter>
         <UserProvider>
           <ThemeProvider>
-            <App />
+            <SettingsProvider>
+              <App />
+            </SettingsProvider>
           </ThemeProvider>
         </UserProvider>
       </BrowserRouter>

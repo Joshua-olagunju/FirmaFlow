@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { X, Info } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useSettings } from "../../contexts/SettingsContext";
 
 const AddProductModal = ({ isOpen, onClose, onSave }) => {
   const { theme } = useTheme();
+  const { currencySymbols, currency } = useSettings();
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
@@ -242,7 +244,8 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
               <label
                 className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
               >
-                Cost Price <span className="text-red-500">*</span>
+                Cost Price ({currencySymbols[currency]}){" "}
+                <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -266,7 +269,8 @@ const AddProductModal = ({ isOpen, onClose, onSave }) => {
               <label
                 className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
               >
-                Selling Price <span className="text-red-500">*</span>
+                Selling Price ({currencySymbols[currency]}){" "}
+                <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"

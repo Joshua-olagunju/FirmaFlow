@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useSettings } from "../../contexts/SettingsContext";
 
 const AddCustomerModal = ({ isOpen, onClose, onSave }) => {
   const { theme } = useTheme();
+  const { currencySymbols, currency } = useSettings();
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -239,7 +241,7 @@ const AddCustomerModal = ({ isOpen, onClose, onSave }) => {
               <label
                 className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
               >
-                Credit Limit (₦)
+                Credit Limit ({currencySymbols[currency]})
               </label>
               <input
                 type="number"

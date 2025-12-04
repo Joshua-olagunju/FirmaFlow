@@ -1,8 +1,10 @@
 import SupplierActions from "./SupplierActions";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useSettings } from "../../contexts/SettingsContext";
 
 const SupplierTable = ({ suppliers, onEdit, onDelete, onViewReport }) => {
   const { theme } = useTheme();
+  const { formatCurrency } = useSettings();
   if (!suppliers || suppliers.length === 0) {
     return null;
   }
@@ -74,10 +76,7 @@ const SupplierTable = ({ suppliers, onEdit, onDelete, onViewReport }) => {
               <td className={`p-4 ${theme.textSecondary}`}>{supplier.phone}</td>
               <td className={`p-4 ${theme.textSecondary}`}>{supplier.email}</td>
               <td className={`p-4 ${theme.textPrimary} font-semibold`}>
-                ₦
-                {parseFloat(supplier.balance || 0).toLocaleString("en-NG", {
-                  minimumFractionDigits: 2,
-                })}
+                {formatCurrency(supplier.balance || 0)}
               </td>
               <td className="p-4">
                 <span

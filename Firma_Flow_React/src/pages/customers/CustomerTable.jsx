@@ -1,8 +1,10 @@
 import CustomerActions from "./CustomerActions";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useSettings } from "../../contexts/SettingsContext";
 
 const CustomerTable = ({ customers, onEdit, onDelete, onViewReport }) => {
   const { theme } = useTheme();
+  const { formatCurrency } = useSettings();
   if (!customers || customers.length === 0) {
     return null;
   }
@@ -74,10 +76,7 @@ const CustomerTable = ({ customers, onEdit, onDelete, onViewReport }) => {
                 {customer.billingAddress || customer.address || "N/A"}
               </td>
               <td className={`p-4 ${theme.textPrimary} font-semibold`}>
-                ₦
-                {parseFloat(customer.balance || 0).toLocaleString("en-NG", {
-                  minimumFractionDigits: 2,
-                })}
+                {formatCurrency(customer.balance || 0)}
               </td>
               <td className="p-4">
                 <span
