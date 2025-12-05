@@ -103,7 +103,9 @@ const AccountingSettings = () => {
   ];
 
   return (
-    <div className={`${theme.bgCard} ${theme.shadow} rounded-xl p-6`}>
+    <div
+      className={`${theme.bgCard} ${theme.shadow} rounded-xl p-4 md:p-6 max-w-full`}
+    >
       {/* Header */}
       <div className="mb-6">
         <h2
@@ -225,7 +227,7 @@ const AccountingSettings = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Guaranteed Journal Patterns */}
         <div
-          className={`${theme.bgAccent} rounded-lg p-6 border ${theme.borderSecondary}`}
+          className={`${theme.bgAccent} rounded-lg p-6 border ${theme.borderSecondary} min-w-0`}
         >
           <h3 className={`text-lg font-semibold ${theme.textPrimary} mb-4`}>
             Guaranteed Journal Patterns
@@ -281,7 +283,7 @@ const AccountingSettings = () => {
 
         {/* Smart Defaults Benefits */}
         <div
-          className={`${theme.bgAccent} rounded-lg p-6 border ${theme.borderSecondary}`}
+          className={`${theme.bgAccent} rounded-lg p-6 border ${theme.borderSecondary} min-w-0`}
         >
           <h3 className={`text-lg font-semibold ${theme.textPrimary} mb-4`}>
             Smart Defaults Benefits
