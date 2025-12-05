@@ -10,7 +10,7 @@ const SupplierTable = ({ suppliers, onEdit, onDelete, onViewReport }) => {
   }
 
   return (
-    <div className="overflow-x-auto relative">
+    <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
           <tr

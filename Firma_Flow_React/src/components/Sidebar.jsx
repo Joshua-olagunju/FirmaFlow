@@ -4,6 +4,8 @@ import { pageData } from "./pageData";
 import { useUserStore } from "../stores/useUserStore";
 import { useTheme } from "../contexts/ThemeContext";
 import ThemeToggle from "./ThemeToggle";
+import LogoutModal from "./modals/LogoutModal";
+import { useState } from "react";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -11,6 +13,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const user = useUserStore((state) => state.user);
   const logout = useUserStore((state) => state.logout);
   const { theme } = useTheme();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const userData = {
     userIcon: <User size={20} className="text-white" />,
@@ -21,6 +25,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
 
   const handleLogout = () => {
+    setIsLoggingOut(true);
     logout();
     navigate("/login");
   };
@@ -164,7 +169,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
 
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutModal(true)}
             className={`w-full text-center group/logout py-3 px-4 rounded-lg font-medium ${
               theme.textPrimary
             } hover:bg-gradient-to-br ${
@@ -177,6 +182,14 @@ const Sidebar = ({ isOpen, onClose }) => {
           </button>
         </div>
       </div>
+
+      {/* Logout Modal */}
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        isLoggingOut={isLoggingOut}
+      />
     </>
   );
 };

@@ -91,6 +91,9 @@ try {
             case 'switch_user_account':
                 handleSwitchUserAccount($input);
                 break;
+            case 'change_password':
+                handleChangePassword($input);
+                break;
             default:
                 jsonError('Invalid action', 400);
         }
@@ -98,6 +101,8 @@ try {
         $action = $_GET['action'] ?? '';
         if ($action === 'check') {
             checkSession();
+        } elseif ($action === 'session_info') {
+            handleSessionInfo();
         } else {
             jsonError('Invalid request', 400);
         }
@@ -150,9 +155,36 @@ function handleLogin(array $input) {
         jsonError('Company account is deactivated', 403);
     }
 
-    // Update last login
-    $uStmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+    // Update last login with timezone offset (add 1 hour to UTC)
+    $uStmt = $pdo->prepare("UPDATE users SET last_login = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE id = ?");
     $uStmt->execute([$user['id']]);
+
+    // Check if user wants email alerts for new logins
+    if (!empty($user['company_id'])) {
+        $settingStmt = $pdo->prepare(
+            "SELECT setting_value FROM company_settings 
+             WHERE company_id = ? AND setting_key = 'email_alerts_for_logins' LIMIT 1"
+        );
+        $settingStmt->execute([$user['company_id']]);
+        $emailAlertSetting = $settingStmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Send email if setting is enabled (default to true if not set)
+        if (!$emailAlertSetting || $emailAlertSetting['setting_value'] === '1') {
+            try {
+                require_once __DIR__ . '/../includes/email_helper.php';
+                
+                // Add 1 hour to current time for WAT timezone
+                $loginTime = date('F j, Y \\a\\t g:i A', strtotime('+1 hour'));
+                $userName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+                $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+                
+                EmailHelper::sendLoginAlert($user['email'], $userName, $loginTime, $ipAddress);
+            } catch (Exception $e) {
+                // Log error but don't block login
+                error_log("Failed to send login alert email: " . $e->getMessage());
+            }
+        }
+    }
 
     // Regenerate session
     session_regenerate_id(true);
@@ -924,5 +956,106 @@ function handleResendOTP(array $input) {
     } catch (PDOException $e) {
         error_log("Resend OTP error: " . $e->getMessage());
         jsonError('Database error occurred');
+    }
+}
+
+function handleChangePassword(array $input) {
+    global $pdo;
+
+    // Check if user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        jsonError('Not authenticated', 401);
+    }
+
+    $userId = (int)$_SESSION['user_id'];
+    $currentPassword = $input['current_password'] ?? '';
+    $newPassword = $input['new_password'] ?? '';
+
+    // Validation
+    if ($currentPassword === '' || $newPassword === '') {
+        jsonError('Current password and new password are required', 400);
+    }
+
+    if (strlen($newPassword) < 6) {
+        jsonError('New password must be at least 6 characters long', 400);
+    }
+
+    try {
+        // Get current user password hash
+        $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ? LIMIT 1");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            jsonError('User not found', 404);
+        }
+
+        // Verify current password
+        if (!password_verify($currentPassword, $user['password'])) {
+            jsonError('Current password is incorrect', 401);
+        }
+
+        // Hash new password
+        $newPasswordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+
+        // Update password
+        $updateStmt = $pdo->prepare("UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?");
+        $updateStmt->execute([$newPasswordHash, $userId]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Password changed successfully'
+        ]);
+        exit;
+
+    } catch (PDOException $e) {
+        error_log("Change password error: " . $e->getMessage());
+        jsonError('Database error occurred', 500);
+    }
+}
+
+function handleSessionInfo() {
+    global $pdo;
+
+    // Check if user is logged in
+    if (!isset($_SESSION['user_id'])) {
+        jsonError('Not authenticated', 401);
+    }
+
+    $userId = (int)$_SESSION['user_id'];
+
+    try {
+        // Get user's last login and session info
+        $stmt = $pdo->prepare("SELECT last_login FROM users WHERE id = ? LIMIT 1");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            jsonError('User not found', 404);
+        }
+
+        // last_login is already stored with +1 hour offset from the login handler
+        $lastLogin = $user['last_login'];
+
+        // Calculate session expiration (1 hour from last activity + 1 hour timezone offset)
+        $sessionTimeout = 3600; // 1 hour in seconds
+        $lastActivity = $_SESSION['last_activity'] ?? time();
+        // Add 1 hour for session duration AND 1 hour for timezone offset (total 2 hours from current UTC)
+        $timezoneOffset = 3600; // 1 hour in seconds for WAT timezone
+        $sessionExpires = date('Y-m-d H:i:s', $lastActivity + $sessionTimeout + $timezoneOffset);
+
+        echo json_encode([
+            'success' => true,
+            'data' => [
+                'last_login' => $lastLogin,
+                'session_expires' => $sessionExpires,
+                'last_activity' => date('Y-m-d H:i:s', $lastActivity + $timezoneOffset)
+            ]
+        ]);
+        exit;
+
+    } catch (PDOException $e) {
+        error_log("Session info error: " . $e->getMessage());
+        jsonError('Database error occurred', 500);
     }
 }
