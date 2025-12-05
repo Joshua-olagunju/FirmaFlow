@@ -22,6 +22,9 @@ import GeneralSettings from "./GeneralSettings";
 import CompanyInfo from "./CompanyInfo";
 import AccountingSettings from "./AccountingSettings";
 import TagsManagement from "./TagsManagement/TagsManagement";
+import TaxSettings from "./TaxSettings/TaxSettings";
+import InventorySettings from "./InventorySettings";
+import SecuritySettings from "./SecuritySettings";
 
 const Settings = () => {
   const { theme } = useTheme();
@@ -37,7 +40,7 @@ const Settings = () => {
     { id: "tags", label: "Tags Management", icon: Tag },
     { id: "tax", label: "Tax Settings", icon: Receipt },
     { id: "inventory", label: "Inventory Settings", icon: Package },
-    { id: "system", label: "System Settings", icon: Monitor },
+
     { id: "security", label: "Security Settings", icon: Lock },
     { id: "invoice-templates", label: "Invoice Templates", icon: FileText },
     { id: "receipt-templates", label: "Receipt Templates", icon: File },
@@ -56,29 +59,12 @@ const Settings = () => {
       case "tags":
         return <TagsManagement />;
       case "tax":
-        return (
-          <div className={`${theme.textPrimary}`}>
-            Tax Settings - Coming Soon
-          </div>
-        );
+        return <TaxSettings />;
       case "inventory":
-        return (
-          <div className={`${theme.textPrimary}`}>
-            Inventory Settings - Coming Soon
-          </div>
-        );
-      case "system":
-        return (
-          <div className={`${theme.textPrimary}`}>
-            System Settings - Coming Soon
-          </div>
-        );
+        return <InventorySettings />;
+
       case "security":
-        return (
-          <div className={`${theme.textPrimary}`}>
-            Security Settings - Coming Soon
-          </div>
-        );
+        return <SecuritySettings />;
       case "invoice-templates":
         return (
           <div className={`${theme.textPrimary}`}>
@@ -116,7 +102,7 @@ const Settings = () => {
 
   return (
     <Layout>
-      <div className={`min-h-screen ${theme.bgPrimary} p-4 md:p-6`}>
+      <div className={`min-h-screen ${theme.bgPrimary} p-2 md:p-1`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -151,10 +137,10 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="flex gap-4 md:gap-6">
+        <div className="flex gap-4 md:gap-6 overflow-hidden">
           {/* Desktop Sidebar - Always visible on large screens */}
           <div
-            className={`hidden lg:block w-64 ${theme.bgCard} ${theme.shadow} rounded-xl p-4 h-fit sticky top-6`}
+            className={`hidden lg:block w-64 flex-shrink-0 ${theme.bgCard} ${theme.shadow} rounded-xl p-4 h-fit sticky top-6`}
           >
             <nav className="space-y-1">
               {settingsSections.map((section) => {
@@ -218,7 +204,9 @@ const Settings = () => {
           )}
 
           {/* Main Content */}
-          <div className="flex-1">{renderContent()}</div>
+          <div className="flex-1 min-w-0 overflow-x-hidden">
+            {renderContent()}
+          </div>
         </div>
       </div>
     </Layout>

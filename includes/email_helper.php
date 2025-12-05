@@ -573,4 +573,117 @@ The FirmaFlow Team
 Visit us at: https://firmaflowledger.com
 TEXT;
     }
+
+    /**
+     * Send login alert email
+     */
+    public static function sendLoginAlert(string $email, string $userName, string $loginTime, string $ipAddress): bool
+    {
+        if (!EMAIL_ENABLED) {
+            if (EMAIL_DEBUG) error_log('[EmailHelper] EMAIL_DISABLED, pretending login alert sent');
+            return true;
+        }
+
+        $subject = "New Login to Your FirmaFlow Account";
+        $htmlBody = self::getLoginAlertHtml($userName, $loginTime, $ipAddress);
+        $textBody = self::getLoginAlertText($userName, $loginTime, $ipAddress);
+
+        if (EMAIL_DEBUG) {
+            error_log('[EmailHelper] Sending login alert to: ' . $email);
+        }
+
+        return self::send($email, $subject, $htmlBody, $textBody);
+    }
+
+    private static function getLoginAlertHtml(string $name, string $loginTime, string $ipAddress): string
+    {
+        $greet = $name ?: 'there';
+        
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; }
+        .container { max-width: 600px; margin: 0 auto; background: white; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; text-align: center; }
+        .header h1 { color: white; margin: 0; font-size: 1.8rem; }
+        .content { padding: 2rem; line-height: 1.6; }
+        .info-box { background: #e8f5ff; border-left: 4px solid #667eea; padding: 1.5rem; margin: 1.5rem 0; border-radius: 4px; }
+        .info-row { margin: 0.5rem 0; }
+        .label { font-weight: bold; color: #333; }
+        .value { color: #555; }
+        .alert-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 1rem; margin: 1.5rem 0; border-radius: 4px; }
+        .footer { background: #f8f9fa; padding: 1.5rem; text-align: center; color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 New Login Detected</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hi {$greet},</p>
+            
+            <p>We detected a new login to your FirmaFlow account. Here are the details:</p>
+            
+            <div class="info-box">
+                <div class="info-row">
+                    <span class="label">Login Time:</span>
+                    <span class="value">{$loginTime}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">IP Address:</span>
+                    <span class="value">{$ipAddress}</span>
+                </div>
+            </div>
+            
+            <div class="alert-box">
+                <strong>⚠️ Was this you?</strong><br>
+                If you didn't log in at this time, please secure your account immediately by changing your password and contacting our support team.
+            </div>
+            
+            <p>You can manage your security settings from your account dashboard.</p>
+            
+            <p>Best regards,<br>The FirmaFlow Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 FirmaFlow Ledger. All rights reserved.</p>
+            <p>Visit us at: <a href="https://firmaflowledger.com">https://firmaflowledger.com</a></p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    private static function getLoginAlertText(string $name, string $loginTime, string $ipAddress): string
+    {
+        $greet = $name ?: 'there';
+        
+        return <<<TEXT
+Hi {$greet},
+
+We detected a new login to your FirmaFlow account.
+
+LOGIN DETAILS:
+--------------
+Login Time: {$loginTime}
+IP Address: {$ipAddress}
+
+⚠️ WAS THIS YOU?
+If you didn't log in at this time, please secure your account immediately by changing your password and contacting our support team.
+
+You can manage your security settings from your account dashboard.
+
+Best regards,
+The FirmaFlow Team
+
+© 2025 FirmaFlow Ledger. All rights reserved.
+Visit us at: https://firmaflowledger.com
+TEXT;
+    }
 }

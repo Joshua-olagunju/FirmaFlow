@@ -236,12 +236,12 @@ const Inventory = () => {
 
     const matchesTab =
       activeTab === "all" ||
-      (activeTab === "instock" &&
+      (activeTab === "in_stock" &&
         product.stockQuantity > product.reorderLevel) ||
-      (activeTab === "lowstock" &&
+      (activeTab === "low_stock" &&
         product.stockQuantity > 0 &&
         product.stockQuantity <= product.reorderLevel) ||
-      (activeTab === "outofstock" && product.stockQuantity === 0);
+      (activeTab === "out_of_stock" && product.stockQuantity === 0);
 
     return matchesSearch && matchesTab;
   });
