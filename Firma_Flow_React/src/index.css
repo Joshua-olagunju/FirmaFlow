@@ -127,3 +127,88 @@ html {
 .animate-fadeIn {
   animation: fadeIn 0.25s ease-out;
 }
+
+/* Print Styles - Ensure templates maintain full size for print/share */
+@media print {
+  /* Hide modal background and controls */
+  .fixed.inset-0.bg-black,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Force templates to use full desktop view */
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Ensure templates render at full size */
+  .print\\:p-8 {
+    padding: 2rem !important;
+  }
+
+  .print\\:p-6 {
+    padding: 1.5rem !important;
+  }
+
+  .print\\:p-4 {
+    padding: 1rem !important;
+  }
+
+  /* Maintain full text sizes */
+  .print\\:text-4xl {
+    font-size: 2.25rem !important;
+  }
+
+  .print\\:text-3xl {
+    font-size: 1.875rem !important;
+  }
+
+  .print\\:text-2xl {
+    font-size: 1.5rem !important;
+  }
+
+  .print\\:text-xl {
+    font-size: 1.25rem !important;
+  }
+
+  .print\\:text-lg {
+    font-size: 1.125rem !important;
+  }
+
+  .print\\:text-base {
+    font-size: 1rem !important;
+  }
+
+  .print\\:text-sm {
+    font-size: 0.875rem !important;
+  }
+
+  /* Maintain grid layouts */
+  .print\\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .print\\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  /* Maintain flex directions */
+  .print\\:flex-row {
+    flex-direction: row !important;
+  }
+
+  /* Remove page breaks inside elements */
+  .bg-white,
+  table,
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure colors print correctly */
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}

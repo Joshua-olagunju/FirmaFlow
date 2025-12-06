@@ -1,0 +1,539 @@
+import { useState, useEffect } from "react";
+import { useTheme } from "../../../contexts/ThemeContext";
+import {
+  FileText,
+  Eye,
+  Check,
+  ChevronDown,
+  Palette,
+  Wand2,
+  Layout,
+  Maximize2,
+} from "lucide-react";
+import { buildApiUrl } from "../../../config/api.config";
+import ModernInvoice from "./templates/ModernInvoice";
+import ClassicInvoice from "./templates/ClassicInvoice";
+import MinimalInvoice from "./templates/MinimalInvoice";
+import ProfessionalInvoice from "./templates/ProfessionalInvoice";
+import ElegantInvoice from "./templates/ElegantInvoice";
+import InvoicePreviewModal from "./InvoicePreviewModal";
+import CustomInvoiceBuilder from "./CustomInvoiceBuilder";
+import FreeformInvoiceBuilder from "./FreeformInvoiceBuilder";
+
+const InvoiceTemplates = () => {
+  const { theme } = useTheme();
+  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [selectedColor, setSelectedColor] = useState("#667eea");
+  const [showPreview, setShowPreview] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState(null);
+  const [_templates, setTemplates] = useState([]);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showCustomColor, setShowCustomColor] = useState(false);
+  const [customColor, setCustomColor] = useState("#667eea");
+  const [showPaymentInfo, setShowPaymentInfo] = useState(true);
+  const [showCustomBuilder, setShowCustomBuilder] = useState(false);
+  const [showFreeformBuilder, setShowFreeformBuilder] = useState(false);
+  const [showBuilderChoice, setShowBuilderChoice] = useState(false);
+  const [customTemplates, setCustomTemplates] = useState([]);
+
+  const builtInTemplates = [
+    { id: "modern", name: "Modern", component: ModernInvoice },
+    { id: "classic", name: "Classic", component: ClassicInvoice },
+    { id: "minimal", name: "Minimal", component: MinimalInvoice },
+    {
+      id: "professional",
+      name: "Professional",
+      component: ProfessionalInvoice,
+    },
+    { id: "elegant", name: "Elegant", component: ElegantInvoice },
+  ];
+
+  // Merge built-in and custom templates
+  const availableTemplates = [
+    ...builtInTemplates,
+    ...customTemplates.map((ct) => ({
+      id: ct.template_name,
+      name: ct.template_name,
+      component: null,
+      isCustom: true,
+      data: ct.template_data,
+    })),
+  ];
+
+  const colorOptions = [
+    { name: "Purple", value: "#667eea" },
+    { name: "Blue", value: "#3b82f6" },
+    { name: "Green", value: "#10b981" },
+    { name: "Red", value: "#ef4444" },
+    { name: "Orange", value: "#f59e0b" },
+    { name: "Pink", value: "#ec4899" },
+    { name: "Indigo", value: "#6366f1" },
+    { name: "Teal", value: "#14b8a6" },
+    { name: "Custom", value: "custom" },
+  ];
+
+  const handleColorSelect = (colorValue) => {
+    if (colorValue === "custom") {
+      setShowCustomColor(true);
+      setSelectedColor(customColor);
+    } else {
+      setShowCustomColor(false);
+      setSelectedColor(colorValue);
+    }
+  };
+
+  const handleCustomColorChange = (e) => {
+    const newColor = e.target.value;
+    setCustomColor(newColor);
+    setSelectedColor(newColor);
+  };
+
+  useEffect(() => {
+    fetchCompanyInfo();
+    fetchTemplates();
+  }, []);
+
+  const fetchCompanyInfo = async () => {
+    try {
+      const response = await fetch(
+        buildApiUrl("api/settings.php?type=company"),
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+      const data = await response.json();
+      if (response.ok && data.success) {
+        // Map API fields to template-expected fields
+        const company = data.data;
+        const mappedCompanyInfo = {
+          ...company,
+          logo: company.logo_path ? buildApiUrl(company.logo_path) : null,
+          address: company.billing_address || "",
+          bank_account: company.account_number || "",
+        };
+        setCompanyInfo(mappedCompanyInfo);
+      }
+    } catch (error) {
+      console.error("Error fetching company info:", error);
+    }
+  };
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await fetch(
+        buildApiUrl("api/settings.php?type=templates"),
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+      const data = await response.json();
+      if (response.ok && data.success) {
+        const invoiceTemplates = data.data.filter(
+          (t) => t.template_type === "invoice"
+        );
+        setTemplates(invoiceTemplates);
+
+        // Filter custom templates (those with type="custom" or "custom-freeform" in their data)
+        const customInvoiceTemplates = invoiceTemplates.filter(
+          (t) =>
+            t.template_data?.type === "custom" ||
+            t.template_data?.type === "custom-freeform"
+        );
+        setCustomTemplates(customInvoiceTemplates);
+
+        // Set default template if exists
+        const defaultTemplate = invoiceTemplates.find((t) => t.is_default);
+        if (defaultTemplate) {
+          setSelectedTemplate(defaultTemplate.template_name);
+          setSelectedColor(defaultTemplate.template_data?.color || "#667eea");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    try {
+      const response = await fetch(buildApiUrl("api/settings.php"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "save_template",
+          type: "invoice",
+          name: selectedTemplate,
+          data: {
+            color: selectedColor,
+            templateId: builtInTemplates.find(
+              (t) => t.name === selectedTemplate
+            )?.id,
+          },
+          is_default: true,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setSuccessMessage("Invoice template saved successfully!");
+        setTimeout(() => setSuccessMessage(""), 3000);
+        fetchTemplates();
+      }
+    } catch (error) {
+      console.error("Error saving template:", error);
+    }
+  };
+
+  const handlePreview = () => {
+    if (selectedTemplate) {
+      setShowPreview(true);
+    }
+  };
+
+  const sampleInvoiceData = {
+    invoiceNumber: "INV-2025-001",
+    date: new Date().toLocaleDateString(),
+    dueDate: new Date(
+      Date.now() + 30 * 24 * 60 * 60 * 1000
+    ).toLocaleDateString(),
+    customer: {
+      name: "Sample Customer Ltd",
+      address: "123 Business Street",
+      city: "Lagos",
+      phone: "+234 800 000 0000",
+    },
+    items: [
+      { description: "Product 1", quantity: 2, rate: 50000, amount: 100000 },
+      { description: "Service Fee", quantity: 1, rate: 75000, amount: 75000 },
+      { description: "Consultation", quantity: 3, rate: 25000, amount: 75000 },
+    ],
+    subtotal: 250000,
+    tax: 18750,
+    discount: 10000,
+    total: 258750,
+  };
+
+  return (
+    <div
+      className={`${theme.bgCard} ${theme.shadow} rounded-xl p-4 md:p-6 max-w-full`}
+    >
+      {/* Header */}
+      <div className="mb-6">
+        <h2
+          className={`text-2xl font-bold ${theme.textPrimary} flex items-center gap-2`}
+        >
+          <FileText size={24} />
+          Invoice Templates
+        </h2>
+        <p className={`${theme.textSecondary} mt-1`}>
+          Choose and customize your invoice template
+        </p>
+      </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-6 p-4 bg-green-100 border border-green-200 text-green-700 rounded-lg">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Info Box */}
+      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-800">
+          <strong>Note:</strong> The selected template will be used when
+          generating invoices. Company information, items, and calculations will
+          be populated automatically from your data.
+        </p>
+      </div>
+
+      {/* Template Selection */}
+      <div
+        className={`mb-6 p-6 ${theme.bgAccent} rounded-lg border ${theme.borderSecondary}`}
+      >
+        <h3 className={`text-lg font-semibold ${theme.textPrimary} mb-4`}>
+          Select Template
+        </h3>
+
+        {/* Custom Dropdown */}
+        <div className="relative mb-4">
+          <label className={`block font-semibold ${theme.textPrimary} mb-2`}>
+            Template Style
+          </label>
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className={`w-full px-4 py-3 rounded-lg border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary} focus:outline-none focus:ring-2 focus:ring-[#667eea] flex items-center justify-between`}
+          >
+            <span>{selectedTemplate || "Select a template..."}</span>
+            <ChevronDown
+              size={20}
+              className={`transition-transform ${
+                isDropdownOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {isDropdownOpen && (
+            <div
+              className={`absolute z-10 w-full mt-2 ${theme.bgCard} border ${theme.borderSecondary} rounded-lg shadow-lg max-h-60 overflow-auto`}
+            >
+              {availableTemplates.map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => {
+                    setSelectedTemplate(template.name);
+                    setIsDropdownOpen(false);
+                  }}
+                  className={`w-full px-4 py-3 text-left ${theme.textPrimary} hover:bg-gradient-to-r from-[#667eea]/10 to-[#764ba2]/10 transition flex items-center justify-between`}
+                >
+                  <span>{template.name}</span>
+                  {selectedTemplate === template.name && (
+                    <Check size={18} className="text-green-600" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Color Selection */}
+        <div>
+          <label className={`block font-semibold ${theme.textPrimary} mb-2`}>
+            Theme Color
+          </label>
+          <div className="grid grid-cols-4 md:grid-cols-9 gap-3">
+            {colorOptions.map((color) => (
+              <button
+                key={color.value}
+                onClick={() => handleColorSelect(color.value)}
+                className={`relative w-12 h-12 rounded-lg border-2 transition-all ${
+                  (color.value === "custom" && showCustomColor) ||
+                  (color.value !== "custom" && selectedColor === color.value)
+                    ? "border-gray-800 scale-110"
+                    : "border-gray-300 hover:scale-105"
+                }`}
+                style={{
+                  backgroundColor:
+                    color.value === "custom" ? customColor : color.value,
+                }}
+                title={color.name}
+              >
+                {color.value === "custom" ? (
+                  <Palette
+                    size={20}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow-lg"
+                  />
+                ) : (
+                  ((color.value === "custom" && showCustomColor) ||
+                    (color.value !== "custom" &&
+                      selectedColor === color.value)) && (
+                    <Check
+                      size={20}
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow-lg"
+                    />
+                  )
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom Color Picker */}
+          {showCustomColor && (
+            <div
+              className={`mt-4 p-4 rounded-lg border ${theme.bgAccent} ${theme.borderSecondary}`}
+            >
+              <label
+                className={`block font-semibold ${theme.textPrimary} mb-2`}
+              >
+                Custom Color
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={customColor}
+                  onChange={handleCustomColorChange}
+                  className="w-16 h-10 rounded cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={customColor}
+                  onChange={handleCustomColorChange}
+                  className={`flex-1 px-3 py-2 border rounded-lg ${theme.bgInput} ${theme.textPrimary} ${theme.borderSecondary}`}
+                  placeholder="#667eea"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Payment Info Toggle */}
+        <div
+          className={`mt-4 p-4 rounded-lg border ${theme.bgAccent} ${theme.borderSecondary}`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <label
+                className={`block font-semibold ${theme.textPrimary} mb-1`}
+              >
+                Show Payment Information
+              </label>
+              <p className={`text-sm ${theme.textSecondary}`}>
+                Display bank account details on invoice
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPaymentInfo(!showPaymentInfo)}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                showPaymentInfo ? "bg-green-500" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform ${
+                  showPaymentInfo ? "right-1" : "left-1"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 flex-wrap">
+        {/* Custom Template Builder Button */}
+        <button
+          onClick={() => setShowBuilderChoice(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-white rounded-lg shadow-lg hover:opacity-90 transition"
+        >
+          <Wand2 size={18} />
+          Create Custom Template
+        </button>
+
+        <button
+          onClick={handlePreview}
+          disabled={!selectedTemplate}
+          className="flex items-center gap-2 px-6 py-3 border-2 border-[#667eea] text-[#667eea] rounded-lg font-semibold hover:bg-[#667eea]/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Eye size={18} />
+          Preview Template
+        </button>
+
+        <button
+          onClick={handleSaveTemplate}
+          disabled={!selectedTemplate}
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg shadow-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Check size={18} />
+          Save as Default
+        </button>
+      </div>
+
+      {/* Builder Choice Modal */}
+      {showBuilderChoice && (
+        <div
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={() => setShowBuilderChoice(false)}
+        >
+          <div
+            className={`${theme.bgCard} rounded-xl shadow-2xl p-6 max-w-2xl mx-4`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className={`text-xl font-bold ${theme.textPrimary} mb-4`}>
+              Choose Builder Type
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => {
+                  setShowBuilderChoice(false);
+                  setShowCustomBuilder(true);
+                }}
+                className={`p-6 border-2 ${theme.borderSecondary} rounded-lg hover:border-[#667eea] transition`}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <Layout className="w-12 h-12 mb-3 text-[#667eea]" />
+                  <h4 className={`font-bold text-lg mb-2 ${theme.textPrimary}`}>
+                    Structured Builder
+                  </h4>
+                  <p className={`text-sm ${theme.textSecondary}`}>
+                    Drag & drop sections in a vertical layout. Perfect for
+                    organized, professional invoices.
+                  </p>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setShowBuilderChoice(false);
+                  setShowFreeformBuilder(true);
+                }}
+                className={`p-6 border-2 ${theme.borderSecondary} rounded-lg hover:border-[#f59e0b] transition`}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <Maximize2 className="w-12 h-12 mb-3 text-[#f59e0b]" />
+                  <h4 className={`font-bold text-lg mb-2 ${theme.textPrimary}`}>
+                    Freeform Builder
+                  </h4>
+                  <p className={`text-sm ${theme.textSecondary}`}>
+                    Position elements anywhere on the page. Complete creative
+                    freedom for unique designs.
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Template Builder */}
+      {showCustomBuilder && (
+        <CustomInvoiceBuilder
+          onClose={() => setShowCustomBuilder(false)}
+          onSave={(template) => {
+            setShowCustomBuilder(false);
+            // Set the newly created template as selected
+            setSelectedTemplate(template.name);
+            setSelectedColor(template.color || "#667eea");
+            setSuccessMessage(
+              `Custom template "${template.name}" saved successfully!`
+            );
+            setTimeout(() => setSuccessMessage(""), 3000);
+            fetchTemplates();
+          }}
+        />
+      )}
+
+      {/* Freeform Template Builder */}
+      {showFreeformBuilder && (
+        <FreeformInvoiceBuilder
+          onClose={() => setShowFreeformBuilder(false)}
+          onSave={(template) => {
+            setShowFreeformBuilder(false);
+            // Set the newly created template as selected
+            setSelectedTemplate(template.name);
+            setSelectedColor(template.color || "#667eea");
+            setSuccessMessage(
+              `Freeform template "${template.name}" saved successfully!`
+            );
+            setTimeout(() => setSuccessMessage(""), 3000);
+            fetchTemplates();
+          }}
+        />
+      )}
+
+      {/* Preview Modal */}
+      <InvoicePreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        template={availableTemplates.find((t) => t.name === selectedTemplate)}
+        color={selectedColor}
+        companyInfo={companyInfo}
+        invoiceData={sampleInvoiceData}
+        showPaymentInfo={showPaymentInfo}
+      />
+    </div>
+  );
+};
+
+export default InvoiceTemplates;

@@ -25,6 +25,8 @@ import TagsManagement from "./TagsManagement/TagsManagement";
 import TaxSettings from "./TaxSettings/TaxSettings";
 import InventorySettings from "./InventorySettings";
 import SecuritySettings from "./SecuritySettings";
+import InvoiceTemplates from "./InvoiceTemplates/InvoiceTemplates";
+import ReceiptTemplates from "./ReceiptTemplates/ReceiptTemplates";
 
 const Settings = () => {
   const { theme } = useTheme();
@@ -66,17 +68,9 @@ const Settings = () => {
       case "security":
         return <SecuritySettings />;
       case "invoice-templates":
-        return (
-          <div className={`${theme.textPrimary}`}>
-            Invoice Templates - Coming Soon
-          </div>
-        );
+        return <InvoiceTemplates />;
       case "receipt-templates":
-        return (
-          <div className={`${theme.textPrimary}`}>
-            Receipt Templates - Coming Soon
-          </div>
-        );
+        return <ReceiptTemplates />;
       case "backup":
         return (
           <div className={`${theme.textPrimary}`}>
