@@ -1,0 +1,407 @@
+import { useTheme } from "../../../contexts/ThemeContext";
+import { Image as ImageIcon } from "lucide-react";
+
+const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
+  // eslint-disable-next-line no-unused-vars
+  const { theme } = useTheme();
+
+  if (!templateData) return null;
+
+  // Check if it's a freeform template (has elements) or structured (has sections)
+  const isFreeform =
+    templateData.type === "custom-freeform" && templateData.elements;
+  const color = templateData.color || "#667eea";
+
+  if (isFreeform) {
+    // Render freeform template
+    const { elements } = templateData;
+
+    const renderFreeformElement = (element) => {
+      const style = {
+        fontSize: `${element.fontSize}px`,
+        textAlign: element.alignment,
+        fontWeight: element.bold ? "bold" : "normal",
+      };
+
+      switch (element.type) {
+        case "header":
+          return (
+            <div style={style}>
+              <h1 style={{ color, margin: 0 }}>INVOICE</h1>
+            </div>
+          );
+        case "companyInfo":
+          return (
+            <div style={style} className="text-sm">
+              <p className="font-bold">
+                {companyInfo?.company_name || "Your Company Name"}
+              </p>
+              <p>{companyInfo?.address || "123 Business Street"}</p>
+              <p>{companyInfo?.phone || "(123) 456-7890"}</p>
+              <p>{companyInfo?.email || "email@company.com"}</p>
+            </div>
+          );
+        case "customerInfo":
+          return (
+            <div style={style} className="text-sm">
+              <p className="font-semibold" style={{ color }}>
+                BILL TO:
+              </p>
+              <p className="font-bold">
+                {invoiceData?.customer_name || "Customer Name"}
+              </p>
+              <p>{invoiceData?.customer_address || "Customer Address"}</p>
+            </div>
+          );
+        case "invoiceDetails":
+          return (
+            <div style={style} className="text-sm space-y-1">
+              <p>
+                <span className="font-semibold">Invoice #:</span>{" "}
+                {invoiceData?.invoice_number || "INV-001"}
+              </p>
+              <p>
+                <span className="font-semibold">Date:</span>{" "}
+                {invoiceData?.date || new Date().toLocaleDateString()}
+              </p>
+              <p>
+                <span className="font-semibold">Due Date:</span>{" "}
+                {invoiceData?.due_date || new Date().toLocaleDateString()}
+              </p>
+            </div>
+          );
+        case "itemsTable": {
+          const items = invoiceData?.items || [
+            {
+              description: "Sample Item",
+              quantity: 1,
+              rate: 100000,
+              amount: 100000,
+            },
+          ];
+          return (
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr style={{ backgroundColor: `${color}15` }}>
+                  <th className="border p-2 text-left">Description</th>
+                  <th className="border p-2 text-center">Qty</th>
+                  <th className="border p-2 text-right">Rate</th>
+                  <th className="border p-2 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="border p-2">{item.description}</td>
+                    <td className="border p-2 text-center">{item.quantity}</td>
+                    <td className="border p-2 text-right">
+                      ₦{item.rate.toLocaleString()}
+                    </td>
+                    <td className="border p-2 text-right">
+                      ₦{item.amount.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        }
+        case "totals":
+          return (
+            <div style={style} className="text-sm space-y-1">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>
+                  ₦{(invoiceData?.subtotal || 100000).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tax (7.5%):</span>
+                <span>₦{(invoiceData?.tax || 7500).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between font-bold border-t pt-1">
+                <span style={{ color }}>TOTAL:</span>
+                <span style={{ color }}>
+                  ₦{(invoiceData?.total || 107500).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          );
+        case "paymentInfo":
+          return (
+            <div style={style} className="text-xs">
+              <p className="font-semibold mb-1" style={{ color }}>
+                Payment Information
+              </p>
+              <p>
+                <span className="font-semibold">Bank:</span>{" "}
+                {companyInfo?.bank_name || "First Bank"}
+              </p>
+              <p>
+                <span className="font-semibold">Account:</span>{" "}
+                {companyInfo?.bank_account || "1234567890"}
+              </p>
+              <p>
+                <span className="font-semibold">Name:</span>{" "}
+                {companyInfo?.company_name || "Your Company Ltd"}
+              </p>
+            </div>
+          );
+        case "logo":
+          return companyInfo?.logo ? (
+            <img
+              src={companyInfo.logo}
+              alt="Logo"
+              className="max-w-full h-auto"
+            />
+          ) : (
+            <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+              <ImageIcon size={32} className="text-gray-400" />
+            </div>
+          );
+        case "text":
+          return <div style={style}>{element.text || "Custom Text"}</div>;
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <div
+        className="relative bg-white"
+        style={{ width: "210mm", minHeight: "297mm", padding: "20mm" }}
+      >
+        {elements.map((element) => (
+          <div
+            key={element.id}
+            className="absolute"
+            style={{
+              left: element.position.x,
+              top: element.position.y,
+              width: element.size.width,
+              minHeight: element.size.height,
+            }}
+          >
+            {renderFreeformElement(element)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Render structured template
+  if (!templateData.sections) return null;
+  const { sections } = templateData;
+
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+    }).format(amount);
+
+  const renderSection = (section) => {
+    const alignmentClass =
+      section.props?.alignment === "center"
+        ? "text-center"
+        : section.props?.alignment === "right"
+        ? "text-right"
+        : "text-left";
+
+    switch (section.type) {
+      case "header":
+        return (
+          <div className={alignmentClass}>
+            {section.props?.showLogo && companyInfo?.logo && (
+              <img
+                src={companyInfo.logo}
+                alt="Company Logo"
+                className="h-16 w-auto mb-2 inline-block"
+              />
+            )}
+            <h1 className="text-2xl font-bold" style={{ color }}>
+              INVOICE
+            </h1>
+          </div>
+        );
+
+      case "companyInfo":
+        return (
+          <div className={alignmentClass}>
+            <h2 className="font-bold text-lg text-gray-800">
+              {companyInfo?.company_name || "Your Company"}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {companyInfo?.address || "Company Address"}
+            </p>
+            <p className="text-sm text-gray-600">
+              {companyInfo?.phone || "Phone Number"}
+            </p>
+            <p className="text-sm text-gray-600">
+              {companyInfo?.email || "email@company.com"}
+            </p>
+          </div>
+        );
+
+      case "customerInfo":
+        return (
+          <div className={alignmentClass}>
+            <p className="font-semibold text-sm" style={{ color }}>
+              BILL TO:
+            </p>
+            <p className="font-semibold text-gray-800">
+              {invoiceData?.customer_name || "Customer Name"}
+            </p>
+            <p className="text-sm text-gray-600">
+              {invoiceData?.customer_address || "Customer Address"}
+            </p>
+          </div>
+        );
+
+      case "invoiceDetails":
+        return (
+          <div className={alignmentClass}>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Invoice #:</span>
+                <span className="font-semibold text-gray-800">
+                  {invoiceData?.invoice_number || "INV-001"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Date:</span>
+                <span className="text-gray-800">
+                  {invoiceData?.date || new Date().toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Due Date:</span>
+                <span className="text-gray-800">
+                  {invoiceData?.due_date || new Date().toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "itemsTable": {
+        const items = invoiceData?.items || [
+          {
+            description: "Sample Item",
+            quantity: 1,
+            rate: 100000,
+            amount: 100000,
+          },
+        ];
+        return (
+          <table
+            className={`w-full text-sm ${
+              section.props?.showBorders ? "border border-gray-300" : ""
+            }`}
+          >
+            <thead>
+              <tr style={{ backgroundColor: `${color}15` }}>
+                <th className="text-left p-2 text-gray-800">Description</th>
+                <th className="text-center p-2 text-gray-800">Qty</th>
+                <th className="text-right p-2 text-gray-800">Rate</th>
+                <th className="text-right p-2 text-gray-800">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, index) => (
+                <tr key={index} className="border-b border-gray-200">
+                  <td className="p-2 text-gray-800">{item.description}</td>
+                  <td className="text-center p-2 text-gray-800">
+                    {item.quantity}
+                  </td>
+                  <td className="text-right p-2 text-gray-800">
+                    {formatCurrency(item.rate)}
+                  </td>
+                  <td className="text-right p-2 text-gray-800">
+                    {formatCurrency(item.amount)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+      }
+
+      case "totals":
+        return (
+          <div className={`${alignmentClass} space-y-1 text-sm`}>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Subtotal:</span>
+              <span className="text-gray-800">
+                {formatCurrency(invoiceData?.subtotal || 100000)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Tax (7.5%):</span>
+              <span className="text-gray-800">
+                {formatCurrency(invoiceData?.tax || 7500)}
+              </span>
+            </div>
+            <div className="flex justify-between font-bold text-base pt-1 border-t border-gray-300">
+              <span style={{ color }}>TOTAL:</span>
+              <span style={{ color }}>
+                {formatCurrency(invoiceData?.total || 107500)}
+              </span>
+            </div>
+          </div>
+        );
+
+      case "paymentInfo":
+        return (
+          <div className={alignmentClass}>
+            <p className="font-semibold mb-2 text-sm" style={{ color }}>
+              Payment Information
+            </p>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <span className="text-gray-600">Bank:</span>
+                <p className="font-semibold text-gray-800">
+                  {companyInfo?.bank_name || "Bank Name"}
+                </p>
+              </div>
+              <div>
+                <span className="text-gray-600">Account:</span>
+                <p className="font-semibold text-gray-800">
+                  {companyInfo?.bank_account || "Account Number"}
+                </p>
+              </div>
+              <div>
+                <span className="text-gray-600">Name:</span>
+                <p className="font-semibold text-gray-800">
+                  {companyInfo?.company_name || "Account Name"}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "customText":
+        return (
+          <div className={alignmentClass}>
+            <p className="text-sm text-gray-700">
+              {section.props?.text || "Custom text"}
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="p-8 bg-white">
+      <div className="space-y-6">
+        {sections.map((section) => (
+          <div key={section.id}>{renderSection(section)}</div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default CustomInvoicePreview;

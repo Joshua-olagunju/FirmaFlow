@@ -1,10 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { useTheme } from "../contexts/ThemeContext";
+import { motion } from "framer-motion";
 
 const Layout = ({ children, onMenuClick }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // Get initial state from localStorage
+    const saved = localStorage.getItem("sidebar-collapsed");
+    return saved === "true";
+  });
   const { theme } = useTheme();
+
+  // Persist collapse state to localStorage
+  useEffect(() => {
+    localStorage.setItem("sidebar-collapsed", isCollapsed.toString());
+  }, [isCollapsed]);
 
   // Expose function to parent components
   if (onMenuClick) {
@@ -18,11 +29,22 @@ const Layout = ({ children, onMenuClick }) => {
         <Sidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
         />
       </div>
 
-      {/* Main Content - Scrollable */}
-      <div className="flex flex-1 flex-col gap-8 overflow-y-auto mt-0 md:p-2 p-5">
+      {/* Main Content - Scrollable - Expands when sidebar collapses */}
+      <motion.div
+        animate={{
+          marginLeft: isCollapsed ? "0px" : "0px",
+        }}
+        transition={{
+          duration: 0.3,
+          ease: "easeInOut",
+        }}
+        className="flex flex-1 flex-col gap-8 overflow-y-auto mt-0 md:p-2 p-5"
+      >
         <div className="flex-1 md:ml-8">{children}</div>
         <div
           className={`flex md:ml-6 ${theme.shadowSm} ${theme.bgAccent} border-t-2 border-[#764ba2] md:mr-6`}
@@ -63,7 +85,7 @@ const Layout = ({ children, onMenuClick }) => {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

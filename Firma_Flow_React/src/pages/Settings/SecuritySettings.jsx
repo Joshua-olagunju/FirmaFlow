@@ -433,6 +433,36 @@ const SecuritySettings = () => {
 
         <div className="space-y-4">
           {/* Force Password Change */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <label
+                className={`block font-semibold ${theme.textPrimary} mb-1`}
+              >
+                Force password change on next login
+              </label>
+            </div>
+            <button
+              onClick={() =>
+                handleSecurityOptionToggle(
+                  "forcePasswordChange",
+                  !securityOptions.forcePasswordChange
+                )
+              }
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                securityOptions.forcePasswordChange
+                  ? "bg-green-600"
+                  : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  securityOptions.forcePasswordChange
+                    ? "translate-x-6"
+                    : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
 
           {/* Enable Session Timeout */}
           <div className="flex items-start justify-between gap-4">

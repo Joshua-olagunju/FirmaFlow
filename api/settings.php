@@ -380,19 +380,36 @@ function saveTemplate($pdo, $company_id, $input) {
         return;
     }
     
+    // Check if template already exists
+    $checkStmt = $pdo->prepare("
+        SELECT id FROM template_settings 
+        WHERE company_id = ? AND template_type = ? AND template_name = ?
+    ");
+    $checkStmt->execute([$company_id, $type, $name]);
+    $existingTemplate = $checkStmt->fetch();
+    
     // If setting as default, unset other defaults
     if ($is_default) {
         $stmt = $pdo->prepare("UPDATE template_settings SET is_default = 0 WHERE company_id = ? AND template_type = ?");
         $stmt->execute([$company_id, $type]);
     }
     
-    $stmt = $pdo->prepare("
-        INSERT INTO template_settings (company_id, template_type, template_name, template_data, is_default) 
-        VALUES (?, ?, ?, ?, ?) 
-        ON DUPLICATE KEY UPDATE template_data = VALUES(template_data), is_default = VALUES(is_default)
-    ");
-    
-    $stmt->execute([$company_id, $type, $name, json_encode($data), $is_default ? 1 : 0]);
+    if ($existingTemplate) {
+        // Update existing template
+        $stmt = $pdo->prepare("
+            UPDATE template_settings 
+            SET template_data = ?, is_default = ? 
+            WHERE id = ?
+        ");
+        $stmt->execute([json_encode($data), $is_default ? 1 : 0, $existingTemplate['id']]);
+    } else {
+        // Insert new template
+        $stmt = $pdo->prepare("
+            INSERT INTO template_settings (company_id, template_type, template_name, template_data, is_default) 
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([$company_id, $type, $name, json_encode($data), $is_default ? 1 : 0]);
+    }
     
     echo json_encode(['success' => true, 'message' => 'Template saved successfully']);
 }
