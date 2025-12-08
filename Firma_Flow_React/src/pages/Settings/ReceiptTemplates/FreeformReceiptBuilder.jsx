@@ -152,11 +152,9 @@ const FreeformReceiptBuilder = ({ onClose, onSave }) => {
 
       const data = await response.json();
       if (response.ok && data.success) {
-        setShowSuccessModal(true);
-        setTimeout(() => {
-          setShowSuccessModal(false);
-          onSave(templateData);
-        }, 2000);
+        setShowSuccessModal(false);
+        setIsSaving(false);
+        onSave(templateData);
       } else {
         alert(data.error || "Failed to save template");
       }

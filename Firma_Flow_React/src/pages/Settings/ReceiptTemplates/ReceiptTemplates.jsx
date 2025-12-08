@@ -19,7 +19,7 @@ import ClassicReceipt from "./templates/ClassicReceipt";
 import CompactReceipt from "./templates/CompactReceipt";
 import DetailedReceipt from "./templates/DetailedReceipt";
 import ReceiptPreviewModal from "./ReceiptPreviewModal";
-import CustomReceiptBuilder from "./CustomReceiptBuilder";
+import EnhancedReceiptBuilder from "./EnhancedReceiptBuilder";
 import FreeformReceiptBuilder from "./FreeformReceiptBuilder";
 
 const ReceiptTemplates = () => {
@@ -111,6 +111,7 @@ const ReceiptTemplates = () => {
         const company = data.data;
         const mappedCompanyInfo = {
           ...company,
+          name: company.company_name || "",
           logo: company.logo_path ? buildApiUrl(company.logo_path) : null,
           address: company.billing_address || "",
           bank_account: company.account_number || "",
@@ -203,7 +204,13 @@ const ReceiptTemplates = () => {
       ...template.data, // This contains sections, color, documentBorder, etc.
     };
     setEditingTemplate(templateData);
-    setShowCustomBuilder(true);
+
+    // Check template type and open appropriate builder
+    if (template.data?.type === "custom-freeform") {
+      setShowFreeformBuilder(true);
+    } else {
+      setShowCustomBuilder(true);
+    }
     setIsDropdownOpen(false);
   };
 
@@ -484,16 +491,18 @@ const ReceiptTemplates = () => {
 
       {/* Custom Template Builder */}
       {showCustomBuilder && (
-        <CustomReceiptBuilder
+        <EnhancedReceiptBuilder
           existingTemplate={editingTemplate}
           onClose={() => {
             setShowCustomBuilder(false);
             setEditingTemplate(null);
           }}
-          onSave={(template) => {
+          onSave={async (template) => {
             setShowCustomBuilder(false);
             setEditingTemplate(null);
-            // Set the newly created/edited template as selected
+            // Wait for templates to load FIRST
+            await fetchTemplates();
+            // Then set the newly created/edited template as selected
             setSelectedTemplate(template.name);
             setSelectedColor(template.color || "#667eea");
             setSuccessMessage(
@@ -502,7 +511,8 @@ const ReceiptTemplates = () => {
               } successfully!`
             );
             setTimeout(() => setSuccessMessage(""), 3000);
-            fetchTemplates();
+            // Wait longer for React to update availableTemplates with the new template
+            setTimeout(() => setShowPreview(true), 800);
           }}
         />
       )}
@@ -511,16 +521,19 @@ const ReceiptTemplates = () => {
       {showFreeformBuilder && (
         <FreeformReceiptBuilder
           onClose={() => setShowFreeformBuilder(false)}
-          onSave={(template) => {
+          onSave={async (template) => {
             setShowFreeformBuilder(false);
-            // Set the newly created template as selected
+            // Wait for templates to load FIRST
+            await fetchTemplates();
+            // Then set the newly created template as selected
             setSelectedTemplate(template.name);
             setSelectedColor(template.color || "#667eea");
             setSuccessMessage(
-              `Custom template "${template.name}" saved successfully!`
+              `Freeform template "${template.name}" saved successfully!`
             );
             setTimeout(() => setSuccessMessage(""), 3000);
-            fetchTemplates();
+            // Wait longer for React to update availableTemplates with the new template
+            setTimeout(() => setShowPreview(true), 800);
           }}
         />
       )}
@@ -532,13 +545,15 @@ const ReceiptTemplates = () => {
           onClick={() => setShowBuilderChoice(false)}
         >
           <div
-            className={`${theme.bgCard} rounded-xl shadow-2xl p-6 max-w-2xl mx-4`}
+            className={`${theme.bgCard} rounded-xl shadow-2xl p-4 max-w-2xl mx-4`}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className={`text-xl font-bold ${theme.textPrimary} mb-4`}>
+            <h3
+              className={`text-xl font-bold ${theme.textPrimary} mb-4 text-base sm:text-xl`}
+            >
               Choose Builder Type
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={() => {
                   setShowBuilderChoice(false);
@@ -558,14 +573,20 @@ const ReceiptTemplates = () => {
                 </div>
               </button>
               <button
-                onClick={() => {
-                  setShowBuilderChoice(false);
-                  setShowFreeformBuilder(true);
-                }}
-                className={`p-6 border-2 ${theme.borderSecondary} rounded-lg hover:border-[#f59e0b] transition`}
+                disabled
+                className={`p-6 border-2 ${theme.borderSecondary} rounded-lg opacity-60 cursor-not-allowed relative`}
               >
+                <div className="absolute top-2 right-2">
+                  <span
+                    className={`text-xs px-2 py-1 rounded ${theme.bgAccent} ${theme.textSecondary} font-medium`}
+                  >
+                    Coming Soon
+                  </span>
+                </div>
                 <div className="flex flex-col items-center text-center">
-                  <Maximize2 className="w-12 h-12 mb-3 text-[#f59e0b]" />
+                  <Maximize2
+                    className={`w-12 h-12 mb-3 ${theme.textSecondary}`}
+                  />
                   <h4 className={`font-bold text-lg mb-2 ${theme.textPrimary}`}>
                     Freeform Builder
                   </h4>

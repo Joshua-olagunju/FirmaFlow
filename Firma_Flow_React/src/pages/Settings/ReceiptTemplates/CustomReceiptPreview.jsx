@@ -122,23 +122,38 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
 
     return (
       <div
-        className="relative bg-white mx-auto"
-        style={{ width: "80mm", minHeight: "297mm", padding: "10mm" }}
+        className="bg-white mx-auto"
+        style={{
+          width: "100%",
+          maxWidth: "302px",
+          fontFamily: "monospace",
+          fontSize: "11px",
+          boxSizing: "border-box",
+          minHeight: "400px",
+        }}
       >
-        {elements.map((element) => (
-          <div
-            key={element.id}
-            className="absolute"
-            style={{
-              left: element.position.x,
-              top: element.position.y,
-              width: element.size.width,
-              minHeight: element.size.height,
-            }}
-          >
-            {renderFreeformElement(element)}
-          </div>
-        ))}
+        <div
+          className="relative"
+          style={{
+            padding: "10mm",
+            minHeight: "380px",
+          }}
+        >
+          {elements.map((element) => (
+            <div
+              key={element.id}
+              className="absolute"
+              style={{
+                left: element.position.x,
+                top: element.position.y,
+                width: element.size.width,
+                minHeight: element.size.height,
+              }}
+            >
+              {renderFreeformElement(element)}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -267,53 +282,91 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
         return (
           <div className={sectionClasses} style={sectionStyle}>
             <div className="space-y-1">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Receipt #:</span>
-                <span className="font-semibold text-gray-800">
-                  {receiptData?.receipt_number || "RCP-001"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Date:</span>
-                <span className="text-gray-800">
-                  {receiptData?.date || new Date().toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Time:</span>
-                <span className="text-gray-800">
-                  {receiptData?.time || new Date().toLocaleTimeString()}
-                </span>
-              </div>
+              {section.props?.showReceiptNumber !== false && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Receipt #:</span>
+                  <span className="font-semibold text-gray-800">
+                    {receiptData?.receipt_number || "RCP-001"}
+                  </span>
+                </div>
+              )}
+              {section.props?.showDate !== false && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Date:</span>
+                  <span className="text-gray-800">
+                    {receiptData?.date || new Date().toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              {section.props?.showTime !== false && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Time:</span>
+                  <span className="text-gray-800">
+                    {receiptData?.time || new Date().toLocaleTimeString()}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );
 
       case "itemsTable": {
         const items = receiptData?.items || [
-          { description: "Sample Product", quantity: 2, amount: 50000 },
+          { name: "Sample Product", quantity: 2, price: 25000, total: 50000 },
         ];
         const props = section.props || {};
         return (
           <div className={sectionClasses} style={sectionStyle}>
-            <div className="border-b border-gray-300 pb-1 mb-1">
-              <div className="flex justify-between font-semibold">
-                <span className="text-gray-800">Item</span>
-                <span className="text-gray-800">Amount</span>
-              </div>
-            </div>
-            <div className={props.compact ? "space-y-0" : "space-y-1"}>
-              {items.map((item, index) => (
-                <div key={index} className="flex justify-between">
-                  <span className="text-gray-800">
-                    {item.description} (x{item.quantity})
-                  </span>
-                  <span className="text-gray-800">
-                    {formatCurrency(item.amount)}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <table className={`w-full ${props.showBorders ? "border" : ""}`}>
+              <thead>
+                <tr
+                  style={{
+                    backgroundColor: props.headerBgColor || color,
+                    color: props.headerTextColor || "#ffffff",
+                  }}
+                >
+                  <th className="p-2 text-left">Item</th>
+                  <th className="p-2 text-right">Qty</th>
+                  <th className="p-2 text-right">Price</th>
+                  <th className="p-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, idx) => (
+                  <tr
+                    key={idx}
+                    className={
+                      props.zebraStripes && idx % 2 === 1 ? "bg-gray-50" : ""
+                    }
+                  >
+                    <td className={`p-2 ${props.showBorders ? "border" : ""}`}>
+                      {item.name}
+                    </td>
+                    <td
+                      className={`p-2 text-right ${
+                        props.showBorders ? "border" : ""
+                      }`}
+                    >
+                      {item.quantity}
+                    </td>
+                    <td
+                      className={`p-2 text-right ${
+                        props.showBorders ? "border" : ""
+                      }`}
+                    >
+                      {formatCurrency(item.price)}
+                    </td>
+                    <td
+                      className={`p-2 text-right ${
+                        props.showBorders ? "border" : ""
+                      }`}
+                    >
+                      {formatCurrency(item.total)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         );
       }
@@ -321,32 +374,56 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
       case "totals":
         return (
           <div className={`${sectionClasses} space-y-1`} style={sectionStyle}>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal:</span>
-              <span className="text-gray-800">
-                {formatCurrency(receiptData?.subtotal || 50000)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Tax (7.5%):</span>
-              <span className="text-gray-800">
-                {formatCurrency(receiptData?.tax || 3750)}
-              </span>
-            </div>
+            {section.props?.showSubtotal !== false && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="text-gray-800">
+                  {formatCurrency(receiptData?.subtotal || 50000)}
+                </span>
+              </div>
+            )}
+            {section.props?.showTax !== false && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tax (7.5%):</span>
+                <span className="text-gray-800">
+                  {formatCurrency(receiptData?.tax || 3750)}
+                </span>
+              </div>
+            )}
+            {section.props?.showDiscount && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Discount:</span>
+                <span className="text-gray-800">
+                  -{formatCurrency(receiptData?.discount || 0)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between font-bold pt-1 border-t border-gray-300">
               <span style={{ color }}>TOTAL:</span>
               <span style={{ color }}>
                 {formatCurrency(receiptData?.total || 53750)}
               </span>
             </div>
+            {receiptData?.change > 0 && (
+              <div className="flex justify-between mt-2 pt-2 border-t border-gray-300">
+                <span className="text-gray-600">Change:</span>
+                <span className="text-gray-800">
+                  {formatCurrency(receiptData?.change)}
+                </span>
+              </div>
+            )}
           </div>
         );
 
       case "paymentMethod":
+      case "paymentInfo":
         return (
           <div className={`${sectionClasses} space-y-1`} style={sectionStyle}>
+            <p className="font-semibold mb-1 text-gray-700">
+              Payment Information:
+            </p>
             <div className="flex justify-between">
-              <span className="text-gray-600">Payment:</span>
+              <span className="text-gray-600">Payment Method:</span>
               <span className="font-semibold text-gray-800">
                 {receiptData?.payment_method || "Cash"}
               </span>
@@ -357,12 +434,14 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
                 {formatCurrency(receiptData?.amount_paid || 60000)}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Change:</span>
-              <span className="text-gray-800">
-                {formatCurrency(receiptData?.change || 6250)}
-              </span>
-            </div>
+            {receiptData?.change > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Change:</span>
+                <span className="text-gray-800">
+                  {formatCurrency(receiptData?.change)}
+                </span>
+              </div>
+            )}
           </div>
         );
 
@@ -401,27 +480,41 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
     documentBorderStyle.borderRadius = `${documentBorder.radius || 0}px`;
   }
 
-  // Thermal receipt format: 80mm width (302px max-width)
+  // Calculate padding: default padding minus document border margin
+  const borderMargin = documentBorder?.enabled
+    ? documentBorder.margin || 20
+    : 0;
+
+  // Thermal receipt format with responsive design
   return (
     <div
-      className="bg-white mx-auto print:p-4"
+      className="bg-white mx-auto p-3 sm:p-4 print:p-4"
       style={{
         width: "100%",
         maxWidth: "302px",
         fontFamily: "monospace",
         fontSize: "11px",
-        padding: "12px",
         boxSizing: "border-box",
-        pageBreakInside: "avoid",
-        ...documentBorderStyle,
+        minHeight: "400px",
       }}
     >
-      <div className="space-y-2">
-        {sections.map((section) => (
-          <div key={section.id} style={{ pageBreakInside: "avoid" }}>
-            {renderSection(section)}
-          </div>
-        ))}
+      <div
+        style={{
+          ...documentBorderStyle,
+          ...(documentBorder?.enabled && {
+            padding: `${borderMargin}px`,
+            minHeight: "100%",
+            boxSizing: "border-box",
+          }),
+        }}
+      >
+        <div className="space-y-2">
+          {sections.map((section) => (
+            <div key={section.id} style={{ pageBreakInside: "avoid" }}>
+              {renderSection(section)}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
