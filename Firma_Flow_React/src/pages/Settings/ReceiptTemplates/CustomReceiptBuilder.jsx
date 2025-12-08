@@ -231,9 +231,11 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
     style: existingTemplate?.documentBorder?.style || "solid",
     color: existingTemplate?.documentBorder?.color || "#000000",
     radius: existingTemplate?.documentBorder?.radius || "0",
+    margin: existingTemplate?.documentBorder?.margin || "20",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -241,6 +243,29 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Check if there are unsaved changes
+  const hasChanges = () => {
+    if (!existingTemplate) {
+      // New template - check if user added name or sections
+      return templateName.trim() !== "" || sections.length > 0;
+    }
+    // Editing - check if anything changed
+    return (
+      templateName !== existingTemplate.name ||
+      JSON.stringify(sections) !== JSON.stringify(existingTemplate.sections) ||
+      customColor !== existingTemplate.color
+    );
+  };
+
+  // Handle close with confirmation if there are changes
+  const handleClose = () => {
+    if (hasChanges()) {
+      setShowDiscardConfirm(true);
+    } else {
+      onClose();
+    }
+  };
 
   // Initialize with default sections if empty
   useEffect(() => {
@@ -360,11 +385,9 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
 
       const data = await response.json();
       if (response.ok && data.success) {
-        setShowSuccessModal(true);
-        setTimeout(() => {
-          setShowSuccessModal(false);
-          onSave(templateData);
-        }, 2000);
+        setShowSuccessModal(false);
+        setIsSaving(false);
+        onSave(templateData);
       } else {
         alert(data.error || "Failed to save template");
       }
@@ -699,7 +722,7 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-white/10 rounded-lg transition"
           >
             <X size={24} className="text-white" />
@@ -854,6 +877,26 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
                         className={`w-full px-2 py-1 text-sm rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
                       />
                     </div>
+                    <div>
+                      <label
+                        className={`block text-xs ${theme.textSecondary} mb-1`}
+                      >
+                        Margin from Edge (mm)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={documentBorder.margin}
+                        onChange={(e) =>
+                          setDocumentBorder({
+                            ...documentBorder,
+                            margin: e.target.value,
+                          })
+                        }
+                        className={`w-full px-2 py-1 text-sm rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -924,7 +967,7 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
           className={`${theme.bgAccent} p-4 border-t ${theme.borderSecondary} flex justify-end gap-3 flex-shrink-0`}
         >
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className={`px-6 py-2 border ${theme.borderSecondary} ${theme.textPrimary} rounded-lg ${theme.bgHover} transition font-medium`}
           >
             Cancel
@@ -1478,6 +1521,40 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
             <p className={`${theme.textPrimary} font-semibold`}>
               "{templateName}"
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Discard Confirmation Modal */}
+      {showDiscardConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60]">
+          <div
+            className={`${theme.bgCard} rounded-xl shadow-2xl p-6 max-w-md mx-4`}
+          >
+            <h3 className={`text-xl font-bold ${theme.textPrimary} mb-4`}>
+              Discard Changes?
+            </h3>
+            <p className={`${theme.textSecondary} mb-6`}>
+              Are you sure you want to discard this template? All unsaved
+              changes will be lost.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDiscardConfirm(false)}
+                className={`px-4 py-2 rounded-lg border ${theme.borderSecondary} ${theme.textSecondary} hover:bg-gray-100 dark:hover:bg-gray-800 transition`}
+              >
+                Keep Editing
+              </button>
+              <button
+                onClick={() => {
+                  setShowDiscardConfirm(false);
+                  onClose();
+                }}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+              >
+                Discard
+              </button>
+            </div>
           </div>
         </div>
       )}

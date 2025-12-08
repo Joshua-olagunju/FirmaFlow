@@ -48,8 +48,11 @@ const ReceiptPreviewModal = ({
         </div>
 
         {/* Preview Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          <div className="bg-white rounded-lg shadow-lg flex justify-center">
+        <div className="flex-1 overflow-auto p-6 bg-gray-50">
+          <div
+            className="bg-white rounded-lg shadow-lg mx-auto"
+            style={{ maxWidth: "fit-content" }}
+          >
             {isCustomTemplate ? (
               <CustomReceiptPreview
                 templateData={template.data}
