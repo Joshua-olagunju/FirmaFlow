@@ -9,6 +9,8 @@ import {
   Wand2,
   Layout,
   Maximize2,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { buildApiUrl } from "../../../config/api.config";
 import ThermalReceipt from "./templates/ThermalReceipt";
@@ -35,6 +37,10 @@ const ReceiptTemplates = () => {
   const [showFreeformBuilder, setShowFreeformBuilder] = useState(false);
   const [showBuilderChoice, setShowBuilderChoice] = useState(false);
   const [customTemplates, setCustomTemplates] = useState([]);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
+  const [deleteSuccessModal, setDeleteSuccessModal] = useState(false);
 
   const builtInTemplates = [
     { id: "thermal", name: "Thermal (POS Style)", component: ThermalReceipt },
@@ -53,6 +59,7 @@ const ReceiptTemplates = () => {
       component: null,
       isCustom: true,
       data: ct.template_data,
+      fullTemplate: ct, // Store full template object for editing/deleting
     })),
   ];
 
@@ -189,6 +196,64 @@ const ReceiptTemplates = () => {
     }
   };
 
+  const handleEditTemplate = (template) => {
+    // Pass the template data in the format the builder expects
+    const templateData = {
+      name: template.name,
+      ...template.data, // This contains sections, color, documentBorder, etc.
+    };
+    setEditingTemplate(templateData);
+    setShowCustomBuilder(true);
+    setIsDropdownOpen(false);
+  };
+
+  const handleDeleteTemplate = async (template) => {
+    setTemplateToDelete(template);
+    setDeleteConfirmModal(true);
+    setIsDropdownOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!templateToDelete) return;
+
+    try {
+      const response = await fetch(buildApiUrl("api/settings.php"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "delete_template",
+          template_id: templateToDelete.fullTemplate?.id,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setDeleteConfirmModal(false);
+        setDeleteSuccessModal(true);
+
+        // If deleted template was selected, clear selection
+        if (selectedTemplate === templateToDelete.name) {
+          setSelectedTemplate("");
+        }
+
+        fetchTemplates();
+        setTemplateToDelete(null);
+      } else {
+        setDeleteConfirmModal(false);
+        setSuccessMessage(data.message || "Failed to delete template");
+        setTimeout(() => setSuccessMessage(""), 3000);
+      }
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      setDeleteConfirmModal(false);
+      setSuccessMessage("Failed to delete template");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    }
+  };
+
   const sampleReceiptData = {
     receiptNumber: "REC-2025-001",
     date: new Date().toLocaleDateString(),
@@ -271,19 +336,47 @@ const ReceiptTemplates = () => {
               className={`absolute z-10 w-full mt-2 ${theme.bgCard} border ${theme.borderSecondary} rounded-lg shadow-lg max-h-60 overflow-auto`}
             >
               {availableTemplates.map((template) => (
-                <button
+                <div
                   key={template.id}
-                  onClick={() => {
-                    setSelectedTemplate(template.name);
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`w-full px-4 py-3 text-left ${theme.textPrimary} hover:bg-gradient-to-r from-[#667eea]/10 to-[#764ba2]/10 transition flex items-center justify-between`}
+                  className={`flex items-center justify-between px-4 py-3 ${theme.textPrimary} hover:bg-gradient-to-r from-[#667eea]/10 to-[#764ba2]/10 transition`}
                 >
-                  <span>{template.name}</span>
-                  {selectedTemplate === template.name && (
-                    <Check size={18} className="text-green-600" />
+                  <button
+                    onClick={() => {
+                      setSelectedTemplate(template.name);
+                      setIsDropdownOpen(false);
+                    }}
+                    className="flex-1 text-left flex items-center gap-2"
+                  >
+                    <span>{template.name}</span>
+                    {selectedTemplate === template.name && (
+                      <Check size={18} className="text-green-600" />
+                    )}
+                  </button>
+                  {template.isCustom && (
+                    <div className="flex items-center gap-2 ml-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTemplate(template);
+                        }}
+                        className="p-1 hover:bg-blue-100 rounded transition"
+                        title="Edit template"
+                      >
+                        <Edit size={16} className="text-blue-600" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTemplate(template);
+                        }}
+                        className="p-1 hover:bg-red-100 rounded transition"
+                        title="Delete template"
+                      >
+                        <Trash2 size={16} className="text-red-600" />
+                      </button>
+                    </div>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           )}
@@ -392,14 +485,21 @@ const ReceiptTemplates = () => {
       {/* Custom Template Builder */}
       {showCustomBuilder && (
         <CustomReceiptBuilder
-          onClose={() => setShowCustomBuilder(false)}
+          existingTemplate={editingTemplate}
+          onClose={() => {
+            setShowCustomBuilder(false);
+            setEditingTemplate(null);
+          }}
           onSave={(template) => {
             setShowCustomBuilder(false);
-            // Set the newly created template as selected
+            setEditingTemplate(null);
+            // Set the newly created/edited template as selected
             setSelectedTemplate(template.name);
             setSelectedColor(template.color || "#667eea");
             setSuccessMessage(
-              `Custom template "${template.name}" saved successfully!`
+              `Custom template "${template.name}" ${
+                editingTemplate ? "updated" : "saved"
+              } successfully!`
             );
             setTimeout(() => setSuccessMessage(""), 3000);
             fetchTemplates();
@@ -489,6 +589,66 @@ const ReceiptTemplates = () => {
         companyInfo={companyInfo}
         receiptData={sampleReceiptData}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${theme.bgCard} rounded-lg p-6 max-w-md w-full`}>
+            <h3 className={`text-xl font-bold ${theme.textPrimary} mb-4`}>
+              Delete Template
+            </h3>
+            <p className={`${theme.textSecondary} mb-6`}>
+              Are you sure you want to delete "{templateToDelete?.name}"? This
+              action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setDeleteConfirmModal(false);
+                  setTemplateToDelete(null);
+                }}
+                className={`px-4 py-2 border ${theme.borderSecondary} ${theme.textPrimary} rounded-lg ${theme.bgHover} transition`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Success Modal */}
+      {deleteSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${theme.bgCard} rounded-lg p-6 max-w-md w-full`}>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check size={32} className="text-green-600" />
+              </div>
+              <h3 className={`text-xl font-bold ${theme.textPrimary} mb-2`}>
+                Template Deleted!
+              </h3>
+              <p className={`${theme.textSecondary} mb-6`}>
+                "{templateToDelete?.name}" has been deleted successfully.
+              </p>
+              <button
+                onClick={() => {
+                  setDeleteSuccessModal(false);
+                  setTemplateToDelete(null);
+                }}
+                className="px-6 py-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg hover:opacity-90 transition"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -13,6 +13,8 @@ const DetailedReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
         width: "100%",
         maxWidth: "450px",
         fontFamily: "Arial, sans-serif",
+        boxSizing: "border-box",
+        pageBreakInside: "avoid",
       }}
     >
       {/* Detailed Header */}

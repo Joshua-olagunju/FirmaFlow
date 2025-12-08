@@ -14,6 +14,8 @@ const CompactReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
         maxWidth: "320px",
         fontFamily: "Arial, sans-serif",
         fontSize: "11px",
+        boxSizing: "border-box",
+        pageBreakInside: "avoid",
       }}
     >
       {/* Compact Header */}
