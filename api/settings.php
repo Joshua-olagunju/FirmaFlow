@@ -109,6 +109,9 @@ function handlePost($pdo, $company_id, $input) {
         case 'save_template':
             saveTemplate($pdo, $company_id, $input);
             break;
+        case 'delete_template':
+            deleteTemplate($pdo, $company_id, $input);
+            break;
         case 'update_company':
             updateCompany($pdo, $company_id, $input);
             break;
@@ -157,6 +160,34 @@ function handleDelete($pdo, $company_id, $input) {
         default:
             echo json_encode(['error' => 'Invalid action']);
     }
+}
+
+function deleteTemplate($pdo, $company_id, $input) {
+    $template_id = $input['template_id'] ?? null;
+    
+    if (!$template_id) {
+        echo json_encode(['error' => 'Template ID is required']);
+        return;
+    }
+    
+    // Verify template belongs to company
+    $checkStmt = $pdo->prepare("
+        SELECT id FROM template_settings 
+        WHERE id = ? AND company_id = ?
+    ");
+    $checkStmt->execute([$template_id, $company_id]);
+    $template = $checkStmt->fetch();
+    
+    if (!$template) {
+        echo json_encode(['error' => 'Template not found or unauthorized']);
+        return;
+    }
+    
+    // Delete template
+    $stmt = $pdo->prepare("DELETE FROM template_settings WHERE id = ? AND company_id = ?");
+    $stmt->execute([$template_id, $company_id]);
+    
+    echo json_encode(['success' => true, 'message' => 'Template deleted successfully']);
 }
 
 // Company Data Functions

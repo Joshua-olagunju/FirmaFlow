@@ -168,23 +168,35 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
 
     return (
       <div
-        className="relative bg-white"
-        style={{ width: "210mm", minHeight: "297mm", padding: "20mm" }}
+        className="relative bg-white mx-auto"
+        style={{
+          width: "210mm",
+          minHeight: "297mm",
+          boxSizing: "border-box",
+        }}
       >
-        {elements.map((element) => (
-          <div
-            key={element.id}
-            className="absolute"
-            style={{
-              left: element.position.x,
-              top: element.position.y,
-              width: element.size.width,
-              minHeight: element.size.height,
-            }}
-          >
-            {renderFreeformElement(element)}
-          </div>
-        ))}
+        <div
+          className="relative"
+          style={{
+            padding: "20mm",
+            minHeight: "257mm",
+          }}
+        >
+          {elements.map((element) => (
+            <div
+              key={element.id}
+              className="absolute"
+              style={{
+                left: element.position.x,
+                top: element.position.y,
+                width: element.size.width,
+                minHeight: element.size.height,
+              }}
+            >
+              {renderFreeformElement(element)}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -204,10 +216,13 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
     const sizeMap = {
       xs: "12px",
       sm: "14px",
+      md: "16px",
       base: "16px",
       lg: "18px",
       xl: "20px",
       "2xl": "24px",
+      "3xl": "30px",
+      "4xl": "36px",
     };
     return sizeMap[size] || "16px";
   };
@@ -215,6 +230,7 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
   // Helper function to get font weight class
   const getFontWeightClass = (weight) => {
     const weightMap = {
+      light: "font-light",
       normal: "font-normal",
       medium: "font-medium",
       semibold: "font-semibold",
@@ -231,6 +247,7 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
       2: "p-2",
       3: "p-3",
       4: "p-4",
+      5: "p-5",
       6: "p-6",
       8: "p-8",
     };
@@ -294,12 +311,37 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
       case "header":
         return (
           <div className={sectionClasses} style={sectionStyle}>
-            {section.props?.showLogo && companyInfo?.logo && (
-              <img
-                src={companyInfo.logo}
-                alt="Company Logo"
-                className="h-16 w-auto mb-2 inline-block"
-              />
+            {section.props?.showLogo && (
+              <div className="mb-2">
+                {companyInfo?.logo ? (
+                  <img
+                    src={companyInfo.logo}
+                    alt="Company Logo"
+                    className={`inline-block ${
+                      section.props.logoSize === "sm"
+                        ? "h-12 w-auto"
+                        : section.props.logoSize === "md"
+                        ? "h-16 w-auto"
+                        : section.props.logoSize === "lg"
+                        ? "h-20 w-auto"
+                        : "h-24 w-auto"
+                    }`}
+                  />
+                ) : (
+                  <ImageIcon
+                    className={`inline-block ${
+                      section.props.logoSize === "sm"
+                        ? "w-12 h-12"
+                        : section.props.logoSize === "md"
+                        ? "w-16 h-16"
+                        : section.props.logoSize === "lg"
+                        ? "w-20 h-20"
+                        : "w-24 h-24"
+                    }`}
+                    style={{ color }}
+                  />
+                )}
+              </div>
             )}
             <h1 className="font-bold" style={{ color }}>
               INVOICE
@@ -311,17 +353,23 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
         return (
           <div className={sectionClasses} style={sectionStyle}>
             <h2 className="font-bold text-gray-800">
-              {companyInfo?.company_name || "Your Company"}
+              {companyInfo?.name || companyInfo?.company_name || "Your Company"}
             </h2>
-            <p className="text-gray-600">
-              {companyInfo?.address || "Company Address"}
-            </p>
-            <p className="text-gray-600">
-              {companyInfo?.phone || "Phone Number"}
-            </p>
-            <p className="text-gray-600">
-              {companyInfo?.email || "email@company.com"}
-            </p>
+            {section.props?.showAddress && (
+              <p className="text-gray-600">
+                {companyInfo?.address || "Company Address"}
+              </p>
+            )}
+            {section.props?.showPhone && (
+              <p className="text-gray-600">
+                {companyInfo?.phone || "Phone Number"}
+              </p>
+            )}
+            {section.props?.showEmail && (
+              <p className="text-gray-600">
+                {companyInfo?.email || "email@company.com"}
+              </p>
+            )}
           </div>
         );
 
@@ -344,24 +392,30 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
         return (
           <div className={sectionClasses} style={sectionStyle}>
             <div className="space-y-1">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Invoice #:</span>
-                <span className="font-semibold text-gray-800">
-                  {invoiceData?.invoice_number || "INV-001"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Date:</span>
-                <span className="text-gray-800">
-                  {invoiceData?.date || new Date().toLocaleDateString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Due Date:</span>
-                <span className="text-gray-800">
-                  {invoiceData?.due_date || new Date().toLocaleDateString()}
-                </span>
-              </div>
+              {section.props?.showInvoiceNumber && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Invoice #:</span>
+                  <span className="font-semibold text-gray-800">
+                    {invoiceData?.invoice_number || "INV-001"}
+                  </span>
+                </div>
+              )}
+              {section.props?.showDate && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Date:</span>
+                  <span className="text-gray-800">
+                    {invoiceData?.date || new Date().toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              {section.props?.showDueDate && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Due Date:</span>
+                  <span className="text-gray-800">
+                    {invoiceData?.due_date || new Date().toLocaleDateString()}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -378,36 +432,68 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
         const props = section.props || {};
         return (
           <div className={getPaddingClass(props.padding)} style={sectionStyle}>
-            <table
-              className={`w-full text-sm ${
-                props.showBorders ? "border border-gray-300" : ""
-              }`}
-            >
-              <thead>
-                <tr style={{ backgroundColor: `${color}15` }}>
-                  <th className="text-left p-2 text-gray-800">Description</th>
-                  <th className="text-center p-2 text-gray-800">Qty</th>
-                  <th className="text-right p-2 text-gray-800">Rate</th>
-                  <th className="text-right p-2 text-gray-800">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, index) => (
-                  <tr key={index} className="border-b border-gray-200">
-                    <td className="p-2 text-gray-800">{item.description}</td>
-                    <td className="text-center p-2 text-gray-800">
-                      {item.quantity}
-                    </td>
-                    <td className="text-right p-2 text-gray-800">
-                      {formatCurrency(item.rate)}
-                    </td>
-                    <td className="text-right p-2 text-gray-800">
-                      {formatCurrency(item.amount)}
-                    </td>
+            <div className="overflow-x-auto">
+              <table
+                className={`w-full text-xs sm:text-sm min-w-full ${
+                  props.showBorders ? "border border-gray-300" : ""
+                }`}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      backgroundColor: props.headerBgColor || `${color}15`,
+                      color: props.headerTextColor || "#000000",
+                    }}
+                  >
+                    <th className="text-left p-1 sm:p-2">Description</th>
+                    <th className="text-center p-1 sm:p-2">Qty</th>
+                    <th className="text-right p-1 sm:p-2">Rate</th>
+                    <th className="text-right p-1 sm:p-2">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map((item, index) => (
+                    <tr
+                      key={index}
+                      className={`${
+                        props.zebraStripes && index % 2 === 1
+                          ? "bg-gray-50"
+                          : ""
+                      } ${props.showBorders ? "" : "border-b border-gray-200"}`}
+                    >
+                      <td
+                        className={`p-1 sm:p-2 text-gray-800 ${
+                          props.showBorders ? "border" : ""
+                        }`}
+                      >
+                        {item.description}
+                      </td>
+                      <td
+                        className={`text-center p-1 sm:p-2 text-gray-800 ${
+                          props.showBorders ? "border" : ""
+                        }`}
+                      >
+                        {item.quantity}
+                      </td>
+                      <td
+                        className={`text-right p-1 sm:p-2 text-gray-800 whitespace-nowrap ${
+                          props.showBorders ? "border" : ""
+                        }`}
+                      >
+                        {formatCurrency(item.rate)}
+                      </td>
+                      <td
+                        className={`text-right p-1 sm:p-2 text-gray-800 whitespace-nowrap ${
+                          props.showBorders ? "border" : ""
+                        }`}
+                      >
+                        {formatCurrency(item.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         );
       }
@@ -415,18 +501,30 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
       case "totals":
         return (
           <div className={`${sectionClasses} space-y-1`} style={sectionStyle}>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal:</span>
-              <span className="text-gray-800">
-                {formatCurrency(invoiceData?.subtotal || 100000)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Tax (7.5%):</span>
-              <span className="text-gray-800">
-                {formatCurrency(invoiceData?.tax || 7500)}
-              </span>
-            </div>
+            {section.props?.showSubtotal && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="text-gray-800">
+                  {formatCurrency(invoiceData?.subtotal || 100000)}
+                </span>
+              </div>
+            )}
+            {section.props?.showTax && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tax (7.5%):</span>
+                <span className="text-gray-800">
+                  {formatCurrency(invoiceData?.tax || 7500)}
+                </span>
+              </div>
+            )}
+            {section.props?.showDiscount && invoiceData?.discount > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Discount:</span>
+                <span className="text-gray-800">
+                  -{formatCurrency(invoiceData?.discount || 0)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between font-bold pt-1 border-t border-gray-300">
               <span style={{ color }}>TOTAL:</span>
               <span style={{ color }}>
@@ -442,23 +540,32 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
             <p className="font-semibold mb-2" style={{ color }}>
               Payment Information
             </p>
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              <div>
-                <span className="text-gray-600">Bank:</span>
-                <p className="font-semibold text-gray-800">
-                  {companyInfo?.bank_name || "Bank Name"}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-600">Account:</span>
-                <p className="font-semibold text-gray-800">
-                  {companyInfo?.bank_account || "Account Number"}
-                </p>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs sm:text-sm">
+              {section.props?.showBankName && (
+                <div>
+                  <span className="text-gray-600">Bank:</span>
+                  <p className="font-semibold text-gray-800">
+                    {companyInfo?.bank_name || "Bank Name"}
+                  </p>
+                </div>
+              )}
+              {section.props?.showAccountNumber && (
+                <div>
+                  <span className="text-gray-600">Account:</span>
+                  <p className="font-semibold text-gray-800 break-all">
+                    {companyInfo?.bank_account ||
+                      companyInfo?.account_number ||
+                      "Account Number"}
+                  </p>
+                </div>
+              )}
               <div>
                 <span className="text-gray-600">Name:</span>
                 <p className="font-semibold text-gray-800">
-                  {companyInfo?.company_name || "Account Name"}
+                  {companyInfo?.account_name ||
+                    companyInfo?.name ||
+                    companyInfo?.company_name ||
+                    "Account Name"}
                 </p>
               </div>
             </div>
@@ -500,27 +607,38 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
     documentBorderStyle.borderRadius = `${documentBorder.radius || 0}px`;
   }
 
-  // A4 format: 210mm × 297mm with page break support
+  // Calculate padding: default padding minus document border margin
+  const borderMargin = documentBorder?.enabled
+    ? documentBorder.margin || 20
+    : 0;
+
+  // A4 format with responsive design
   return (
     <div
-      className="bg-white mx-auto print:p-8"
+      className="bg-white mx-auto p-4 sm:p-6 md:p-8 max-w-4xl print:p-8"
       style={{
-        width: "210mm",
-        minHeight: "297mm",
-        maxHeight: "297mm",
-        padding: "20mm",
+        fontFamily: "Arial, sans-serif",
         boxSizing: "border-box",
-        pageBreakAfter: "always",
-        overflow: "hidden",
-        ...documentBorderStyle,
+        minHeight: "500px",
       }}
     >
-      <div className="space-y-6">
-        {sections.map((section) => (
-          <div key={section.id} style={{ pageBreakInside: "avoid" }}>
-            {renderSection(section)}
-          </div>
-        ))}
+      <div
+        style={{
+          ...documentBorderStyle,
+          ...(documentBorder?.enabled && {
+            padding: `${borderMargin}px`,
+            minHeight: "100%",
+            boxSizing: "border-box",
+          }),
+        }}
+      >
+        <div className="space-y-4 md:space-y-6">
+          {sections.map((section) => (
+            <div key={section.id} style={{ pageBreakInside: "avoid" }}>
+              {renderSection(section)}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
