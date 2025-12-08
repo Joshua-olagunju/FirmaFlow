@@ -146,21 +146,103 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
   // Render structured template
   if (!templateData.sections) return null;
 
-  const { sections } = templateData;
+  const { sections, documentBorder } = templateData;
+
+  // Helper function to get font size in pixels
+  const getFontSize = (size) => {
+    const sizeMap = {
+      xs: "10px",
+      sm: "11px",
+      base: "12px",
+      lg: "14px",
+      xl: "16px",
+      "2xl": "18px",
+    };
+    return sizeMap[size] || "12px";
+  };
+
+  // Helper function to get font weight class
+  const getFontWeightClass = (weight) => {
+    const weightMap = {
+      normal: "font-normal",
+      medium: "font-medium",
+      semibold: "font-semibold",
+      bold: "font-bold",
+    };
+    return weightMap[weight] || "font-normal";
+  };
+
+  // Helper function to get padding class
+  const getPaddingClass = (padding) => {
+    const paddingMap = {
+      0: "p-0",
+      1: "p-1",
+      2: "p-2",
+      3: "p-3",
+      4: "p-4",
+      6: "p-6",
+    };
+    return paddingMap[padding] || "p-2";
+  };
+
+  // Helper function to build section style
+  const getSectionStyle = (section) => {
+    const style = {};
+    const props = section.props || {};
+
+    // Font size - apply directly to override child classes
+    if (props.fontSize) {
+      style.fontSize = getFontSize(props.fontSize);
+    }
+
+    if (props.backgroundColor && props.backgroundColor !== "transparent") {
+      style.backgroundColor = props.backgroundColor;
+    }
+
+    if (props.borderWidth && parseInt(props.borderWidth) > 0) {
+      style.borderWidth = `${props.borderWidth}px`;
+      style.borderStyle = props.borderStyle || "solid";
+      style.borderColor = props.borderColor || "#000000";
+    }
+
+    return style;
+  };
+
+  // Helper function to get section classes
+  const getSectionClasses = (section) => {
+    const props = section.props || {};
+    const classes = [];
+
+    // Alignment
+    if (props.alignment === "center") classes.push("text-center");
+    else if (props.alignment === "right") classes.push("text-right");
+    else classes.push("text-left");
+
+    // Font weight
+    classes.push(getFontWeightClass(props.fontWeight));
+
+    // Padding
+    classes.push(getPaddingClass(props.padding));
+
+    // Text style
+    if (props.textStyle === "italic") classes.push("italic");
+    if (props.textStyle === "underline") classes.push("underline");
+
+    // Shadow
+    if (props.showShadow) classes.push("shadow-md");
+
+    return classes.join(" ");
+  };
 
   const renderSection = (section) => {
-    const alignmentClass =
-      section.props?.alignment === "center"
-        ? "text-center"
-        : section.props?.alignment === "right"
-        ? "text-right"
-        : "text-left";
+    const sectionClasses = getSectionClasses(section);
+    const sectionStyle = getSectionStyle(section);
 
     switch (section.type) {
       case "header":
         return (
-          <div className={alignmentClass}>
-            <h2 className="text-lg font-bold" style={{ color }}>
+          <div className={sectionClasses} style={sectionStyle}>
+            <h2 className="font-bold" style={{ color }}>
               RECEIPT
             </h2>
           </div>
@@ -168,14 +250,14 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
 
       case "companyInfo":
         return (
-          <div className={alignmentClass}>
-            <h3 className="font-bold text-sm text-gray-800">
+          <div className={sectionClasses} style={sectionStyle}>
+            <h3 className="font-bold text-gray-800">
               {companyInfo?.company_name || "Your Company"}
             </h3>
-            <p className="text-xs text-gray-600">
+            <p className="text-gray-600">
               {companyInfo?.address || "Company Address"}
             </p>
-            <p className="text-xs text-gray-600">
+            <p className="text-gray-600">
               {companyInfo?.phone || "Phone Number"}
             </p>
           </div>
@@ -183,8 +265,8 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
 
       case "receiptDetails":
         return (
-          <div className={alignmentClass}>
-            <div className="space-y-1 text-xs">
+          <div className={sectionClasses} style={sectionStyle}>
+            <div className="space-y-1">
               <div className="flex justify-between">
                 <span className="text-gray-600">Receipt #:</span>
                 <span className="font-semibold text-gray-800">
@@ -211,15 +293,16 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
         const items = receiptData?.items || [
           { description: "Sample Product", quantity: 2, amount: 50000 },
         ];
+        const props = section.props || {};
         return (
-          <div className="text-xs">
+          <div className={sectionClasses} style={sectionStyle}>
             <div className="border-b border-gray-300 pb-1 mb-1">
               <div className="flex justify-between font-semibold">
                 <span className="text-gray-800">Item</span>
                 <span className="text-gray-800">Amount</span>
               </div>
             </div>
-            <div className="space-y-1">
+            <div className={props.compact ? "space-y-0" : "space-y-1"}>
               {items.map((item, index) => (
                 <div key={index} className="flex justify-between">
                   <span className="text-gray-800">
@@ -237,7 +320,7 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
 
       case "totals":
         return (
-          <div className={`${alignmentClass} space-y-1 text-xs`}>
+          <div className={`${sectionClasses} space-y-1`} style={sectionStyle}>
             <div className="flex justify-between">
               <span className="text-gray-600">Subtotal:</span>
               <span className="text-gray-800">
@@ -261,7 +344,7 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
 
       case "paymentMethod":
         return (
-          <div className={`${alignmentClass} text-xs space-y-1`}>
+          <div className={`${sectionClasses} space-y-1`} style={sectionStyle}>
             <div className="flex justify-between">
               <span className="text-gray-600">Payment:</span>
               <span className="font-semibold text-gray-800">
@@ -285,23 +368,59 @@ const CustomReceiptPreview = ({ templateData, companyInfo, receiptData }) => {
 
       case "customText":
         return (
-          <div className={alignmentClass}>
-            <p className="text-xs text-gray-700">
+          <div className={sectionClasses} style={sectionStyle}>
+            <p className="text-gray-700">
               {section.props?.text || "Custom text"}
             </p>
           </div>
         );
+
+      case "divider": {
+        const props = section.props || {};
+        const dividerStyle = {
+          borderTopWidth: `${props.thickness || 1}px`,
+          borderTopStyle: props.style || "solid",
+          borderTopColor: props.color || "#e5e7eb",
+          marginTop: `${(props.marginTop || 2) * 0.25}rem`,
+          marginBottom: `${(props.marginBottom || 2) * 0.25}rem`,
+        };
+        return <div style={dividerStyle}></div>;
+      }
 
       default:
         return null;
     }
   };
 
+  // Build document border style
+  const documentBorderStyle = {};
+  if (documentBorder?.enabled) {
+    documentBorderStyle.borderWidth = `${documentBorder.width || 1}px`;
+    documentBorderStyle.borderStyle = documentBorder.style || "solid";
+    documentBorderStyle.borderColor = documentBorder.color || "#000000";
+    documentBorderStyle.borderRadius = `${documentBorder.radius || 0}px`;
+  }
+
+  // Thermal receipt format: 80mm width (302px max-width)
   return (
-    <div className="max-w-md mx-auto p-6 bg-white">
-      <div className="space-y-4">
+    <div
+      className="bg-white mx-auto print:p-4"
+      style={{
+        width: "100%",
+        maxWidth: "302px",
+        fontFamily: "monospace",
+        fontSize: "11px",
+        padding: "12px",
+        boxSizing: "border-box",
+        pageBreakInside: "avoid",
+        ...documentBorderStyle,
+      }}
+    >
+      <div className="space-y-2">
         {sections.map((section) => (
-          <div key={section.id}>{renderSection(section)}</div>
+          <div key={section.id} style={{ pageBreakInside: "avoid" }}>
+            {renderSection(section)}
+          </div>
         ))}
       </div>
     </div>

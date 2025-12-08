@@ -14,7 +14,14 @@ const ProfessionalInvoice = ({
   return (
     <div
       className="bg-white max-w-4xl mx-auto"
-      style={{ fontFamily: "Arial, sans-serif" }}
+      style={{
+        fontFamily: "Arial, sans-serif",
+        minHeight: "297mm",
+        maxHeight: "297mm",
+        boxSizing: "border-box",
+        pageBreakAfter: "always",
+        overflow: "hidden",
+      }}
     >
       {/* Professional Header */}
       <div

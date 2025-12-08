@@ -16,6 +16,8 @@ const ThermalReceipt = ({ companyInfo, receiptData }) => {
         maxWidth: "302px",
         fontFamily: "monospace",
         fontSize: "11px",
+        boxSizing: "border-box",
+        pageBreakInside: "avoid",
       }}
     >
       {/* Header */}
