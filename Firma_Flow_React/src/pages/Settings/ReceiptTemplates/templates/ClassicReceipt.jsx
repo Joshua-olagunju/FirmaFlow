@@ -14,6 +14,8 @@ const ClassicReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
         maxWidth: "400px",
         borderColor: color,
         fontFamily: "Georgia, serif",
+        boxSizing: "border-box",
+        pageBreakInside: "avoid",
       }}
     >
       {/* Classic Header */}

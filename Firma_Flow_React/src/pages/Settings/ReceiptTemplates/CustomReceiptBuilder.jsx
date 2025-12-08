@@ -28,6 +28,7 @@ import {
   DollarSign,
   CreditCard,
   Building,
+  Minus,
 } from "lucide-react";
 import { buildApiUrl } from "../../../config/api.config";
 
@@ -94,43 +95,123 @@ const elementLibrary = [
     type: "header",
     label: "Header",
     icon: Building,
-    defaultProps: { alignment: "center" },
+    defaultProps: {
+      alignment: "center",
+      fontSize: "lg",
+      fontWeight: "bold",
+      backgroundColor: "transparent",
+      padding: "4",
+      borderWidth: "0",
+      borderStyle: "solid",
+      borderColor: "#000000",
+      showShadow: false,
+    },
   },
   {
     type: "companyInfo",
     label: "Company Info",
     icon: Building,
-    defaultProps: { alignment: "center" },
+    defaultProps: {
+      alignment: "center",
+      fontSize: "sm",
+      backgroundColor: "transparent",
+      padding: "4",
+      borderWidth: "0",
+      borderStyle: "solid",
+      borderColor: "#000000",
+      showShadow: false,
+    },
   },
   {
     type: "receiptDetails",
     label: "Receipt Details",
     icon: Type,
-    defaultProps: { alignment: "left" },
+    defaultProps: {
+      alignment: "left",
+      fontSize: "xs",
+      backgroundColor: "transparent",
+      padding: "4",
+      borderWidth: "0",
+      borderStyle: "solid",
+      borderColor: "#000000",
+      showShadow: false,
+    },
   },
   {
     type: "itemsTable",
     label: "Items List",
     icon: Table,
-    defaultProps: { compact: true },
+    defaultProps: {
+      compact: true,
+      fontSize: "xs",
+      backgroundColor: "transparent",
+      padding: "2",
+      borderWidth: "0",
+      borderStyle: "solid",
+      borderColor: "#000000",
+      showShadow: false,
+    },
   },
   {
     type: "totals",
     label: "Totals Section",
     icon: DollarSign,
-    defaultProps: { alignment: "left" },
+    defaultProps: {
+      alignment: "left",
+      fontSize: "xs",
+      fontWeight: "semibold",
+      backgroundColor: "transparent",
+      padding: "4",
+      borderWidth: "0",
+      borderStyle: "solid",
+      borderColor: "#000000",
+      showShadow: false,
+    },
   },
   {
     type: "paymentMethod",
     label: "Payment Method",
     icon: CreditCard,
-    defaultProps: { alignment: "left" },
+    defaultProps: {
+      alignment: "left",
+      fontSize: "xs",
+      backgroundColor: "transparent",
+      padding: "4",
+      borderWidth: "0",
+      borderStyle: "solid",
+      borderColor: "#000000",
+      showShadow: false,
+    },
   },
   {
     type: "customText",
     label: "Custom Text",
     icon: Type,
-    defaultProps: { text: "Thank you!", alignment: "center" },
+    defaultProps: {
+      text: "Thank you!",
+      alignment: "center",
+      fontSize: "xs",
+      fontWeight: "normal",
+      textStyle: "normal",
+      backgroundColor: "transparent",
+      padding: "4",
+      borderWidth: "0",
+      borderStyle: "solid",
+      borderColor: "#000000",
+      showShadow: false,
+    },
+  },
+  {
+    type: "divider",
+    label: "Divider Line",
+    icon: Minus,
+    defaultProps: {
+      thickness: "1",
+      style: "solid",
+      color: "#e5e7eb",
+      marginTop: "2",
+      marginBottom: "2",
+    },
   },
 ];
 
@@ -144,6 +225,13 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
   const [customColor, setCustomColor] = useState(
     existingTemplate?.color || "#667eea"
   );
+  const [documentBorder, setDocumentBorder] = useState({
+    enabled: existingTemplate?.documentBorder?.enabled || false,
+    width: existingTemplate?.documentBorder?.width || "1",
+    style: existingTemplate?.documentBorder?.style || "solid",
+    color: existingTemplate?.documentBorder?.color || "#000000",
+    radius: existingTemplate?.documentBorder?.radius || "0",
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -252,6 +340,7 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
       name: templateName,
       sections,
       color: customColor,
+      documentBorder,
       type: "custom",
     };
 
@@ -316,20 +405,91 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
         ? "text-right"
         : "text-left";
 
+    // Font size mapping
+    const fontSizeMap = {
+      xs: "text-xs",
+      sm: "text-sm",
+      base: "text-base",
+      lg: "text-lg",
+      xl: "text-xl",
+      "2xl": "text-2xl",
+    };
+
+    // Font weight mapping
+    const fontWeightMap = {
+      normal: "font-normal",
+      medium: "font-medium",
+      semibold: "font-semibold",
+      bold: "font-bold",
+    };
+
+    // Padding mapping
+    const paddingMap = {
+      0: "p-0",
+      1: "p-1",
+      2: "p-2",
+      3: "p-3",
+      4: "p-4",
+      6: "p-6",
+    };
+
+    // Build common style classes
+    const getCommonStyles = (props) => {
+      const styles = {
+        className: `${fontSizeMap[props?.fontSize || "xs"]} ${
+          fontWeightMap[props?.fontWeight || "normal"]
+        } ${paddingMap[props?.padding || "2"]} ${
+          props?.showShadow ? "shadow-lg" : ""
+        }`,
+        style: {},
+      };
+
+      if (props?.backgroundColor && props?.backgroundColor !== "transparent") {
+        styles.style.backgroundColor = props.backgroundColor;
+      }
+
+      if (props?.borderWidth && parseInt(props.borderWidth) > 0) {
+        styles.style.border = `${props.borderWidth}px ${
+          props?.borderStyle || "solid"
+        } ${props?.borderColor || "#000000"}`;
+        styles.style.borderRadius = "4px";
+      }
+
+      return styles;
+    };
+
     switch (section.type) {
-      case "header":
+      case "header": {
+        const headerStyles = getCommonStyles(section.props);
         return (
-          <div className={alignmentClass}>
-            <h2 className="text-lg font-bold" style={{ color: customColor }}>
+          <div
+            className={`${alignmentClass} ${headerStyles.className}`}
+            style={headerStyles.style}
+          >
+            <h2
+              className={`${fontSizeMap[section.props?.fontSize || "lg"]} ${
+                fontWeightMap[section.props?.fontWeight || "bold"]
+              }`}
+              style={{ color: customColor }}
+            >
               RECEIPT
             </h2>
           </div>
         );
+      }
 
-      case "companyInfo":
+      case "companyInfo": {
+        const companyStyles = getCommonStyles(section.props);
         return (
-          <div className={alignmentClass}>
-            <h3 className={`font-bold text-sm ${theme.textPrimary}`}>
+          <div
+            className={`${alignmentClass} ${companyStyles.className}`}
+            style={companyStyles.style}
+          >
+            <h3
+              className={`font-bold ${
+                fontSizeMap[section.props?.fontSize || "sm"]
+              } ${theme.textPrimary}`}
+            >
               {sampleData.companyName}
             </h3>
             <p className={`text-xs ${theme.textSecondary}`}>
@@ -340,11 +500,20 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
             </p>
           </div>
         );
+      }
 
-      case "receiptDetails":
+      case "receiptDetails": {
+        const detailsStyles = getCommonStyles(section.props);
         return (
-          <div className={alignmentClass}>
-            <div className="space-y-1 text-xs">
+          <div
+            className={`${alignmentClass} ${detailsStyles.className}`}
+            style={detailsStyles.style}
+          >
+            <div
+              className={`space-y-1 ${
+                fontSizeMap[section.props?.fontSize || "xs"]
+              }`}
+            >
               <div className="flex justify-between">
                 <span className={theme.textSecondary}>Receipt #:</span>
                 <span className={`font-semibold ${theme.textPrimary}`}>
@@ -362,85 +531,148 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
             </div>
           </div>
         );
+      }
 
-      case "itemsTable":
+      case "itemsTable": {
+        const tableStyles = getCommonStyles(section.props);
         return (
-          <div className="text-xs">
-            <div className={`border-b ${theme.borderSecondary} pb-1 mb-1`}>
-              <div className="flex justify-between font-semibold">
-                <span className={theme.textPrimary}>Item</span>
-                <span className={theme.textPrimary}>Amount</span>
+          <div className={`${tableStyles.className}`} style={tableStyles.style}>
+            <div className={fontSizeMap[section.props?.fontSize || "xs"]}>
+              <div className={`border-b ${theme.borderSecondary} pb-1 mb-1`}>
+                <div className="flex justify-between font-semibold">
+                  <span className={theme.textPrimary}>Item</span>
+                  <span className={theme.textPrimary}>Amount</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className={theme.textPrimary}>Sample Product (x2)</span>
+                  <span className={theme.textPrimary}>
+                    {formatCurrency(50000)}
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="space-y-1">
+          </div>
+        );
+      }
+
+      case "totals": {
+        const totalsStyles = getCommonStyles(section.props);
+        return (
+          <div
+            className={`${alignmentClass} ${totalsStyles.className}`}
+            style={totalsStyles.style}
+          >
+            <div
+              className={`space-y-1 ${
+                fontSizeMap[section.props?.fontSize || "xs"]
+              }`}
+            >
               <div className="flex justify-between">
-                <span className={theme.textPrimary}>Sample Product (x2)</span>
+                <span className={theme.textSecondary}>Subtotal:</span>
                 <span className={theme.textPrimary}>
-                  {formatCurrency(50000)}
+                  {formatCurrency(sampleData.subtotal)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className={theme.textSecondary}>Tax (7.5%):</span>
+                <span className={theme.textPrimary}>
+                  {formatCurrency(sampleData.tax)}
+                </span>
+              </div>
+              <div
+                className={`flex justify-between ${
+                  fontWeightMap[section.props?.fontWeight || "bold"]
+                } pt-1 border-t ${theme.borderSecondary}`}
+              >
+                <span style={{ color: customColor }}>TOTAL:</span>
+                <span style={{ color: customColor }}>
+                  {formatCurrency(sampleData.total)}
                 </span>
               </div>
             </div>
           </div>
         );
+      }
 
-      case "totals":
+      case "paymentMethod": {
+        const paymentStyles = getCommonStyles(section.props);
         return (
-          <div className={`${alignmentClass} space-y-1 text-xs`}>
-            <div className="flex justify-between">
-              <span className={theme.textSecondary}>Subtotal:</span>
-              <span className={theme.textPrimary}>
-                {formatCurrency(sampleData.subtotal)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className={theme.textSecondary}>Tax (7.5%):</span>
-              <span className={theme.textPrimary}>
-                {formatCurrency(sampleData.tax)}
-              </span>
-            </div>
+          <div
+            className={`${alignmentClass} ${paymentStyles.className}`}
+            style={paymentStyles.style}
+          >
             <div
-              className={`flex justify-between font-bold pt-1 border-t ${theme.borderSecondary}`}
+              className={`space-y-1 ${
+                fontSizeMap[section.props?.fontSize || "xs"]
+              }`}
             >
-              <span style={{ color: customColor }}>TOTAL:</span>
-              <span style={{ color: customColor }}>
-                {formatCurrency(sampleData.total)}
-              </span>
+              <div className="flex justify-between">
+                <span className={theme.textSecondary}>Payment:</span>
+                <span className={`font-semibold ${theme.textPrimary}`}>
+                  {sampleData.paymentMethod}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className={theme.textSecondary}>Amount Paid:</span>
+                <span className={theme.textPrimary}>
+                  {formatCurrency(sampleData.amountPaid)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className={theme.textSecondary}>Change:</span>
+                <span className={theme.textPrimary}>
+                  {formatCurrency(sampleData.change)}
+                </span>
+              </div>
             </div>
           </div>
         );
+      }
 
-      case "paymentMethod":
+      case "customText": {
+        const textStyles = getCommonStyles(section.props);
+        const textStyleClass =
+          section.props?.textStyle === "italic"
+            ? "italic"
+            : section.props?.textStyle === "underline"
+            ? "underline"
+            : "";
         return (
-          <div className={`${alignmentClass} text-xs space-y-1`}>
-            <div className="flex justify-between">
-              <span className={theme.textSecondary}>Payment:</span>
-              <span className={`font-semibold ${theme.textPrimary}`}>
-                {sampleData.paymentMethod}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className={theme.textSecondary}>Amount Paid:</span>
-              <span className={theme.textPrimary}>
-                {formatCurrency(sampleData.amountPaid)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className={theme.textSecondary}>Change:</span>
-              <span className={theme.textPrimary}>
-                {formatCurrency(sampleData.change)}
-              </span>
-            </div>
-          </div>
-        );
-
-      case "customText":
-        return (
-          <div className={alignmentClass}>
-            <p className={`text-xs ${theme.textSecondary}`}>
+          <div
+            className={`${alignmentClass} ${textStyles.className}`}
+            style={textStyles.style}
+          >
+            <p
+              className={`${fontSizeMap[section.props?.fontSize || "xs"]} ${
+                fontWeightMap[section.props?.fontWeight || "normal"]
+              } ${textStyleClass} ${theme.textSecondary}`}
+            >
               {section.props?.text || "Custom text"}
             </p>
           </div>
         );
+      }
+
+      case "divider": {
+        const dividerMarginTop = `mt-${section.props?.marginTop || "2"}`;
+        const dividerMarginBottom = `mb-${section.props?.marginBottom || "2"}`;
+        return (
+          <div className={`${dividerMarginTop} ${dividerMarginBottom}`}>
+            <hr
+              style={{
+                borderTop: `${section.props?.thickness || "1"}px ${
+                  section.props?.style || "solid"
+                } ${section.props?.color || "#e5e7eb"}`,
+                borderBottom: "none",
+                borderLeft: "none",
+                borderRight: "none",
+              }}
+            />
+          </div>
+        );
+      }
 
       default:
         return (
@@ -517,6 +749,113 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
                   onChange={(e) => setCustomColor(e.target.value)}
                   className="w-full h-10 rounded cursor-pointer"
                 />
+              </div>
+
+              {/* Document Border Controls */}
+              <div className="mt-6 pt-6 border-t ${theme.borderSecondary}">
+                <label className="flex items-center gap-2 mb-3">
+                  <input
+                    type="checkbox"
+                    checked={documentBorder.enabled}
+                    onChange={(e) =>
+                      setDocumentBorder({
+                        ...documentBorder,
+                        enabled: e.target.checked,
+                      })
+                    }
+                    className="rounded"
+                  />
+                  <span
+                    className={`${theme.textPrimary} text-xs font-semibold`}
+                  >
+                    Add Document Border
+                  </span>
+                </label>
+
+                {documentBorder.enabled && (
+                  <div className="space-y-3 ml-6">
+                    <div>
+                      <label
+                        className={`block text-xs ${theme.textSecondary} mb-1`}
+                      >
+                        Border Width (px)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={documentBorder.width}
+                        onChange={(e) =>
+                          setDocumentBorder({
+                            ...documentBorder,
+                            width: e.target.value,
+                          })
+                        }
+                        className={`w-full px-2 py-1 text-sm rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        className={`block text-xs ${theme.textSecondary} mb-1`}
+                      >
+                        Border Style
+                      </label>
+                      <select
+                        value={documentBorder.style}
+                        onChange={(e) =>
+                          setDocumentBorder({
+                            ...documentBorder,
+                            style: e.target.value,
+                          })
+                        }
+                        className={`w-full px-2 py-1 text-sm rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                      >
+                        <option value="solid">Solid</option>
+                        <option value="dashed">Dashed</option>
+                        <option value="dotted">Dotted</option>
+                        <option value="double">Double</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        className={`block text-xs ${theme.textSecondary} mb-1`}
+                      >
+                        Border Color
+                      </label>
+                      <input
+                        type="color"
+                        value={documentBorder.color}
+                        onChange={(e) =>
+                          setDocumentBorder({
+                            ...documentBorder,
+                            color: e.target.value,
+                          })
+                        }
+                        className="w-full h-8 rounded cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        className={`block text-xs ${theme.textSecondary} mb-1`}
+                      >
+                        Border Radius (px)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        value={documentBorder.radius}
+                        onChange={(e) =>
+                          setDocumentBorder({
+                            ...documentBorder,
+                            radius: e.target.value,
+                          })
+                        }
+                        className={`w-full px-2 py-1 text-sm rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -603,85 +942,493 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
 
       {/* Section Edit Modal */}
       {editingSection && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4 overflow-y-auto">
           <div
-            className={`${theme.bgCard} rounded-lg p-6 max-w-md w-full mx-4`}
+            className={`${theme.bgCard} rounded-lg p-6 max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto`}
           >
-            <h3 className={`font-bold ${theme.textPrimary} mb-4`}>
+            <h3 className={`font-bold ${theme.textPrimary} mb-4 text-lg`}>
               Edit {editingSection.label}
             </h3>
 
-            {editingSection.type === "customText" && (
-              <div className="mb-4">
-                <label
-                  className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
-                >
-                  Text Content
-                </label>
-                <textarea
-                  value={editingSection.props?.text || ""}
-                  onChange={(e) =>
-                    setEditingSection({
-                      ...editingSection,
-                      props: { ...editingSection.props, text: e.target.value },
-                    })
-                  }
-                  className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
-                  rows="3"
-                />
-              </div>
-            )}
-
-            <div className="mb-4">
-              <label
-                className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
-              >
-                Alignment
-              </label>
-              <select
-                value={editingSection.props?.alignment || "left"}
-                onChange={(e) =>
-                  setEditingSection({
-                    ...editingSection,
-                    props: {
-                      ...editingSection.props,
-                      alignment: e.target.value,
-                    },
-                  })
-                }
-                className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
-              >
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-              </select>
-            </div>
-
-            {editingSection.type === "itemsTable" && (
-              <div className="mb-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={editingSection.props?.compact || false}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Text Content for customText */}
+              {editingSection.type === "customText" && (
+                <div className="md:col-span-2">
+                  <label
+                    className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                  >
+                    Text Content
+                  </label>
+                  <textarea
+                    value={editingSection.props?.text || ""}
                     onChange={(e) =>
                       setEditingSection({
                         ...editingSection,
                         props: {
                           ...editingSection.props,
-                          compact: e.target.checked,
+                          text: e.target.value,
                         },
                       })
                     }
-                    className="rounded"
+                    className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                    rows="3"
                   />
-                  <span className={`${theme.textPrimary} text-sm`}>
-                    Compact View
-                  </span>
-                </label>
-              </div>
-            )}
+                </div>
+              )}
 
-            <div className="flex gap-3 justify-end">
+              {/* Alignment - for most elements except divider */}
+              {editingSection.type !== "divider" && (
+                <div>
+                  <label
+                    className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                  >
+                    Alignment
+                  </label>
+                  <select
+                    value={editingSection.props?.alignment || "left"}
+                    onChange={(e) =>
+                      setEditingSection({
+                        ...editingSection,
+                        props: {
+                          ...editingSection.props,
+                          alignment: e.target.value,
+                        },
+                      })
+                    }
+                    className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                  >
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Font Size - for text-based elements */}
+              {!["divider", "itemsTable"].includes(editingSection.type) && (
+                <div>
+                  <label
+                    className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                  >
+                    Font Size
+                  </label>
+                  <select
+                    value={editingSection.props?.fontSize || "xs"}
+                    onChange={(e) =>
+                      setEditingSection({
+                        ...editingSection,
+                        props: {
+                          ...editingSection.props,
+                          fontSize: e.target.value,
+                        },
+                      })
+                    }
+                    className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                  >
+                    <option value="xs">Extra Small</option>
+                    <option value="sm">Small</option>
+                    <option value="base">Base</option>
+                    <option value="lg">Large</option>
+                    <option value="xl">Extra Large</option>
+                    <option value="2xl">2X Large</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Font Weight - for text-based elements */}
+              {["header", "customText", "totals"].includes(
+                editingSection.type
+              ) && (
+                <div>
+                  <label
+                    className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                  >
+                    Font Weight
+                  </label>
+                  <select
+                    value={editingSection.props?.fontWeight || "normal"}
+                    onChange={(e) =>
+                      setEditingSection({
+                        ...editingSection,
+                        props: {
+                          ...editingSection.props,
+                          fontWeight: e.target.value,
+                        },
+                      })
+                    }
+                    className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="medium">Medium</option>
+                    <option value="semibold">Semi Bold</option>
+                    <option value="bold">Bold</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Text Style - for customText only */}
+              {editingSection.type === "customText" && (
+                <div>
+                  <label
+                    className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                  >
+                    Text Style
+                  </label>
+                  <select
+                    value={editingSection.props?.textStyle || "normal"}
+                    onChange={(e) =>
+                      setEditingSection({
+                        ...editingSection,
+                        props: {
+                          ...editingSection.props,
+                          textStyle: e.target.value,
+                        },
+                      })
+                    }
+                    className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="italic">Italic</option>
+                    <option value="underline">Underline</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Background Color - for all except divider */}
+              {editingSection.type !== "divider" && (
+                <div>
+                  <label
+                    className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                  >
+                    Background Color
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={
+                        editingSection.props?.backgroundColor === "transparent"
+                          ? "#ffffff"
+                          : editingSection.props?.backgroundColor || "#ffffff"
+                      }
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            backgroundColor: e.target.value,
+                          },
+                        })
+                      }
+                      className="h-10 rounded cursor-pointer"
+                    />
+                    <button
+                      onClick={() =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            backgroundColor: "transparent",
+                          },
+                        })
+                      }
+                      className={`px-3 py-1 text-xs border ${theme.borderSecondary} rounded ${theme.bgHover}`}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Padding - for all except divider */}
+              {editingSection.type !== "divider" && (
+                <div>
+                  <label
+                    className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                  >
+                    Padding
+                  </label>
+                  <select
+                    value={editingSection.props?.padding || "2"}
+                    onChange={(e) =>
+                      setEditingSection({
+                        ...editingSection,
+                        props: {
+                          ...editingSection.props,
+                          padding: e.target.value,
+                        },
+                      })
+                    }
+                    className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                  >
+                    <option value="0">None</option>
+                    <option value="1">Extra Small</option>
+                    <option value="2">Small</option>
+                    <option value="3">Medium</option>
+                    <option value="4">Default</option>
+                    <option value="6">Large</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Border Width - for all except divider */}
+              {editingSection.type !== "divider" && (
+                <div>
+                  <label
+                    className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                  >
+                    Border Width (px)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={editingSection.props?.borderWidth || "0"}
+                    onChange={(e) =>
+                      setEditingSection({
+                        ...editingSection,
+                        props: {
+                          ...editingSection.props,
+                          borderWidth: e.target.value,
+                        },
+                      })
+                    }
+                    className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                  />
+                </div>
+              )}
+
+              {/* Border Style - shown when border width > 0 */}
+              {editingSection.type !== "divider" &&
+                parseInt(editingSection.props?.borderWidth || "0") > 0 && (
+                  <div>
+                    <label
+                      className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                    >
+                      Border Style
+                    </label>
+                    <select
+                      value={editingSection.props?.borderStyle || "solid"}
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            borderStyle: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                    >
+                      <option value="solid">Solid</option>
+                      <option value="dashed">Dashed</option>
+                      <option value="dotted">Dotted</option>
+                      <option value="double">Double</option>
+                    </select>
+                  </div>
+                )}
+
+              {/* Border Color - shown when border width > 0 */}
+              {editingSection.type !== "divider" &&
+                parseInt(editingSection.props?.borderWidth || "0") > 0 && (
+                  <div>
+                    <label
+                      className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                    >
+                      Border Color
+                    </label>
+                    <input
+                      type="color"
+                      value={editingSection.props?.borderColor || "#000000"}
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            borderColor: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full h-10 rounded cursor-pointer"
+                    />
+                  </div>
+                )}
+
+              {/* Divider-specific controls */}
+              {editingSection.type === "divider" && (
+                <>
+                  <div>
+                    <label
+                      className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                    >
+                      Thickness (px)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={editingSection.props?.thickness || "1"}
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            thickness: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                    >
+                      Line Style
+                    </label>
+                    <select
+                      value={editingSection.props?.style || "solid"}
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            style: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                    >
+                      <option value="solid">Solid</option>
+                      <option value="dashed">Dashed</option>
+                      <option value="dotted">Dotted</option>
+                      <option value="double">Double</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                    >
+                      Line Color
+                    </label>
+                    <input
+                      type="color"
+                      value={editingSection.props?.color || "#e5e7eb"}
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            color: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full h-10 rounded cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                    >
+                      Top Margin
+                    </label>
+                    <select
+                      value={editingSection.props?.marginTop || "2"}
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            marginTop: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                    >
+                      <option value="0">None</option>
+                      <option value="1">Small</option>
+                      <option value="2">Medium</option>
+                      <option value="4">Large</option>
+                      <option value="6">Extra Large</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      className={`block font-semibold ${theme.textPrimary} mb-2 text-sm`}
+                    >
+                      Bottom Margin
+                    </label>
+                    <select
+                      value={editingSection.props?.marginBottom || "2"}
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            marginBottom: e.target.value,
+                          },
+                        })
+                      }
+                      className={`w-full px-3 py-2 rounded border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary}`}
+                    >
+                      <option value="0">None</option>
+                      <option value="1">Small</option>
+                      <option value="2">Medium</option>
+                      <option value="4">Large</option>
+                      <option value="6">Extra Large</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {/* Checkboxes */}
+              <div className="md:col-span-2 space-y-2">
+                {editingSection.type === "itemsTable" && (
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editingSection.props?.compact || false}
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            compact: e.target.checked,
+                          },
+                        })
+                      }
+                      className="rounded"
+                    />
+                    <span className={`${theme.textPrimary} text-sm`}>
+                      Compact View
+                    </span>
+                  </label>
+                )}
+
+                {editingSection.type !== "divider" && (
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editingSection.props?.showShadow || false}
+                      onChange={(e) =>
+                        setEditingSection({
+                          ...editingSection,
+                          props: {
+                            ...editingSection.props,
+                            showShadow: e.target.checked,
+                          },
+                        })
+                      }
+                      className="rounded"
+                    />
+                    <span className={`${theme.textPrimary} text-sm`}>
+                      Add Shadow Effect
+                    </span>
+                  </label>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
               <button
                 onClick={() => setEditingSection(null)}
                 className={`px-4 py-2 border ${theme.borderSecondary} rounded-lg ${theme.bgHover}`}
@@ -694,7 +1441,7 @@ const CustomReceiptBuilder = ({ onClose, onSave, existingTemplate = null }) => {
                 }
                 className="px-4 py-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg"
               >
-                Apply
+                Apply Changes
               </button>
             </div>
           </div>
