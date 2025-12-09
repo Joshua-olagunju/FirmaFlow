@@ -1,7 +1,37 @@
 <?php
+// Clean output buffer and suppress errors to ensure JSON output
+if (ob_get_level()) {
+    ob_clean();
+}
+error_reporting(0);
+ini_set('display_errors', 0);
+
 // Start session first
 session_start();
 header('Content-Type: application/json');
+
+// CORS Headers - allow credentials
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && in_array($origin, $allowed_origins, true)) {
+    header('Vary: Origin');
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+}
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/journal_helpers.php';
 require_once __DIR__ . '/../includes/company_settings_helper.php';
@@ -80,7 +110,10 @@ try {
                 $invoice['status'] = 'draft'; // Reset if payment was reversed
             }
             
-            echo json_encode($invoice);
+            echo json_encode([
+                'success' => true,
+                'data' => $invoice
+            ]);
         } else {
             // Get all invoices with balance and accurate status
             $search = $_GET['search'] ?? '';
@@ -121,7 +154,10 @@ try {
                 unset($invoice['computed_status']);
             }
             
-            echo json_encode($invoices);
+            echo json_encode([
+                'success' => true,
+                'data' => $invoices
+            ]);
         }
     } else if ($method === 'POST') {
         $customer_id = $input['customer_id'] ?? 0;
@@ -130,8 +166,12 @@ try {
         $notes = $input['notes'] ?? '';
         $items = $input['items'] ?? [];
         
+        // Tax fields - handle both tax_id and tax_rate_id
+        $tax_rate_id = $input['tax_rate_id'] ?? $input['tax_id'] ?? null;
+        $tax_rate = floatval($input['tax_rate'] ?? 0);
+        
         // Discount fields
-        $discount_amount = floatval($input['discount_amount'] ?? 0);
+        $discount_amount = floatval($input['discount_amount'] ?? $input['discount'] ?? 0);
         $discount_type = $input['discount_type'] ?? 'fixed'; // 'fixed' or 'percent'
 
         if (empty($items)) {
@@ -183,13 +223,10 @@ try {
             // Apply discount to get discounted subtotal
             $discounted_subtotal = $subtotal - $discount_value;
             
-            // Calculate tax on discounted amount
+            // Calculate tax on discounted amount using the tax rate from input
             $tax_amount = 0;
-            foreach ($items as $item) {
-                $line_total = $item['quantity'] * $item['unit_price'];
-                // Calculate tax proportionally based on discount
-                $line_discounted = $line_total * ($discounted_subtotal / $subtotal);
-                $tax_amount += $line_discounted * ($item['tax_rate'] ?? 0) / 100;
+            if ($tax_rate > 0) {
+                $tax_amount = $discounted_subtotal * ($tax_rate / 100);
             }
 
             $total_amount = $discounted_subtotal + $tax_amount;
@@ -237,7 +274,8 @@ try {
 
             foreach ($items as $item) {
                 $line_total = $item['quantity'] * $item['unit_price'];
-                $tax_for_line = $line_total * ($item['tax_rate'] ?? 0) / 100;
+                // Calculate proportional tax for this line
+                $line_tax = ($line_total / $subtotal) * $tax_amount;
                 
                 $lineStmt->execute([
                     $invoice_id,
@@ -245,7 +283,7 @@ try {
                     $item['description'] ?? '',
                     $item['quantity'],
                     $item['unit_price'],
-                    $tax_for_line,
+                    $line_tax,
                     $line_total,
                     $tax_rate_id
                 ]);
@@ -415,7 +453,11 @@ try {
             $stmt->execute([$invoice_id]);
             $invoice['lines'] = $stmt->fetchAll();
 
-            echo json_encode($invoice);
+            echo json_encode([
+                'success' => true,
+                'data' => $invoice,
+                'message' => 'Invoice created successfully'
+            ]);
 
         } catch (Exception $e) {
             $pdo->rollBack();
