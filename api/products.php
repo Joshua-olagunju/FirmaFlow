@@ -130,10 +130,17 @@ try {
             
             $rows = $stmt->fetchAll();
             
+            // Map database columns to frontend-expected field names
+            $products = array_map(function($product) {
+                $product['quantity'] = $product['stock_quantity']; // Map stock_quantity to quantity
+                $product['price'] = $product['selling_price']; // Map selling_price to price
+                return $product;
+            }, $rows);
+            
             // Return response with success wrapper
             echo json_encode([
                 'success' => true,
-                'data' => $rows
+                'data' => $products
             ]);
         }
         exit;

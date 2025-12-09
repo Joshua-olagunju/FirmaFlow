@@ -205,11 +205,14 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
   if (!templateData.sections) return null;
   const { sections, documentBorder } = templateData;
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-    }).format(amount);
+  // Use formatCurrency from invoiceData if available, otherwise fallback to hardcoded NGN
+  const formatCurrency =
+    invoiceData?.formatCurrency ||
+    ((amount) =>
+      new Intl.NumberFormat("en-NG", {
+        style: "currency",
+        currency: "NGN",
+      }).format(amount));
 
   // Helper function to get font size in pixels
   const getFontSize = (size) => {

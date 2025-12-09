@@ -27,6 +27,7 @@ import InventorySettings from "./InventorySettings";
 import SecuritySettings from "./SecuritySettings";
 import InvoiceTemplates from "./InvoiceTemplates/InvoiceTemplates";
 import ReceiptTemplates from "./ReceiptTemplates/ReceiptTemplates";
+import UserManagement from "./UserManagement/UserManagement";
 
 const Settings = () => {
   const { theme } = useTheme();
@@ -78,11 +79,7 @@ const Settings = () => {
           </div>
         );
       case "users":
-        return (
-          <div className={`${theme.textPrimary}`}>
-            User Management - Coming Soon
-          </div>
-        );
+        return <UserManagement />;
       default:
         return <GeneralSettings />;
     }

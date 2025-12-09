@@ -4,12 +4,15 @@ const ElegantInvoice = ({
   invoiceData,
   showPaymentInfo = true,
 }) => {
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-    }).format(amount);
-  };
+  // Use formatCurrency from invoiceData if available, otherwise fallback to hardcoded NGN
+  const formatCurrency =
+    invoiceData?.formatCurrency ||
+    ((amount) => {
+      return new Intl.NumberFormat("en-NG", {
+        style: "currency",
+        currency: "NGN",
+      }).format(amount);
+    });
 
   return (
     <div

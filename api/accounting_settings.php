@@ -9,6 +9,28 @@ ini_set('display_errors', 0);
 session_start();
 header('Content-Type: application/json');
 
+// CORS Headers - allow credentials
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && in_array($origin, $allowed_origins, true)) {
+    header('Vary: Origin');
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+}
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 try {
     // Check session
     if (!isset($_SESSION['company_id'])) {
@@ -23,6 +45,24 @@ try {
     require_once __DIR__ . '/../includes/AccountResolver.php';
     
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        // Check if requesting taxes
+        if (isset($_GET['type']) && $_GET['type'] === 'taxes') {
+            $stmt = $pdo->prepare("
+                SELECT id, name, rate, description, is_active, is_default 
+                FROM tax_rates 
+                WHERE company_id = ? AND is_active = 1
+                ORDER BY is_default DESC, name ASC
+            ");
+            $stmt->execute([$company_id]);
+            $taxes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode([
+                'success' => true,
+                'data' => $taxes
+            ]);
+            exit;
+        }
+        
         // Initialize AccountResolver to ensure accounts exist
         $resolver = new AccountResolver($pdo, $company_id);
         
