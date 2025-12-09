@@ -65,7 +65,9 @@ export default function Login() {
 
       const data = await response.json();
 
-      if (data.success) {
+      console.log("Login response:", data); // Debug log
+
+      if (response.ok && data.success) {
         // Store user data in Zustand
         login({
           user: data.user,
@@ -82,8 +84,12 @@ export default function Login() {
         // Redirect after 2s to allow user to see message
         setTimeout(() => navigate("/dashboard"), 2000);
       } else {
+        // Show the specific error message from the server
         setMessage({
-          text: data.error || "Invalid credentials",
+          text:
+            data.error ||
+            data.message ||
+            "Invalid credentials. Please check your email and password.",
           type: "error",
         });
       }
