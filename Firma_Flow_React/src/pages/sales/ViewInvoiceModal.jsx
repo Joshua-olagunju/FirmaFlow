@@ -1,5 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Printer, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  X,
+  Printer,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Share2,
+} from "lucide-react";
+import { pdf } from "@react-pdf/renderer";
+import html2canvas from "html2canvas";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { buildApiUrl } from "../../config/api.config";
@@ -9,6 +18,7 @@ import MinimalInvoice from "../Settings/InvoiceTemplates/templates/MinimalInvoic
 import ProfessionalInvoice from "../Settings/InvoiceTemplates/templates/ProfessionalInvoice";
 import ElegantInvoice from "../Settings/InvoiceTemplates/templates/ElegantInvoice";
 import CustomInvoicePreview from "../Settings/InvoiceTemplates/CustomInvoicePreview";
+import InvoicePDFFactory from "./PDFTemplates/InvoicePDFFactory";
 
 const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
   const { theme } = useTheme();
@@ -18,6 +28,8 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
   const [templateSettings, setTemplateSettings] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const contentRef = useRef(null);
 
   const templateComponents = {
@@ -26,6 +38,64 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
     minimal: MinimalInvoice,
     professional: ProfessionalInvoice,
     elegant: ElegantInvoice,
+  };
+
+  // Helper function to convert image URL to base64
+  const getImageAsBase64 = async (imageUrl) => {
+    if (!imageUrl) return null;
+
+    try {
+      console.log("Converting logo to base64:", imageUrl);
+
+      // Try to find the image element already loaded in the DOM
+      const imgElement = document.querySelector(`img[src="${imageUrl}"]`);
+
+      if (imgElement && imgElement.complete) {
+        // Image is already loaded in the DOM, convert it to base64
+        console.log("Found loaded image in DOM, converting...");
+        const canvas = document.createElement("canvas");
+        canvas.width = imgElement.naturalWidth || imgElement.width;
+        canvas.height = imgElement.naturalHeight || imgElement.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(imgElement, 0, 0);
+        const base64 = canvas.toDataURL("image/png");
+        console.log(
+          "Logo converted to base64 from DOM, length:",
+          base64.length
+        );
+        return base64;
+      }
+
+      // Fallback: try to load image with crossOrigin
+      console.log("Image not found in DOM, loading with crossOrigin...");
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+
+        img.onload = () => {
+          console.log("Image loaded, converting to base64...");
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const base64 = canvas.toDataURL("image/png");
+          console.log("Logo converted to base64, length:", base64.length);
+          resolve(base64);
+        };
+
+        img.onerror = (error) => {
+          console.error("Image load error:", error);
+          // If CORS fails, resolve with null instead of rejecting
+          resolve(null);
+        };
+
+        img.src = imageUrl;
+      });
+    } catch (error) {
+      console.error("Error converting image to base64:", error);
+      return null;
+    }
   };
 
   const calculatePages = useCallback(() => {
@@ -76,9 +146,10 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
       if (data.success) {
         // Map API fields to template-expected fields
         const company = data.data;
+        console.log("Company data from API:", company);
         const mappedCompanyInfo = {
-          name: company.company_name || "",
-          company_name: company.company_name || "",
+          name: company.name || "",
+          company_name: company.name || "",
           logo: company.logo_path ? buildApiUrl(company.logo_path) : null,
           logo_path: company.logo_path ? buildApiUrl(company.logo_path) : null,
           address: company.billing_address || company.address || "",
@@ -90,8 +161,9 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
           bank_account: company.account_number || "",
           account_number: company.account_number || "",
           bank_name: company.bank_name || "",
-          account_name: company.account_name || company.company_name || "",
+          account_name: company.account_name || company.name || "",
         };
+        console.log("Mapped company info:", mappedCompanyInfo);
         setCompanyInfo(mappedCompanyInfo);
       }
     } catch (err) {
@@ -183,9 +255,281 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
     window.print();
   };
 
-  const handleDownload = () => {
-    // Implement PDF download functionality
-    console.log("Download PDF");
+  const handleDownloadPDF = async () => {
+    setShowDownloadMenu(false);
+    try {
+      console.log("=== PDF Download Debug Start ===");
+      console.log("Currency from settings:", currency);
+      console.log("Company logo URL:", companyInfo?.logo);
+
+      // Convert logo to base64 for PDF
+      const logoBase64 = companyInfo?.logo
+        ? await getImageAsBase64(companyInfo.logo)
+        : null;
+
+      console.log("Logo Base64 conversion result:");
+      console.log("- Is null?", logoBase64 === null);
+      console.log("- Starts with data:?", logoBase64?.startsWith("data:"));
+      console.log("- Length:", logoBase64?.length);
+      console.log("- First 100 chars:", logoBase64?.substring(0, 100));
+
+      // Simple currency formatter for PDF (Intl.NumberFormat doesn't work well in PDFs)
+      const simpleCurrencyFormat = (amount) => {
+        const currencySymbol =
+          currency === "USD" ? "$" : currency === "EUR" ? "€" : "NGN ";
+        const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        return `${currencySymbol}${formatted}`;
+      };
+
+      // Build invoice data for PDF
+      const pdfInvoiceData = {
+        invoiceNumber:
+          invoiceData.invoice_no || invoiceData.invoice_number || "",
+        date:
+          invoiceData.invoice_date ||
+          invoiceData.sale_date ||
+          new Date().toLocaleDateString(),
+        dueDate: invoiceData.due_date || "",
+        customer: {
+          name: invoiceData.customer_name || "",
+          address: invoiceData.customer_address || "",
+          email: invoiceData.customer_email || "",
+          phone: invoiceData.customer_phone || "",
+          city: invoiceData.customer_city || "",
+        },
+        items: (invoiceData.lines || []).map((line) => ({
+          description: line.description || line.product_name || "",
+          quantity: parseFloat(line.quantity) || 0,
+          rate: parseFloat(line.unit_price) || 0,
+          amount:
+            parseFloat(line.quantity || 0) * parseFloat(line.unit_price || 0),
+        })),
+        subtotal: parseFloat(invoiceData.subtotal) || 0,
+        tax:
+          parseFloat(invoiceData.tax_amount) ||
+          parseFloat(invoiceData.tax) ||
+          0,
+        discount: parseFloat(invoiceData.discount_amount) || 0,
+        total: parseFloat(invoiceData.total) || 0,
+        notes: invoiceData.notes || "",
+        currency: currency,
+        formatCurrency: simpleCurrencyFormat,
+      };
+
+      console.log("Invoice Data for PDF:");
+      console.log("- Items count:", pdfInvoiceData.items?.length);
+      console.log("- First item:", pdfInvoiceData.items?.[0]);
+      console.log("- Subtotal:", pdfInvoiceData.subtotal);
+      console.log("- Tax:", pdfInvoiceData.tax);
+      console.log("- Total:", pdfInvoiceData.total);
+      console.log("- Currency:", pdfInvoiceData.currency);
+      console.log(
+        "- formatCurrency type:",
+        typeof pdfInvoiceData.formatCurrency
+      );
+      console.log(
+        "- formatCurrency test (1000):",
+        pdfInvoiceData.formatCurrency(1000)
+      );
+      console.log("=== PDF Download Debug End ===");
+
+      // Use company info with base64 logo
+      const pdfCompanyInfo = {
+        ...companyInfo,
+        logo: logoBase64,
+      };
+
+      // Generate PDF using @react-pdf/renderer with the appropriate template
+      const blob = await pdf(
+        <InvoicePDFFactory
+          templateType={templateSettings?.template}
+          isCustom={templateSettings?.isCustom}
+          customData={templateSettings?.customData}
+          companyInfo={pdfCompanyInfo}
+          invoiceData={pdfInvoiceData}
+          color={templateSettings?.color || "#667eea"}
+          showPaymentInfo={templateSettings?.showPaymentInfo !== false}
+        />
+      ).toBlob();
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `Invoice-${
+        invoiceData.invoice_number || invoiceData.invoice_no
+      }.pdf`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+      alert("Error generating PDF. Please try again.");
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    setShowDownloadMenu(false);
+    try {
+      const element = document.getElementById("invoice-print-area");
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const link = document.createElement("a");
+      link.download = `Invoice-${invoiceData.invoice_number}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (err) {
+      console.error("Error generating image:", err);
+      alert("Error generating image. Please try again.");
+    }
+  };
+
+  const handleSharePDF = async () => {
+    setShowShareMenu(false);
+    try {
+      // Convert logo to base64 for PDF
+      const logoBase64 = companyInfo?.logo
+        ? await getImageAsBase64(companyInfo.logo)
+        : null;
+
+      // Simple currency formatter for PDF
+      const simpleCurrencyFormat = (amount) => {
+        const currencySymbol =
+          currency === "USD" ? "$" : currency === "EUR" ? "€" : "NGN ";
+        const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        return `${currencySymbol}${formatted}`;
+      };
+
+      // Build invoice data for PDF
+      const pdfInvoiceData = {
+        invoiceNumber:
+          invoiceData.invoice_no || invoiceData.invoice_number || "",
+        date:
+          invoiceData.invoice_date ||
+          invoiceData.sale_date ||
+          new Date().toLocaleDateString(),
+        dueDate: invoiceData.due_date || "",
+        customer: {
+          name: invoiceData.customer_name || "",
+          address: invoiceData.customer_address || "",
+          email: invoiceData.customer_email || "",
+          phone: invoiceData.customer_phone || "",
+          city: invoiceData.customer_city || "",
+        },
+        items: (invoiceData.lines || []).map((line) => ({
+          description: line.description || line.product_name || "",
+          quantity: parseFloat(line.quantity) || 0,
+          rate: parseFloat(line.unit_price) || 0,
+          amount:
+            parseFloat(line.quantity || 0) * parseFloat(line.unit_price || 0),
+        })),
+        subtotal: parseFloat(invoiceData.subtotal) || 0,
+        tax:
+          parseFloat(invoiceData.tax_amount) ||
+          parseFloat(invoiceData.tax) ||
+          0,
+        discount: parseFloat(invoiceData.discount_amount) || 0,
+        total: parseFloat(invoiceData.total) || 0,
+        notes: invoiceData.notes || "",
+        currency: currency,
+        formatCurrency: simpleCurrencyFormat,
+      };
+
+      // Use company info with base64 logo
+      const pdfCompanyInfo = {
+        ...companyInfo,
+        logo: logoBase64,
+      };
+
+      // Generate PDF using @react-pdf/renderer with the appropriate template
+      const blob = await pdf(
+        <InvoicePDFFactory
+          templateType={templateSettings?.template}
+          isCustom={templateSettings?.isCustom}
+          customData={templateSettings?.customData}
+          companyInfo={pdfCompanyInfo}
+          invoiceData={pdfInvoiceData}
+          color={templateSettings?.color || "#667eea"}
+          showPaymentInfo={templateSettings?.showPaymentInfo !== false}
+        />
+      ).toBlob();
+
+      const file = new File(
+        [blob],
+        `Invoice-${invoiceData.invoice_number || invoiceData.invoice_no}.pdf`,
+        {
+          type: "application/pdf",
+        }
+      );
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invoice ${
+            invoiceData.invoice_number || invoiceData.invoice_no
+          }`,
+          text: `Invoice ${
+            invoiceData.invoice_number || invoiceData.invoice_no
+          }`,
+        });
+      } else {
+        alert(
+          "Sharing is not supported on this device. Please use Download instead."
+        );
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+      if (err.name !== "AbortError") {
+        alert("Error sharing invoice. Please try download instead.");
+      }
+    }
+  };
+
+  const handleShareImage = async () => {
+    setShowShareMenu(false);
+    try {
+      const element = document.getElementById("invoice-print-area");
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/png")
+      );
+      const file = new File(
+        [blob],
+        `Invoice-${invoiceData.invoice_number}.png`,
+        { type: "image/png" }
+      );
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invoice ${invoiceData.invoice_number}`,
+          text: `Invoice ${invoiceData.invoice_number}`,
+        });
+      } else {
+        alert(
+          "Sharing is not supported on this device. Please use Download instead."
+        );
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+      if (err.name !== "AbortError") {
+        alert("Error sharing invoice. Please try download instead.");
+      }
+    }
   };
 
   if (!isOpen || !invoiceData || !companyInfo || !templateSettings) return null;
@@ -266,6 +610,12 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
             left: 0;
             top: 0;
             width: 100%;
+            background: white !important;
+            padding: 0 !important;
+          }
+          #invoice-print-area > div {
+            box-shadow: none !important;
+            margin: 0 !important;
           }
           .no-print {
             display: none !important;
@@ -285,10 +635,10 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
 
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 no-print">
         <div
-          className={`${theme.bgCard} rounded-xl ${theme.shadow} max-w-4xl w-full max-h-[90vh] overflow-y-auto`}
+          className={`${theme.bgCard} rounded-xl ${theme.shadow} max-w-6xl w-full max-h-[95vh] flex flex-col overflow-hidden`}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] p-6 flex justify-between items-center rounded-t-xl sticky top-0 z-10 no-print">
+          <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] p-6 flex justify-between items-center rounded-t-xl z-50 no-print flex-shrink-0">
             <div>
               <h2 className="text-2xl font-bold text-white">
                 Invoice {invoiceData.invoice_number}
@@ -307,13 +657,67 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
               >
                 <Printer size={20} />
               </button>
-              <button
-                onClick={handleDownload}
-                className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition text-white"
-                title="Download PDF"
-              >
-                <Download size={20} />
-              </button>
+
+              {/* Share Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowShareMenu(!showShareMenu);
+                    setShowDownloadMenu(false);
+                  }}
+                  className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition text-white"
+                  title="Share"
+                >
+                  <Share2 size={20} />
+                </button>
+                {showShareMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
+                    <button
+                      onClick={handleShareImage}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition text-gray-700 font-medium"
+                    >
+                      Share as Image
+                    </button>
+                    <button
+                      onClick={handleSharePDF}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition text-gray-700 font-medium border-t border-gray-200"
+                    >
+                      Share as PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Download Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowDownloadMenu(!showDownloadMenu);
+                    setShowShareMenu(false);
+                  }}
+                  className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition text-white"
+                  title="Download"
+                >
+                  <Download size={20} />
+                </button>
+                {showDownloadMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
+                    <button
+                      onClick={handleDownloadImage}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition text-gray-700 font-medium"
+                    >
+                      Download as Image
+                    </button>
+                    <button
+                      onClick={handleDownloadPDF}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition text-gray-700 font-medium border-t border-gray-200"
+                    >
+                      Download as PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={onClose}
                 className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition text-white"
@@ -324,21 +728,36 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
           </div>
 
           {/* Invoice Content */}
-          <div className="p-6" ref={contentRef} id="invoice-print-area">
-            {isCustomTemplate ? (
-              <CustomInvoicePreview
-                templateData={templateSettings.customData}
-                companyInfo={companyInfo}
-                invoiceData={invoiceForDisplay}
-              />
-            ) : (
-              <TemplateComponent
-                companyInfo={companyInfo}
-                invoiceData={invoiceForDisplay}
-                color={templateSettings.color || "#667eea"}
-                showPaymentInfo={templateSettings.showPaymentInfo !== false}
-              />
-            )}
+          <div
+            className="p-8 overflow-y-auto flex-1 relative bg-gray-100"
+            ref={contentRef}
+            id="invoice-print-area"
+            style={{ zIndex: 1 }}
+          >
+            {/* A4 Paper Container */}
+            <div
+              className="bg-white shadow-lg mx-auto"
+              style={{
+                width: "210mm",
+                minHeight: "297mm",
+                boxSizing: "border-box",
+              }}
+            >
+              {isCustomTemplate ? (
+                <CustomInvoicePreview
+                  templateData={templateSettings.customData}
+                  companyInfo={companyInfo}
+                  invoiceData={invoiceForDisplay}
+                />
+              ) : (
+                <TemplateComponent
+                  companyInfo={companyInfo}
+                  invoiceData={invoiceForDisplay}
+                  color={templateSettings.color || "#667eea"}
+                  showPaymentInfo={templateSettings.showPaymentInfo !== false}
+                />
+              )}
+            </div>
           </div>
 
           {/* Pagination Controls */}

@@ -83,14 +83,6 @@ const InvoiceItems = ({ items, setItems, products }) => {
     updateQuantity(itemIndex, requestedQty);
   };
 
-  const handlePriceChange = (index, newPrice) => {
-    const price = parseFloat(newPrice) || 0;
-    const newItems = [...items];
-    newItems[index].unit_price = price;
-    newItems[index].total = newItems[index].quantity * price;
-    setItems(newItems);
-  };
-
   return (
     <div className="space-y-4">
       <h3 className={`text-sm font-semibold ${theme.textPrimary}`}>
@@ -160,14 +152,11 @@ const InvoiceItems = ({ items, setItems, products }) => {
               >
                 Unit Price
               </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={item.unit_price}
-                onChange={(e) => handlePriceChange(index, e.target.value)}
-                className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgInput} ${theme.textPrimary} focus:ring-2 focus:ring-[#667eea] focus:border-transparent text-sm`}
-              />
+              <div
+                className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgCard} ${theme.textPrimary} font-semibold text-sm bg-gray-100`}
+              >
+                {formatCurrency(item.unit_price)}
+              </div>
             </div>
 
             {/* Total */}

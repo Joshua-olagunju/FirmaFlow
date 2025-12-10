@@ -465,45 +465,169 @@ try {
         }
     } else if ($method === 'PUT') {
         $id = $input['id'] ?? 0;
-        $status = $input['status'] ?? 'draft';
         
-        // Update invoice status
-        $stmt = $pdo->prepare("UPDATE sales_invoices SET status = ?, updated_at = NOW() WHERE id = ? AND company_id = ?");
-        $stmt->execute([$status, $id, $company_id]);
-        
-        // Get invoice details for sales table update
-        $stmt = $pdo->prepare("SELECT customer_id, total FROM sales_invoices WHERE id = ? AND company_id = ?");
-        $stmt->execute([$id, $company_id]);
-        $invoice = $stmt->fetch();
-        
-        if ($invoice) {
-            // Update corresponding sales table entry status
-            $newPaymentStatus = ($status === 'paid') ? 'paid' : 'pending';
-            $updateSalesStmt = $pdo->prepare("
-                UPDATE sales 
-                SET payment_status = ?, updated_at = NOW() 
-                WHERE company_id = ? AND customer_id = ? AND total_amount = ? 
-                ORDER BY created_at DESC LIMIT 1
-            ");
-            $updateSalesStmt->execute([$newPaymentStatus, $company_id, $invoice['customer_id'], $invoice['total']]);
+        // Check if this is a status-only update or full invoice update
+        if (isset($input['items']) && is_array($input['items'])) {
+            // Full invoice update
+            $pdo->beginTransaction();
             
-            error_log("✅ Sales payment status updated to $newPaymentStatus for invoice #$id");
+            try {
+                $customer_id = $input['customer_id'];
+                $invoice_date = $input['invoice_date'];
+                $due_date = $input['due_date'];
+                $tax_rate_id = $input['tax_id'] ?? null;
+                $tax_rate = floatval($input['tax_rate'] ?? 0);
+                $discount = floatval($input['discount'] ?? 0);
+                $notes = $input['notes'] ?? '';
+                $status = $input['status'] ?? 'draft';
+                $items = $input['items'];
+                
+                // Calculate totals
+                $subtotal = 0;
+                foreach ($items as $item) {
+                    $subtotal += floatval($item['total']);
+                }
+                
+                $tax_amount = ($subtotal - $discount) * ($tax_rate / 100);
+                $total = $subtotal - $discount + $tax_amount;
+                
+                // Get old invoice data to reverse stock
+                $stmt = $pdo->prepare("SELECT * FROM sales_invoice_lines WHERE invoice_id = ?");
+                $stmt->execute([$id]);
+                $oldLines = $stmt->fetchAll();
+                
+                // Reverse old stock quantities
+                $updateStockStmt = $pdo->prepare("UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?");
+                foreach ($oldLines as $line) {
+                    $updateStockStmt->execute([$line['quantity'], $line['product_id']]);
+                }
+                
+                // Update invoice header
+                $stmt = $pdo->prepare("
+                    UPDATE sales_invoices 
+                    SET customer_id = ?, invoice_date = ?, due_date = ?, 
+                        subtotal = ?, tax = ?, discount_amount = ?, 
+                        total = ?, notes = ?, status = ?, 
+                        tax_rate_id = ?, updated_at = NOW()
+                    WHERE id = ? AND company_id = ?
+                ");
+                $stmt->execute([
+                    $customer_id, $invoice_date, $due_date,
+                    $subtotal, $tax_amount, $discount,
+                    $total, $notes, $status,
+                    $tax_rate_id, $id, $company_id
+                ]);
+                
+                // Delete old invoice lines
+                $stmt = $pdo->prepare("DELETE FROM sales_invoice_lines WHERE invoice_id = ?");
+                $stmt->execute([$id]);
+                
+                // Insert new invoice lines and update stock
+                $stmt = $pdo->prepare("
+                    INSERT INTO sales_invoice_lines 
+                    (invoice_id, product_id, quantity, unit_price, line_total) 
+                    VALUES (?, ?, ?, ?, ?)
+                ");
+                
+                $reduceStockStmt = $pdo->prepare("UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?");
+                
+                foreach ($items as $item) {
+                    $stmt->execute([
+                        $id,
+                        $item['product_id'],
+                        $item['quantity'],
+                        $item['unit_price'],
+                        $item['total']
+                    ]);
+                    
+                    // Reduce stock for new quantities
+                    $reduceStockStmt->execute([$item['quantity'], $item['product_id']]);
+                }
+                
+                // Update sales table
+                $updateSalesStmt = $pdo->prepare("
+                    UPDATE sales 
+                    SET customer_id = ?, total_amount = ?, 
+                        payment_status = ?, updated_at = NOW()
+                    WHERE company_id = ? AND id IN (
+                        SELECT id FROM (
+                            SELECT id FROM sales 
+                            WHERE company_id = ? 
+                            ORDER BY created_at DESC LIMIT 1
+                        ) tmp
+                    )
+                ");
+                $newPaymentStatus = ($status === 'paid') ? 'paid' : 'pending';
+                $updateSalesStmt->execute([
+                    $customer_id, $total,
+                    $newPaymentStatus, $company_id, $company_id
+                ]);
+                
+                $pdo->commit();
+                
+                // Return updated invoice
+                $stmt = $pdo->prepare("
+                    SELECT si.*, c.name as customer_name,
+                           si.invoice_no as invoice_number,
+                           si.invoice_date as sale_date,
+                           si.total as amount
+                    FROM sales_invoices si 
+                    LEFT JOIN customers c ON si.customer_id = c.id 
+                    WHERE si.id = ?
+                ");
+                $stmt->execute([$id]);
+                $invoice = $stmt->fetch();
+                
+                echo json_encode(['success' => true, 'data' => $invoice]);
+                
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                http_response_code(500);
+                echo json_encode(['error' => 'Failed to update invoice: ' . $e->getMessage()]);
+            }
+            
+        } else {
+            // Status-only update (legacy)
+            $status = $input['status'] ?? 'draft';
+            
+            // Update invoice status
+            $stmt = $pdo->prepare("UPDATE sales_invoices SET status = ?, updated_at = NOW() WHERE id = ? AND company_id = ?");
+            $stmt->execute([$status, $id, $company_id]);
+            
+            // Get invoice details for sales table update
+            $stmt = $pdo->prepare("SELECT customer_id, total FROM sales_invoices WHERE id = ? AND company_id = ?");
+            $stmt->execute([$id, $company_id]);
+            $invoice = $stmt->fetch();
+            
+            if ($invoice) {
+                // Update corresponding sales table entry status
+                $newPaymentStatus = ($status === 'paid') ? 'paid' : 'pending';
+                $updateSalesStmt = $pdo->prepare("
+                    UPDATE sales 
+                    SET payment_status = ?, updated_at = NOW() 
+                    WHERE company_id = ? AND customer_id = ? AND total_amount = ? 
+                    ORDER BY created_at DESC LIMIT 1
+                ");
+                $updateSalesStmt->execute([$newPaymentStatus, $company_id, $invoice['customer_id'], $invoice['total']]);
+                
+                error_log("✅ Sales payment status updated to $newPaymentStatus for invoice #$id");
+            }
+            
+            // Get updated invoice
+            $stmt = $pdo->prepare("
+                SELECT si.*, c.name as customer_name,
+                       si.invoice_no as invoice_number,
+                       si.invoice_date as sale_date,
+                       si.total as amount
+                FROM sales_invoices si 
+                LEFT JOIN customers c ON si.customer_id = c.id 
+                WHERE si.id = ?
+            ");
+            $stmt->execute([$id]);
+            $invoice = $stmt->fetch();
+            
+            echo json_encode($invoice);
         }
-        
-        // Get updated invoice
-        $stmt = $pdo->prepare("
-            SELECT si.*, c.name as customer_name,
-                   si.invoice_no as invoice_number,
-                   si.invoice_date as sale_date,
-                   si.total as amount
-            FROM sales_invoices si 
-            LEFT JOIN customers c ON si.customer_id = c.id 
-            WHERE si.id = ?
-        ");
-        $stmt->execute([$id]);
-        $invoice = $stmt->fetch();
-        
-        echo json_encode($invoice);
         
     } else if ($method === 'PATCH') {
         // PATCH functionality temporarily disabled - reversal system not available
