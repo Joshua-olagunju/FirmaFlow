@@ -68,6 +68,8 @@ const InvoiceTemplates = () => {
     })),
   ];
 
+  console.log("Available invoice templates for dropdown:", availableTemplates);
+
   const colorOptions = [
     { name: "Purple", value: "#667eea" },
     { name: "Blue", value: "#3b82f6" },
@@ -100,6 +102,11 @@ const InvoiceTemplates = () => {
     fetchCompanyInfo();
     fetchTemplates();
   }, []);
+
+  // Force re-render when customTemplates changes
+  useEffect(() => {
+    console.log("customTemplates state updated:", customTemplates);
+  }, [customTemplates]);
 
   const fetchCompanyInfo = async () => {
     try {
@@ -139,9 +146,11 @@ const InvoiceTemplates = () => {
       );
       const data = await response.json();
       if (response.ok && data.success) {
+        console.log("All templates from API:", data.data);
         const invoiceTemplates = data.data.filter(
           (t) => t.template_type === "invoice"
         );
+        console.log("Invoice templates:", invoiceTemplates);
         setTemplates(invoiceTemplates);
 
         // Filter custom templates (those with type="custom" or "custom-freeform" in their data)
@@ -150,6 +159,7 @@ const InvoiceTemplates = () => {
             t.template_data?.type === "custom" ||
             t.template_data?.type === "custom-freeform"
         );
+        console.log("Custom invoice templates:", customInvoiceTemplates);
         setCustomTemplates(customInvoiceTemplates);
 
         // Set default template if exists
@@ -157,6 +167,9 @@ const InvoiceTemplates = () => {
         if (defaultTemplate) {
           setSelectedTemplate(defaultTemplate.template_name);
           setSelectedColor(defaultTemplate.template_data?.color || "#667eea");
+          setShowPaymentInfo(
+            defaultTemplate.template_data?.showPaymentInfo !== false
+          );
         }
       }
     } catch (error) {
@@ -165,35 +178,82 @@ const InvoiceTemplates = () => {
   };
 
   const handleSaveTemplate = async () => {
-    try {
-      const response = await fetch(buildApiUrl("api/settings.php"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "save_template",
-          type: "invoice",
-          name: selectedTemplate,
-          data: {
-            color: selectedColor,
-            templateId: builtInTemplates.find(
-              (t) => t.name === selectedTemplate
-            )?.id,
-          },
-          is_default: true,
-        }),
-      });
+    if (!selectedTemplate) {
+      alert("Please select a template first");
+      return;
+    }
 
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setSuccessMessage("Invoice template saved successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
-        fetchTemplates();
+    try {
+      // Find if it's a built-in template or custom template
+      const selectedTemplateObj = availableTemplates.find(
+        (t) => t.name === selectedTemplate
+      );
+
+      console.log("Saving template:", selectedTemplate);
+      console.log("Selected template object:", selectedTemplateObj);
+      console.log("Is custom:", selectedTemplateObj?.isCustom);
+
+      // If it's a custom template, just mark it as default (don't create new)
+      if (selectedTemplateObj?.isCustom) {
+        // For custom templates, we need to update the existing template to set is_default
+        // IMPORTANT: Preserve the entire template_data including the type field
+        const response = await fetch(buildApiUrl("api/settings.php"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            action: "save_template",
+            type: "invoice",
+            name: selectedTemplate,
+            data: {
+              ...selectedTemplateObj.data, // Preserve ALL existing data
+              color: selectedColor, // Update color if changed
+            },
+            is_default: true, // Mark as default
+          }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          setSuccessMessage("Custom template set as default successfully!");
+          setTimeout(() => setSuccessMessage(""), 3000);
+          await fetchTemplates();
+        }
+      } else {
+        // For built-in templates, save with color and settings
+        const response = await fetch(buildApiUrl("api/settings.php"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            action: "save_template",
+            type: "invoice",
+            name: selectedTemplate,
+            data: {
+              color: selectedColor,
+              templateId: builtInTemplates.find(
+                (t) => t.name === selectedTemplate
+              )?.id,
+              showPaymentInfo: showPaymentInfo,
+            },
+            is_default: true,
+          }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          setSuccessMessage("Invoice template saved successfully!");
+          setTimeout(() => setSuccessMessage(""), 3000);
+          await fetchTemplates();
+        }
       }
     } catch (error) {
       console.error("Error saving template:", error);
+      alert("Failed to save template. Please try again.");
     }
   };
 
@@ -609,19 +669,33 @@ const InvoiceTemplates = () => {
           onSave={async (template) => {
             setShowCustomBuilder(false);
             setEditingTemplate(null);
+
+            // Close dropdown if open
+            setIsDropdownOpen(false);
+
             // Wait for templates to load FIRST
             await fetchTemplates();
-            // Then set the newly created/edited template as selected
-            setSelectedTemplate(template.name);
-            setSelectedColor(template.color || "#667eea");
-            setSuccessMessage(
-              `Custom template "${template.name}" ${
-                editingTemplate ? "updated" : "saved"
-              } successfully!`
-            );
-            setTimeout(() => setSuccessMessage(""), 3000);
+
+            // Small delay to ensure state has updated
+            setTimeout(() => {
+              // Then set the newly created/edited template as selected
+              setSelectedTemplate(template.name);
+              setSelectedColor(template.color || "#667eea");
+              setSuccessMessage(
+                `Custom template "${template.name}" ${
+                  editingTemplate ? "updated" : "saved"
+                } successfully!`
+              );
+              setTimeout(() => setSuccessMessage(""), 3000);
+            }, 100);
+
             // Wait longer for React to update availableTemplates with the new template
-            setTimeout(() => setShowPreview(true), 800);
+            setTimeout(() => {
+              console.log("Opening preview for template:", template.name);
+              console.log("Current availableTemplates:", availableTemplates);
+              console.log("Custom templates in state:", customTemplates);
+              setShowPreview(true);
+            }, 800);
           }}
         />
       )}
