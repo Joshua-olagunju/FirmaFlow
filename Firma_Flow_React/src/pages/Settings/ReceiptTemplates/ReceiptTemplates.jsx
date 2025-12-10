@@ -63,6 +63,8 @@ const ReceiptTemplates = () => {
     })),
   ];
 
+  console.log("Available receipt templates for dropdown:", availableTemplates);
+
   const colorOptions = [
     { name: "Purple", value: "#667eea" },
     { name: "Blue", value: "#3b82f6" },
@@ -95,6 +97,11 @@ const ReceiptTemplates = () => {
     fetchCompanyInfo();
     fetchTemplates();
   }, []);
+
+  // Force re-render when customTemplates changes
+  useEffect(() => {
+    console.log("customTemplates state updated:", customTemplates);
+  }, [customTemplates]);
 
   const fetchCompanyInfo = async () => {
     try {
@@ -134,9 +141,11 @@ const ReceiptTemplates = () => {
       );
       const data = await response.json();
       if (response.ok && data.success) {
+        console.log("All templates from API:", data.data);
         const receiptTemplates = data.data.filter(
           (t) => t.template_type === "receipt"
         );
+        console.log("Receipt templates:", receiptTemplates);
         setTemplates(receiptTemplates);
 
         // Filter custom templates (those with type="custom" or "custom-freeform" in their data)
@@ -145,6 +154,7 @@ const ReceiptTemplates = () => {
             t.template_data?.type === "custom" ||
             t.template_data?.type === "custom-freeform"
         );
+        console.log("Custom receipt templates:", customReceiptTemplates);
         setCustomTemplates(customReceiptTemplates);
 
         const defaultTemplate = receiptTemplates.find((t) => t.is_default);
@@ -159,35 +169,81 @@ const ReceiptTemplates = () => {
   };
 
   const handleSaveTemplate = async () => {
-    try {
-      const response = await fetch(buildApiUrl("api/settings.php"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "save_template",
-          type: "receipt",
-          name: selectedTemplate,
-          data: {
-            color: selectedColor,
-            templateId: builtInTemplates.find(
-              (t) => t.name === selectedTemplate
-            )?.id,
-          },
-          is_default: true,
-        }),
-      });
+    if (!selectedTemplate) {
+      alert("Please select a template first");
+      return;
+    }
 
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setSuccessMessage("Receipt template saved successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
-        fetchTemplates();
+    try {
+      // Find if it's a built-in template or custom template
+      const selectedTemplateObj = availableTemplates.find(
+        (t) => t.name === selectedTemplate
+      );
+
+      console.log("Saving template:", selectedTemplate);
+      console.log("Selected template object:", selectedTemplateObj);
+      console.log("Is custom:", selectedTemplateObj?.isCustom);
+
+      // If it's a custom template, just mark it as default (don't create new)
+      if (selectedTemplateObj?.isCustom) {
+        // For custom templates, we need to update the existing template to set is_default
+        // IMPORTANT: Preserve the entire template_data including the type field
+        const response = await fetch(buildApiUrl("api/settings.php"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            action: "save_template",
+            type: "receipt",
+            name: selectedTemplate,
+            data: {
+              ...selectedTemplateObj.data, // Preserve ALL existing data
+              color: selectedColor, // Update color if changed
+            },
+            is_default: true, // Mark as default
+          }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          setSuccessMessage("Custom template set as default successfully!");
+          setTimeout(() => setSuccessMessage(""), 3000);
+          await fetchTemplates();
+        }
+      } else {
+        // For built-in templates, save with color and settings
+        const response = await fetch(buildApiUrl("api/settings.php"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            action: "save_template",
+            type: "receipt",
+            name: selectedTemplate,
+            data: {
+              color: selectedColor,
+              templateId: builtInTemplates.find(
+                (t) => t.name === selectedTemplate
+              )?.id,
+            },
+            is_default: true,
+          }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          setSuccessMessage("Receipt template saved successfully!");
+          setTimeout(() => setSuccessMessage(""), 3000);
+          await fetchTemplates();
+        }
       }
     } catch (error) {
       console.error("Error saving template:", error);
+      alert("Failed to save template. Please try again.");
     }
   };
 
@@ -500,19 +556,33 @@ const ReceiptTemplates = () => {
           onSave={async (template) => {
             setShowCustomBuilder(false);
             setEditingTemplate(null);
+
+            // Close dropdown if open
+            setIsDropdownOpen(false);
+
             // Wait for templates to load FIRST
             await fetchTemplates();
-            // Then set the newly created/edited template as selected
-            setSelectedTemplate(template.name);
-            setSelectedColor(template.color || "#667eea");
-            setSuccessMessage(
-              `Custom template "${template.name}" ${
-                editingTemplate ? "updated" : "saved"
-              } successfully!`
-            );
-            setTimeout(() => setSuccessMessage(""), 3000);
+
+            // Small delay to ensure state has updated
+            setTimeout(() => {
+              // Then set the newly created/edited template as selected
+              setSelectedTemplate(template.name);
+              setSelectedColor(template.color || "#667eea");
+              setSuccessMessage(
+                `Custom template "${template.name}" ${
+                  editingTemplate ? "updated" : "saved"
+                } successfully!`
+              );
+              setTimeout(() => setSuccessMessage(""), 3000);
+            }, 100);
+
             // Wait longer for React to update availableTemplates with the new template
-            setTimeout(() => setShowPreview(true), 800);
+            setTimeout(() => {
+              console.log("Opening preview for template:", template.name);
+              console.log("Current availableTemplates:", availableTemplates);
+              console.log("Custom templates in state:", customTemplates);
+              setShowPreview(true);
+            }, 800);
           }}
         />
       )}

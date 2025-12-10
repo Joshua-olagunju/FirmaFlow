@@ -399,7 +399,6 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                 </div>
               )}
             </div>
-            )}
           </div>
         </div>
       </motion.div>
