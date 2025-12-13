@@ -6,9 +6,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Share2,
+  Image as ImageIcon,
+  FileText,
 } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
-import html2canvas from "html2canvas";
+import * as htmlToImage from "html-to-image";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { buildApiUrl } from "../../config/api.config";
@@ -20,9 +22,14 @@ import ElegantInvoice from "../Settings/InvoiceTemplates/templates/ElegantInvoic
 import CustomInvoicePreview from "../Settings/InvoiceTemplates/CustomInvoicePreview";
 import InvoicePDFFactory from "./PDFTemplates/InvoicePDFFactory";
 
-const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
+const ViewInvoiceModal = ({
+  isOpen,
+  onClose,
+  invoice,
+  initialAction = null,
+}) => {
   const { theme } = useTheme();
-  const { formatCurrency, currency } = useSettings();
+  const { formatCurrency, currency, currencySymbols } = useSettings();
   const [invoiceData, setInvoiceData] = useState(null);
   const [companyInfo, setCompanyInfo] = useState(null);
   const [templateSettings, setTemplateSettings] = useState(null);
@@ -30,6 +37,7 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [pendingAction, setPendingAction] = useState(initialAction);
   const contentRef = useRef(null);
 
   const templateComponents = {
@@ -47,50 +55,88 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
     try {
       console.log("Converting logo to base64:", imageUrl);
 
-      // Try to find the image element already loaded in the DOM
-      const imgElement = document.querySelector(`img[src="${imageUrl}"]`);
+      // Method 1: Try to fetch the image as blob and convert to base64
+      try {
+        const response = await fetch(imageUrl, {
+          credentials: "include",
+          mode: "cors",
+        });
 
-      if (imgElement && imgElement.complete) {
-        // Image is already loaded in the DOM, convert it to base64
-        console.log("Found loaded image in DOM, converting...");
-        const canvas = document.createElement("canvas");
-        canvas.width = imgElement.naturalWidth || imgElement.width;
-        canvas.height = imgElement.naturalHeight || imgElement.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(imgElement, 0, 0);
-        const base64 = canvas.toDataURL("image/png");
-        console.log(
-          "Logo converted to base64 from DOM, length:",
-          base64.length
-        );
-        return base64;
+        if (response.ok) {
+          const blob = await response.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              console.log(
+                "Logo converted via fetch, length:",
+                reader.result?.length
+              );
+              resolve(reader.result);
+            };
+            reader.onerror = () => {
+              console.error("FileReader error");
+              resolve(null);
+            };
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch (fetchError) {
+        console.log("Fetch method failed, trying canvas method:", fetchError);
       }
 
-      // Fallback: try to load image with crossOrigin
-      console.log("Image not found in DOM, loading with crossOrigin...");
+      // Method 2: Try to find the image element already loaded in the DOM
+      const imgElement = document.querySelector(`img[src="${imageUrl}"]`);
+
+      if (imgElement && imgElement.complete && imgElement.naturalWidth > 0) {
+        console.log("Found loaded image in DOM, converting...");
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = imgElement.naturalWidth || imgElement.width;
+          canvas.height = imgElement.naturalHeight || imgElement.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(imgElement, 0, 0);
+          const base64 = canvas.toDataURL("image/png");
+          console.log(
+            "Logo converted to base64 from DOM, length:",
+            base64.length
+          );
+          return base64;
+        } catch (canvasError) {
+          console.log("Canvas conversion failed (CORS):", canvasError);
+        }
+      }
+
+      // Method 3: Load image fresh with crossOrigin
+      console.log("Trying to load image fresh with crossOrigin...");
       return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
 
         img.onload = () => {
-          console.log("Image loaded, converting to base64...");
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth || img.width;
-          canvas.height = img.naturalHeight || img.height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          const base64 = canvas.toDataURL("image/png");
-          console.log("Logo converted to base64, length:", base64.length);
-          resolve(base64);
+          try {
+            console.log("Image loaded, converting to base64...");
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            const base64 = canvas.toDataURL("image/png");
+            console.log("Logo converted to base64, length:", base64.length);
+            resolve(base64);
+          } catch (e) {
+            console.error("Canvas error:", e);
+            resolve(null);
+          }
         };
 
         img.onerror = (error) => {
           console.error("Image load error:", error);
-          // If CORS fails, resolve with null instead of rejecting
           resolve(null);
         };
 
-        img.src = imageUrl;
+        // Add cache busting to avoid CORS cached responses
+        const separator = imageUrl.includes("?") ? "&" : "?";
+        img.src = `${imageUrl}${separator}t=${Date.now()}`;
       });
     } catch (error) {
       console.error("Error converting image to base64:", error);
@@ -147,11 +193,21 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
         // Map API fields to template-expected fields
         const company = data.data;
         console.log("Company data from API:", company);
+
+        // Build logo URL using the serve_image.php endpoint for CORS support
+        const logoUrl = company.logo_path
+          ? buildApiUrl(
+              `api/serve_image.php?path=${encodeURIComponent(
+                company.logo_path
+              )}`
+            )
+          : null;
+
         const mappedCompanyInfo = {
           name: company.name || "",
           company_name: company.name || "",
-          logo: company.logo_path ? buildApiUrl(company.logo_path) : null,
-          logo_path: company.logo_path ? buildApiUrl(company.logo_path) : null,
+          logo: logoUrl,
+          logo_path: logoUrl,
           address: company.billing_address || company.address || "",
           billing_address: company.billing_address || company.address || "",
           city: company.city || "",
@@ -164,6 +220,7 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
           account_name: company.account_name || company.name || "",
         };
         console.log("Mapped company info:", mappedCompanyInfo);
+        console.log("Logo URL:", logoUrl);
         setCompanyInfo(mappedCompanyInfo);
       }
     } catch (err) {
@@ -251,6 +308,23 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
     }
   }, [invoiceData, calculatePages]);
 
+  // Handle pending share action from InvoiceActions
+  useEffect(() => {
+    if (pendingAction && invoiceData && companyInfo && templateSettings) {
+      // Small delay to ensure content is rendered
+      const timer = setTimeout(() => {
+        if (pendingAction === "pdf") {
+          handleSharePDF();
+        } else if (pendingAction === "image") {
+          handleShareImage();
+        }
+        setPendingAction(null);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAction, invoiceData, companyInfo, templateSettings]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -275,8 +349,7 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
 
       // Simple currency formatter for PDF (Intl.NumberFormat doesn't work well in PDFs)
       const simpleCurrencyFormat = (amount) => {
-        const currencySymbol =
-          currency === "USD" ? "$" : currency === "EUR" ? "€" : "NGN ";
+        const currencySymbol = currencySymbols[currency] || currency + " ";
         const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
@@ -368,26 +441,127 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
     }
   };
 
-  const handleDownloadImage = async () => {
+  const handleDownloadImage = async (format = "png") => {
     setShowDownloadMenu(false);
     try {
-      const element = document.getElementById("invoice-print-area");
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
+      // Target the A4 paper container directly using a specific ID
+      const invoiceElement = document.getElementById("invoice-paper-container");
+
+      if (!invoiceElement) {
+        throw new Error("Invoice element not found");
+      }
+
+      // Find ALL elements with overflow-x-auto or overflow-auto and temporarily fix them
+      const overflowElements = invoiceElement.querySelectorAll(
+        '[class*="overflow"]'
+      );
+      const originalOverflows = [];
+
+      overflowElements.forEach((el, index) => {
+        originalOverflows[index] = {
+          overflow: el.style.overflow,
+          overflowX: el.style.overflowX,
+          overflowY: el.style.overflowY,
+        };
+        el.style.overflow = "visible";
+        el.style.overflowX = "visible";
+        el.style.overflowY = "visible";
       });
 
+      // Also fix any tables that might have min-width issues
+      const tables = invoiceElement.querySelectorAll("table");
+      const originalTableStyles = [];
+      tables.forEach((table, index) => {
+        originalTableStyles[index] = {
+          minWidth: table.style.minWidth,
+          width: table.style.width,
+        };
+        table.style.minWidth = "unset";
+        table.style.width = "100%";
+      });
+
+      // Store original styles of the main container
+      const originalStyles = {
+        overflow: invoiceElement.style.overflow,
+        boxShadow: invoiceElement.style.boxShadow,
+        margin: invoiceElement.style.margin,
+        width: invoiceElement.style.width,
+        minHeight: invoiceElement.style.minHeight,
+      };
+
+      // Temporarily modify main container styles for clean capture
+      invoiceElement.style.overflow = "visible";
+      invoiceElement.style.boxShadow = "none";
+      invoiceElement.style.margin = "0";
+
+      // Wait a moment for styles to apply
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Configuration for high-quality image generation
+      const config = {
+        quality: 1,
+        pixelRatio: 2,
+        cacheBust: true,
+        backgroundColor: "#ffffff",
+        width: invoiceElement.scrollWidth,
+        height: invoiceElement.scrollHeight,
+        style: {
+          overflow: "visible",
+          margin: "0",
+        },
+      };
+
+      let dataUrl;
+      let filename;
+      const invoiceNumber =
+        invoiceData?.invoice_number || invoiceData?.invoice_no || "INV";
+
+      if (format === "jpeg" || format === "jpg") {
+        dataUrl = await htmlToImage.toJpeg(invoiceElement, {
+          ...config,
+          quality: 0.95,
+        });
+        filename = `Invoice-${invoiceNumber}.jpg`;
+      } else if (format === "svg") {
+        dataUrl = await htmlToImage.toSvg(invoiceElement, config);
+        filename = `Invoice-${invoiceNumber}.svg`;
+      } else {
+        // Default to PNG for best quality
+        dataUrl = await htmlToImage.toPng(invoiceElement, config);
+        filename = `Invoice-${invoiceNumber}.png`;
+      }
+
+      // Restore original styles for overflow elements
+      overflowElements.forEach((el, index) => {
+        el.style.overflow = originalOverflows[index].overflow;
+        el.style.overflowX = originalOverflows[index].overflowX;
+        el.style.overflowY = originalOverflows[index].overflowY;
+      });
+
+      // Restore table styles
+      tables.forEach((table, index) => {
+        table.style.minWidth = originalTableStyles[index].minWidth;
+        table.style.width = originalTableStyles[index].width;
+      });
+
+      // Restore main container styles
+      invoiceElement.style.overflow = originalStyles.overflow;
+      invoiceElement.style.boxShadow = originalStyles.boxShadow;
+      invoiceElement.style.margin = originalStyles.margin;
+
+      // Create download link
       const link = document.createElement("a");
-      link.download = `Invoice-${invoiceData.invoice_number}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.download = filename;
+      link.href = dataUrl;
       link.click();
     } catch (err) {
       console.error("Error generating image:", err);
       alert("Error generating image. Please try again.");
     }
   };
+
+  // Download as high-quality JPEG (smaller file size)
+  const handleDownloadJPEG = () => handleDownloadImage("jpeg");
 
   const handleSharePDF = async () => {
     setShowShareMenu(false);
@@ -399,8 +573,7 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
 
       // Simple currency formatter for PDF
       const simpleCurrencyFormat = (amount) => {
-        const currencySymbol =
-          currency === "USD" ? "$" : currency === "EUR" ? "€" : "NGN ";
+        const currencySymbol = currencySymbols[currency] || currency + " ";
         const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
@@ -496,28 +669,100 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
   const handleShareImage = async () => {
     setShowShareMenu(false);
     try {
-      const element = document.getElementById("invoice-print-area");
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
+      // Target the A4 paper container directly
+      const invoiceElement = document.getElementById("invoice-paper-container");
+
+      if (!invoiceElement) {
+        throw new Error("Invoice element not found");
+      }
+
+      // Find ALL elements with overflow-x-auto or overflow-auto and temporarily fix them
+      const overflowElements = invoiceElement.querySelectorAll(
+        '[class*="overflow"]'
+      );
+      const originalOverflows = [];
+
+      overflowElements.forEach((el, index) => {
+        originalOverflows[index] = {
+          overflow: el.style.overflow,
+          overflowX: el.style.overflowX,
+          overflowY: el.style.overflowY,
+        };
+        el.style.overflow = "visible";
+        el.style.overflowX = "visible";
+        el.style.overflowY = "visible";
       });
 
-      const blob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/png")
-      );
-      const file = new File(
-        [blob],
-        `Invoice-${invoiceData.invoice_number}.png`,
-        { type: "image/png" }
-      );
+      // Also fix any tables that might have min-width issues
+      const tables = invoiceElement.querySelectorAll("table");
+      const originalTableStyles = [];
+      tables.forEach((table, index) => {
+        originalTableStyles[index] = {
+          minWidth: table.style.minWidth,
+          width: table.style.width,
+        };
+        table.style.minWidth = "unset";
+        table.style.width = "100%";
+      });
+
+      // Store original styles of the main container
+      const originalStyles = {
+        overflow: invoiceElement.style.overflow,
+        boxShadow: invoiceElement.style.boxShadow,
+        margin: invoiceElement.style.margin,
+      };
+
+      // Temporarily modify main container styles for clean capture
+      invoiceElement.style.overflow = "visible";
+      invoiceElement.style.boxShadow = "none";
+      invoiceElement.style.margin = "0";
+
+      // Wait a moment for styles to apply
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Generate high-quality image blob
+      const blob = await htmlToImage.toBlob(invoiceElement, {
+        quality: 1,
+        pixelRatio: 2,
+        cacheBust: true,
+        backgroundColor: "#ffffff",
+        width: invoiceElement.scrollWidth,
+        height: invoiceElement.scrollHeight,
+        style: {
+          overflow: "visible",
+          margin: "0",
+        },
+      });
+
+      // Restore original styles for overflow elements
+      overflowElements.forEach((el, index) => {
+        el.style.overflow = originalOverflows[index].overflow;
+        el.style.overflowX = originalOverflows[index].overflowX;
+        el.style.overflowY = originalOverflows[index].overflowY;
+      });
+
+      // Restore table styles
+      tables.forEach((table, index) => {
+        table.style.minWidth = originalTableStyles[index].minWidth;
+        table.style.width = originalTableStyles[index].width;
+      });
+
+      // Restore main container styles
+      invoiceElement.style.overflow = originalStyles.overflow;
+      invoiceElement.style.boxShadow = originalStyles.boxShadow;
+      invoiceElement.style.margin = originalStyles.margin;
+
+      const invoiceNumber =
+        invoiceData?.invoice_number || invoiceData?.invoice_no || "INV";
+      const file = new File([blob], `Invoice-${invoiceNumber}.png`, {
+        type: "image/png",
+      });
 
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: `Invoice ${invoiceData.invoice_number}`,
-          text: `Invoice ${invoiceData.invoice_number}`,
+          title: `Invoice ${invoiceNumber}`,
+          text: `Invoice ${invoiceNumber}`,
         });
       } else {
         alert(
@@ -701,18 +946,52 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
                   <Download size={20} />
                 </button>
                 {showDownloadMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg z-50 overflow-hidden">
+                    <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Image Formats
+                      </span>
+                    </div>
                     <button
-                      onClick={handleDownloadImage}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition text-gray-700 font-medium"
+                      onClick={() => handleDownloadImage("png")}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition text-gray-700 font-medium flex items-center gap-3"
                     >
-                      Download as Image
+                      <ImageIcon size={18} className="text-blue-500" />
+                      <div>
+                        <div>PNG Image</div>
+                        <div className="text-xs text-gray-400">
+                          Best quality, transparent
+                        </div>
+                      </div>
                     </button>
                     <button
-                      onClick={handleDownloadPDF}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition text-gray-700 font-medium border-t border-gray-200"
+                      onClick={handleDownloadJPEG}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition text-gray-700 font-medium flex items-center gap-3 border-t border-gray-100"
                     >
-                      Download as PDF
+                      <ImageIcon size={18} className="text-green-500" />
+                      <div>
+                        <div>JPEG Image</div>
+                        <div className="text-xs text-gray-400">
+                          Smaller file size
+                        </div>
+                      </div>
+                    </button>
+                    <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Document Format
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleDownloadPDF}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition text-gray-700 font-medium flex items-center gap-3"
+                    >
+                      <FileText size={18} className="text-red-500" />
+                      <div>
+                        <div>PDF Document</div>
+                        <div className="text-xs text-gray-400">
+                          Print-ready format
+                        </div>
+                      </div>
                     </button>
                   </div>
                 )}
@@ -734,12 +1013,12 @@ const ViewInvoiceModal = ({ isOpen, onClose, invoice }) => {
             id="invoice-print-area"
             style={{ zIndex: 1 }}
           >
-            {/* A4 Paper Container */}
+            {/* A4 Paper Container - NO fixed height, grows with content */}
             <div
+              id="invoice-paper-container"
               className="bg-white shadow-lg mx-auto"
               style={{
                 width: "210mm",
-                minHeight: "297mm",
                 boxSizing: "border-box",
               }}
             >

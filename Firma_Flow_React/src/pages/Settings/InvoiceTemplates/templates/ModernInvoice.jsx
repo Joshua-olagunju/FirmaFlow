@@ -57,7 +57,9 @@ const ModernInvoice = ({
               {companyInfo?.address}
             </p>
             <p className="text-gray-600 text-xs sm:text-sm print:text-sm">
-              {companyInfo?.city}, {companyInfo?.state}
+              {[companyInfo?.city, companyInfo?.state]
+                .filter(Boolean)
+                .join(", ")}
             </p>
             <p className="text-gray-600 text-xs sm:text-sm print:text-sm">
               {companyInfo?.phone}

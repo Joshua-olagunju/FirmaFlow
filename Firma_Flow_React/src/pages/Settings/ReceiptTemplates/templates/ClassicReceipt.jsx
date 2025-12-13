@@ -33,7 +33,7 @@ const ClassicReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
           {companyInfo?.address}
         </p>
         <p className="text-gray-700 text-[10px] sm:text-xs md:text-sm print:text-sm">
-          {companyInfo?.city}, {companyInfo?.state}
+          {[companyInfo?.city, companyInfo?.state].filter(Boolean).join(", ")}
         </p>
         <p className="text-gray-700 text-[10px] sm:text-xs md:text-sm print:text-sm">
           Tel: {companyInfo?.phone}

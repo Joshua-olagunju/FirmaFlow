@@ -29,7 +29,7 @@ const ThermalReceipt = ({ companyInfo, receiptData }) => {
           {companyInfo?.address}
         </div>
         <div className="text-[10px] sm:text-xs print:text-xs">
-          {companyInfo?.city}, {companyInfo?.state}
+          {[companyInfo?.city, companyInfo?.state].filter(Boolean).join(", ")}
         </div>
         <div className="text-[10px] sm:text-xs print:text-xs">
           Tel: {companyInfo?.phone}

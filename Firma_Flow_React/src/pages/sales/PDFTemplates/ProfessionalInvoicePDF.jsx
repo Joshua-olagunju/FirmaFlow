@@ -6,9 +6,11 @@ import {
   View,
   StyleSheet,
   Image,
+  Svg,
+  Circle,
 } from "@react-pdf/renderer";
 
-// Create styles that match the Professional template
+// Create styles that match the Professional template exactly
 const createStyles = (color = "#667eea") =>
   StyleSheet.create({
     page: {
@@ -16,10 +18,11 @@ const createStyles = (color = "#667eea") =>
       fontSize: 10,
       backgroundColor: "#ffffff",
     },
-    // Professional colored header
+    // Professional colored header - matches HTML exactly
     coloredHeader: {
       backgroundColor: color,
-      padding: 30,
+      paddingVertical: 30,
+      paddingHorizontal: 32,
       color: "#ffffff",
     },
     headerContent: {
@@ -28,39 +31,38 @@ const createStyles = (color = "#667eea") =>
       alignItems: "center",
     },
     leftHeaderSection: {
-      flex: 1,
+      flexDirection: "column",
     },
     rightHeaderSection: {
-      flex: 1,
       alignItems: "flex-end",
     },
     logoContainer: {
       backgroundColor: "#ffffff",
-      padding: 6,
+      padding: 8,
       borderRadius: 4,
-      marginBottom: 8,
       width: 70,
+      marginBottom: 10,
     },
     logo: {
-      width: 58,
-      height: 48,
+      width: 48,
+      height: 40,
       objectFit: "contain",
     },
     companyName: {
-      fontSize: 20,
+      fontSize: 22,
       fontFamily: "Helvetica-Bold",
       color: "#ffffff",
-      marginBottom: 3,
+      marginBottom: 4,
     },
     companyEmail: {
       fontSize: 10,
       color: "rgba(255, 255, 255, 0.8)",
     },
     invoiceTitle: {
-      fontSize: 28,
+      fontSize: 30,
       fontFamily: "Helvetica-Bold",
       color: "#ffffff",
-      marginBottom: 5,
+      marginBottom: 6,
     },
     invoiceNumber: {
       fontSize: 11,
@@ -68,72 +70,94 @@ const createStyles = (color = "#667eea") =>
     },
     // Content area
     content: {
-      padding: 30,
+      padding: 32,
     },
-    // Info Grid
+    // Info Grid - matches HTML layout
     infoGrid: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginBottom: 30,
+      marginBottom: 32,
     },
-    infoColumn: {
+    leftInfoColumn: {
       flex: 1,
+    },
+    rightInfoColumn: {
+      alignItems: "flex-end",
+    },
+    // Company Address Section
+    companyAddressSection: {
+      marginBottom: 20,
     },
     sectionTitle: {
       fontSize: 9,
       fontFamily: "Helvetica-Bold",
-      color: "#999",
+      color: "#888888",
       textTransform: "uppercase",
       marginBottom: 8,
     },
-    companyAddress: {
+    addressText: {
       fontSize: 10,
-      color: "#333",
+      color: "#333333",
       marginBottom: 2,
     },
+    // Bill To Section
+    billToSection: {
+      marginTop: 4,
+    },
     customerName: {
-      fontSize: 11,
+      fontSize: 13,
       fontFamily: "Helvetica-Bold",
-      color: "#333",
-      marginBottom: 3,
+      color: "#333333",
+      marginBottom: 4,
     },
     customerInfo: {
       fontSize: 10,
-      color: "#666",
+      color: "#555555",
       marginBottom: 2,
+    },
+    // Date Box - gray background matches HTML bg-gray-50
+    dateBox: {
+      backgroundColor: "#f9fafb",
+      padding: 14,
+      borderRadius: 8,
+    },
+    dateSection: {
+      marginBottom: 14,
     },
     dateLabel: {
-      fontSize: 9,
-      color: "#999",
-      marginBottom: 2,
+      fontSize: 10,
+      color: "#666666",
+      marginBottom: 3,
     },
     dateValue: {
-      fontSize: 10,
+      fontSize: 13,
       fontFamily: "Helvetica-Bold",
-      color: "#333",
-      marginBottom: 8,
+      color: "#333333",
     },
-    // Table styles
+    dueDateValue: {
+      fontSize: 13,
+      fontFamily: "Helvetica-Bold",
+      color: color,
+    },
+    // Table styles - matches HTML bg-color-20
     table: {
-      marginBottom: 25,
+      marginBottom: 32,
     },
     tableHeader: {
       flexDirection: "row",
-      backgroundColor: "#f9fafb",
-      borderBottomWidth: 2,
-      borderBottomColor: color,
-      padding: 10,
+      backgroundColor: `${color}20`,
+      padding: 14,
+    },
+    tableHeaderText: {
+      fontSize: 10,
       fontFamily: "Helvetica-Bold",
-      fontSize: 9,
-      color: "#666",
-      textTransform: "uppercase",
+      color: "#333333",
     },
     tableRow: {
       flexDirection: "row",
       borderBottomWidth: 1,
       borderBottomColor: "#e5e7eb",
-      padding: 10,
-      fontSize: 10,
+      padding: 14,
     },
     tableColDescription: {
       flex: 3,
@@ -149,32 +173,41 @@ const createStyles = (color = "#667eea") =>
     tableColAmount: {
       flex: 1.5,
       textAlign: "right",
-      fontFamily: "Helvetica-Bold",
     },
-    // Totals section
+    tableCellText: {
+      fontSize: 10,
+      color: "#333333",
+    },
+    tableCellTextBold: {
+      fontSize: 10,
+      fontFamily: "Helvetica-Bold",
+      color: "#333333",
+    },
+    // Totals section - matches HTML bg-gray-50 rounded-lg
     totalsSection: {
       flexDirection: "row",
       justifyContent: "flex-end",
-      marginBottom: 25,
+      marginBottom: 32,
     },
     totalsBox: {
-      width: 240,
+      width: 280,
+      backgroundColor: "#f9fafb",
+      borderRadius: 8,
+      padding: 20,
     },
     totalRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingVertical: 6,
-      borderBottomWidth: 1,
-      borderBottomColor: "#e5e7eb",
+      paddingVertical: 8,
     },
     totalLabel: {
       fontSize: 10,
-      color: "#666",
+      color: "#555555",
     },
     totalValue: {
       fontSize: 10,
       fontFamily: "Helvetica-Bold",
-      color: "#333",
+      color: "#333333",
     },
     discountValue: {
       fontSize: 10,
@@ -184,61 +217,79 @@ const createStyles = (color = "#667eea") =>
     grandTotalRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingVertical: 12,
-      marginTop: 8,
-      backgroundColor: color,
-      paddingHorizontal: 10,
+      alignItems: "center",
+      paddingTop: 14,
+      marginTop: 10,
+      borderTopWidth: 2,
+      borderTopColor: color,
     },
     grandTotalLabel: {
       fontSize: 14,
       fontFamily: "Helvetica-Bold",
-      color: "#ffffff",
+      color: "#333333",
     },
     grandTotalValue: {
-      fontSize: 14,
+      fontSize: 18,
       fontFamily: "Helvetica-Bold",
-      color: "#ffffff",
+      color: color,
     },
-    // Payment info
+    // Payment section - matches HTML bg-blue-50 with left border
     paymentSection: {
-      borderTopWidth: 1,
-      borderTopColor: "#e5e7eb",
-      paddingTop: 20,
+      backgroundColor: "#eff6ff",
+      borderLeftWidth: 4,
+      borderLeftColor: color,
+      borderRadius: 4,
+      padding: 20,
       marginBottom: 20,
     },
+    paymentHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 14,
+    },
+    paymentDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: color,
+      marginRight: 8,
+    },
     paymentTitle: {
-      fontSize: 11,
+      fontSize: 12,
       fontFamily: "Helvetica-Bold",
-      color: "#333",
-      marginBottom: 10,
+      color: "#333333",
     },
     paymentGrid: {
       flexDirection: "row",
-      justifyContent: "space-between",
     },
     paymentItem: {
       flex: 1,
     },
     paymentLabel: {
       fontSize: 9,
-      color: "#666",
-      marginBottom: 2,
+      color: "#666666",
+      marginBottom: 4,
     },
     paymentValue: {
-      fontSize: 10,
+      fontSize: 12,
       fontFamily: "Helvetica-Bold",
-      color: "#333",
+      color: "#333333",
     },
-    // Footer
+    // Footer - matches HTML bg-gray-100
     footer: {
-      borderTopWidth: 1,
-      borderTopColor: "#e5e7eb",
-      paddingTop: 15,
+      backgroundColor: "#f3f4f6",
+      paddingVertical: 20,
+      paddingHorizontal: 32,
       textAlign: "center",
     },
     footerText: {
       fontSize: 10,
-      color: "#666",
+      color: "#666666",
+      marginBottom: 4,
+    },
+    footerSubtext: {
+      fontSize: 9,
+      color: "#888888",
     },
   });
 
@@ -249,20 +300,31 @@ const ProfessionalInvoicePDF = ({
 }) => {
   const styles = createStyles(color);
 
+  // Use formatCurrency from invoiceData which includes proper currency
   const formatCurrency =
     invoiceData?.formatCurrency ||
     ((amount) => {
-      const currencySymbol =
-        invoiceData?.currency === "USD"
-          ? "$"
-          : invoiceData?.currency === "EUR"
-          ? "€"
-          : "NGN ";
+      const currencyMap = {
+        NGN: "₦",
+        USD: "$",
+        EUR: "€",
+        GBP: "£",
+        JPY: "¥",
+        CNY: "¥",
+        INR: "₹",
+        ZAR: "R",
+        KES: "KSh",
+        GHS: "₵",
+      };
+      const symbol =
+        currencyMap[invoiceData?.currency] ||
+        invoiceData?.currency + " " ||
+        "NGN ";
       const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
-      return `${currencySymbol}${formatted}`;
+      return `${symbol}${formatted}`;
     });
 
   return (
@@ -271,9 +333,9 @@ const ProfessionalInvoicePDF = ({
         {/* Professional Colored Header */}
         <View style={styles.coloredHeader}>
           <View style={styles.headerContent}>
-            {/* Left: Company Info */}
+            {/* Left: Company Info with Logo */}
             <View style={styles.leftHeaderSection}>
-              {companyInfo?.logo && companyInfo.logo.startsWith("data:") && (
+              {companyInfo?.logo && (
                 <View style={styles.logoContainer}>
                   <Image
                     src={companyInfo.logo}
@@ -300,45 +362,53 @@ const ProfessionalInvoicePDF = ({
 
         {/* Content */}
         <View style={styles.content}>
-          {/* Info Grid */}
+          {/* Info Grid - Two Column Layout */}
           <View style={styles.infoGrid}>
-            {/* Company Address */}
-            <View style={styles.infoColumn}>
-              <Text style={styles.sectionTitle}>Company Address</Text>
-              <Text style={styles.companyAddress}>{companyInfo?.address}</Text>
-              <Text style={styles.companyAddress}>
-                {companyInfo?.city}, {companyInfo?.state}
-              </Text>
-              <Text style={styles.companyAddress}>{companyInfo?.phone}</Text>
-            </View>
-
-            {/* Bill To */}
-            <View style={styles.infoColumn}>
-              <Text style={styles.sectionTitle}>Bill To</Text>
-              <Text style={styles.customerName}>
-                {invoiceData?.customer?.name}
-              </Text>
-              <Text style={styles.customerInfo}>
-                {invoiceData?.customer?.address}
-              </Text>
-              <Text style={styles.customerInfo}>
-                {invoiceData?.customer?.city}
-              </Text>
-              <Text style={styles.customerInfo}>
-                {invoiceData?.customer?.phone}
-              </Text>
-            </View>
-
-            {/* Invoice Details */}
-            <View style={styles.infoColumn}>
-              <Text style={styles.sectionTitle}>Invoice Details</Text>
-              <View style={{ marginBottom: 8 }}>
-                <Text style={styles.dateLabel}>Invoice Date</Text>
-                <Text style={styles.dateValue}>{invoiceData?.date}</Text>
+            {/* Left Column: Company Address + Bill To */}
+            <View style={styles.leftInfoColumn}>
+              {/* Company Address Section */}
+              <View style={styles.companyAddressSection}>
+                <Text style={styles.sectionTitle}>Company Address</Text>
+                <Text style={styles.addressText}>{companyInfo?.address}</Text>
+                <Text style={styles.addressText}>
+                  {[companyInfo?.city, companyInfo?.state]
+                    .filter(Boolean)
+                    .join(", ")}
+                </Text>
+                <Text style={styles.addressText}>{companyInfo?.phone}</Text>
               </View>
-              <View>
-                <Text style={styles.dateLabel}>Due Date</Text>
-                <Text style={styles.dateValue}>{invoiceData?.dueDate}</Text>
+
+              {/* Bill To Section */}
+              <View style={styles.billToSection}>
+                <Text style={styles.sectionTitle}>Bill To</Text>
+                <Text style={styles.customerName}>
+                  {invoiceData?.customer?.name}
+                </Text>
+                <Text style={styles.customerInfo}>
+                  {invoiceData?.customer?.address}
+                </Text>
+                <Text style={styles.customerInfo}>
+                  {invoiceData?.customer?.city}
+                </Text>
+                <Text style={styles.customerInfo}>
+                  {invoiceData?.customer?.phone}
+                </Text>
+              </View>
+            </View>
+
+            {/* Right Column: Date Box */}
+            <View style={styles.rightInfoColumn}>
+              <View style={styles.dateBox}>
+                <View style={styles.dateSection}>
+                  <Text style={styles.dateLabel}>Invoice Date</Text>
+                  <Text style={styles.dateValue}>{invoiceData?.date}</Text>
+                </View>
+                <View>
+                  <Text style={styles.dateLabel}>Due Date</Text>
+                  <Text style={styles.dueDateValue}>
+                    {invoiceData?.dueDate}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -347,30 +417,44 @@ const ProfessionalInvoicePDF = ({
           <View style={styles.table}>
             {/* Table Header */}
             <View style={styles.tableHeader}>
-              <Text style={styles.tableColDescription}>Description</Text>
-              <Text style={styles.tableColQty}>Qty</Text>
-              <Text style={styles.tableColRate}>Rate</Text>
-              <Text style={styles.tableColAmount}>Amount</Text>
+              <Text
+                style={[styles.tableHeaderText, styles.tableColDescription]}
+              >
+                Description
+              </Text>
+              <Text style={[styles.tableHeaderText, styles.tableColQty]}>
+                Qty
+              </Text>
+              <Text style={[styles.tableHeaderText, styles.tableColRate]}>
+                Unit Price
+              </Text>
+              <Text style={[styles.tableHeaderText, styles.tableColAmount]}>
+                Amount
+              </Text>
             </View>
 
             {/* Table Rows */}
             {invoiceData?.items?.map((item, index) => (
               <View key={index} style={styles.tableRow}>
-                <Text style={styles.tableColDescription}>
+                <Text
+                  style={[styles.tableCellText, styles.tableColDescription]}
+                >
                   {item.description}
                 </Text>
-                <Text style={styles.tableColQty}>{item.quantity}</Text>
-                <Text style={styles.tableColRate}>
+                <Text style={[styles.tableCellText, styles.tableColQty]}>
+                  {item.quantity}
+                </Text>
+                <Text style={[styles.tableCellText, styles.tableColRate]}>
                   {formatCurrency(item.rate)}
                 </Text>
-                <Text style={styles.tableColAmount}>
+                <Text style={[styles.tableCellTextBold, styles.tableColAmount]}>
                   {formatCurrency(item.amount)}
                 </Text>
               </View>
             ))}
           </View>
 
-          {/* Totals */}
+          {/* Totals in Gray Box */}
           <View style={styles.totalsSection}>
             <View style={styles.totalsBox}>
               <View style={styles.totalRow}>
@@ -398,8 +482,9 @@ const ProfessionalInvoicePDF = ({
                 </View>
               )}
 
+              {/* Grand Total with colored border-top */}
               <View style={styles.grandTotalRow}>
-                <Text style={styles.grandTotalLabel}>TOTAL:</Text>
+                <Text style={styles.grandTotalLabel}>Total Due:</Text>
                 <Text style={styles.grandTotalValue}>
                   {formatCurrency(invoiceData?.total)}
                 </Text>
@@ -407,25 +492,28 @@ const ProfessionalInvoicePDF = ({
             </View>
           </View>
 
-          {/* Payment Info */}
+          {/* Payment Info - Blue background with left border */}
           {companyInfo?.bank_account && (
             <View style={styles.paymentSection}>
-              <Text style={styles.paymentTitle}>Payment Information</Text>
+              <View style={styles.paymentHeader}>
+                <View style={styles.paymentDot} />
+                <Text style={styles.paymentTitle}>Payment Information</Text>
+              </View>
               <View style={styles.paymentGrid}>
                 <View style={styles.paymentItem}>
-                  <Text style={styles.paymentLabel}>Bank Name:</Text>
+                  <Text style={styles.paymentLabel}>Bank Name</Text>
                   <Text style={styles.paymentValue}>
                     {companyInfo.bank_name}
                   </Text>
                 </View>
                 <View style={styles.paymentItem}>
-                  <Text style={styles.paymentLabel}>Account Number:</Text>
+                  <Text style={styles.paymentLabel}>Account Number</Text>
                   <Text style={styles.paymentValue}>
                     {companyInfo.bank_account}
                   </Text>
                 </View>
                 <View style={styles.paymentItem}>
-                  <Text style={styles.paymentLabel}>Account Name:</Text>
+                  <Text style={styles.paymentLabel}>Account Name</Text>
                   <Text style={styles.paymentValue}>
                     {companyInfo.account_name}
                   </Text>
@@ -433,11 +521,14 @@ const ProfessionalInvoicePDF = ({
               </View>
             </View>
           )}
+        </View>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Thank you for your business!</Text>
-          </View>
+        {/* Footer - Gray background */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Thank you for your business!</Text>
+          <Text style={styles.footerSubtext}>
+            Please make payment by the due date
+          </Text>
         </View>
       </Page>
     </Document>
