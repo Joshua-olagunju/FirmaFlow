@@ -221,20 +221,31 @@ const createStyles = (color = "#667eea") =>
 const MinimalInvoicePDF = ({ color = "#667eea", companyInfo, invoiceData }) => {
   const styles = createStyles(color);
 
+  // Use formatCurrency from invoiceData which includes proper currency
   const formatCurrency =
     invoiceData?.formatCurrency ||
     ((amount) => {
-      const currencySymbol =
-        invoiceData?.currency === "USD"
-          ? "$"
-          : invoiceData?.currency === "EUR"
-          ? "€"
-          : "NGN ";
+      const currencyMap = {
+        NGN: "₦",
+        USD: "$",
+        EUR: "€",
+        GBP: "£",
+        JPY: "¥",
+        CNY: "¥",
+        INR: "₹",
+        ZAR: "R",
+        KES: "KSh",
+        GHS: "₵",
+      };
+      const symbol =
+        currencyMap[invoiceData?.currency] ||
+        invoiceData?.currency + " " ||
+        "NGN ";
       const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
-      return `${currencySymbol}${formatted}`;
+      return `${symbol}${formatted}`;
     });
 
   return (
@@ -244,7 +255,7 @@ const MinimalInvoicePDF = ({ color = "#667eea", companyInfo, invoiceData }) => {
         <View style={styles.header}>
           {/* Left: Logo and Company Name */}
           <View style={styles.leftHeader}>
-            {companyInfo?.logo && companyInfo.logo.startsWith("data:") && (
+            {companyInfo?.logo && (
               <Image src={companyInfo.logo} style={styles.logo} cache={false} />
             )}
             <Text style={styles.companyName}>

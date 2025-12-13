@@ -19,11 +19,7 @@ const ClassicInvoice = ({
       className="bg-white p-4 sm:p-6 md:p-8 max-w-4xl mx-auto print:p-8"
       style={{
         fontFamily: "Georgia, serif",
-        minHeight: "297mm",
-        maxHeight: "297mm",
         boxSizing: "border-box",
-        pageBreakAfter: "always",
-        overflow: "hidden",
       }}
     >
       {/* Header */}
@@ -46,7 +42,7 @@ const ClassicInvoice = ({
             {companyInfo?.address}
           </p>
           <p className="text-gray-600 text-xs sm:text-sm print:text-sm">
-            {companyInfo?.city}, {companyInfo?.state}
+            {[companyInfo?.city, companyInfo?.state].filter(Boolean).join(", ")}
           </p>
           <p className="text-gray-600 text-xs sm:text-sm print:text-sm">
             {companyInfo?.phone} | {companyInfo?.email}

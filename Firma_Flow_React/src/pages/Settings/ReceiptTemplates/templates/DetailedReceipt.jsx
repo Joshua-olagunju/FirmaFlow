@@ -36,7 +36,7 @@ const DetailedReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
         <div className="bg-gray-50 p-2 sm:p-3 print:p-3 rounded text-[10px] sm:text-xs md:text-sm print:text-sm">
           <p className="text-gray-700">{companyInfo?.address}</p>
           <p className="text-gray-700">
-            {companyInfo?.city}, {companyInfo?.state}
+            {[companyInfo?.city, companyInfo?.state].filter(Boolean).join(", ")}
           </p>
           <p className="text-gray-700">Phone: {companyInfo?.phone}</p>
         </div>

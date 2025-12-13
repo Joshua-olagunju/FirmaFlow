@@ -100,25 +100,23 @@ const createStyles = (color = "#667eea") =>
       color: "#333",
       marginBottom: 10,
     },
-    // Table styles
+    // Table styles - Classic template has solid color header with white text
     table: {
       marginBottom: 25,
       border: `1pt solid ${color}`,
     },
     tableHeader: {
       flexDirection: "row",
-      backgroundColor: `${color}15`,
-      borderBottomWidth: 2,
-      borderBottomColor: color,
+      backgroundColor: color,
       padding: 10,
       fontFamily: "Times-Bold",
       fontSize: 10,
-      color: color,
+      color: "#ffffff",
     },
     tableRow: {
       flexDirection: "row",
       borderBottomWidth: 1,
-      borderBottomColor: "#e5e7eb",
+      borderBottomColor: `${color}30`,
       padding: 10,
       fontSize: 10,
     },
@@ -237,20 +235,31 @@ const createStyles = (color = "#667eea") =>
 const ClassicInvoicePDF = ({ color = "#667eea", companyInfo, invoiceData }) => {
   const styles = createStyles(color);
 
+  // Use formatCurrency from invoiceData which includes proper currency
   const formatCurrency =
     invoiceData?.formatCurrency ||
     ((amount) => {
-      const currencySymbol =
-        invoiceData?.currency === "USD"
-          ? "$"
-          : invoiceData?.currency === "EUR"
-          ? "€"
-          : "NGN ";
+      const currencyMap = {
+        NGN: "₦",
+        USD: "$",
+        EUR: "€",
+        GBP: "£",
+        JPY: "¥",
+        CNY: "¥",
+        INR: "₹",
+        ZAR: "R",
+        KES: "KSh",
+        GHS: "₵",
+      };
+      const symbol =
+        currencyMap[invoiceData?.currency] ||
+        invoiceData?.currency + " " ||
+        "NGN ";
       const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       });
-      return `${currencySymbol}${formatted}`;
+      return `${symbol}${formatted}`;
     });
 
   return (
@@ -259,7 +268,7 @@ const ClassicInvoicePDF = ({ color = "#667eea", companyInfo, invoiceData }) => {
         {/* Header with Double Border */}
         <View style={styles.outerBorder}>
           <View style={styles.headerCenter}>
-            {companyInfo?.logo && companyInfo.logo.startsWith("data:") && (
+            {companyInfo?.logo && (
               <Image src={companyInfo.logo} style={styles.logo} cache={false} />
             )}
             <Text style={styles.companyName}>
@@ -267,7 +276,9 @@ const ClassicInvoicePDF = ({ color = "#667eea", companyInfo, invoiceData }) => {
             </Text>
             <Text style={styles.companyInfo}>{companyInfo?.address}</Text>
             <Text style={styles.companyInfo}>
-              {companyInfo?.city}, {companyInfo?.state}
+              {[companyInfo?.city, companyInfo?.state]
+                .filter(Boolean)
+                .join(", ")}
             </Text>
             <Text style={styles.companyInfo}>
               {companyInfo?.phone} | {companyInfo?.email}

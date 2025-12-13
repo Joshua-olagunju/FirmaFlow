@@ -19,11 +19,7 @@ const ProfessionalInvoice = ({
       className="bg-white max-w-4xl mx-auto"
       style={{
         fontFamily: "Arial, sans-serif",
-        minHeight: "297mm",
-        maxHeight: "297mm",
         boxSizing: "border-box",
-        pageBreakAfter: "always",
-        overflow: "hidden",
       }}
     >
       {/* Professional Header */}
@@ -73,7 +69,9 @@ const ProfessionalInvoice = ({
                 {companyInfo?.address}
               </p>
               <p className="text-gray-800 text-xs sm:text-sm print:text-sm">
-                {companyInfo?.city}, {companyInfo?.state}
+                {[companyInfo?.city, companyInfo?.state]
+                  .filter(Boolean)
+                  .join(", ")}
               </p>
               <p className="text-gray-800 text-xs sm:text-sm print:text-sm">
                 {companyInfo?.phone}

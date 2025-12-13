@@ -596,6 +596,262 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
         return <div style={dividerStyle}></div>;
       }
 
+      case "accentBar": {
+        const props = section.props || {};
+        return (
+          <div
+            className={`w-full h-${props.height || 2}`}
+            style={{
+              height: `${(props.height || 2) * 0.25}rem`,
+              background: props.gradient
+                ? `linear-gradient(90deg, ${color} 0%, ${color}80 50%, ${color} 100%)`
+                : color,
+            }}
+          />
+        );
+      }
+
+      case "diamondDivider": {
+        const props = section.props || {};
+        return (
+          <div
+            className="flex items-center gap-4"
+            style={{
+              marginTop: `${(props.marginTop || 8) * 0.25}rem`,
+              marginBottom: `${(props.marginBottom || 8) * 0.25}rem`,
+            }}
+          >
+            <div
+              className="flex-1 h-px"
+              style={{ backgroundColor: `${color}30` }}
+            />
+            {props.showDiamond && (
+              <div
+                className="w-3 h-3 rotate-45"
+                style={{ backgroundColor: color }}
+              />
+            )}
+            <div
+              className="flex-1 h-px"
+              style={{ backgroundColor: `${color}30` }}
+            />
+          </div>
+        );
+      }
+
+      case "threeColumnInfo": {
+        const props = section.props || {};
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            {/* From Section */}
+            <div
+              className="p-4 rounded-lg"
+              style={{
+                backgroundColor: props.backgroundColor || "#fafafa",
+                borderLeft:
+                  props.borderStyle === "leftAccent"
+                    ? `3px solid ${color}`
+                    : "none",
+              }}
+            >
+              <h3
+                className="text-xs font-semibold uppercase tracking-wider mb-3"
+                style={{ color }}
+              >
+                From
+              </h3>
+              <p className="text-gray-800 font-medium text-sm mb-1">
+                {companyInfo?.name ||
+                  companyInfo?.company_name ||
+                  "Company Name"}
+              </p>
+              <p className="text-gray-600 text-xs leading-relaxed">
+                {companyInfo?.address || "Address"}
+                <br />
+                {[companyInfo?.city, companyInfo?.state]
+                  .filter(Boolean)
+                  .join(", ")}
+                {(companyInfo?.city || companyInfo?.state) && <br />}
+                {companyInfo?.phone}
+              </p>
+            </div>
+
+            {/* Bill To Section */}
+            <div
+              className="p-4 rounded-lg"
+              style={{
+                backgroundColor: props.backgroundColor || "#fafafa",
+                borderLeft:
+                  props.borderStyle === "leftAccent"
+                    ? `3px solid ${color}`
+                    : "none",
+              }}
+            >
+              <h3
+                className="text-xs font-semibold uppercase tracking-wider mb-3"
+                style={{ color }}
+              >
+                Bill To
+              </h3>
+              <p className="text-gray-800 font-medium text-sm mb-1">
+                {invoiceData?.customer_name || "Customer Name"}
+              </p>
+              <p className="text-gray-600 text-xs leading-relaxed">
+                {invoiceData?.customer_address || "Address"}
+                <br />
+                {invoiceData?.customer_city}
+                <br />
+                {invoiceData?.customer_phone}
+              </p>
+            </div>
+
+            {/* Details Section */}
+            <div
+              className="p-4 rounded-lg"
+              style={{
+                backgroundColor: props.backgroundColor || "#fafafa",
+                borderLeft:
+                  props.borderStyle === "leftAccent"
+                    ? `3px solid ${color}`
+                    : "none",
+              }}
+            >
+              <h3
+                className="text-xs font-semibold uppercase tracking-wider mb-3"
+                style={{ color }}
+              >
+                Details
+              </h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">Issue Date:</span>
+                  <span className="text-gray-800 font-medium">
+                    {invoiceData?.date || new Date().toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">Due Date:</span>
+                  <span className="font-medium" style={{ color }}>
+                    {invoiceData?.due_date || new Date().toLocaleDateString()}
+                  </span>
+                </div>
+                {props.showStatus && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Status:</span>
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-medium"
+                      style={{ backgroundColor: `${color}20`, color }}
+                    >
+                      {invoiceData?.status || "Pending"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case "modernTotals": {
+        const props = section.props || {};
+        return (
+          <div
+            className={`flex ${
+              props.alignment === "right"
+                ? "justify-end"
+                : props.alignment === "center"
+                ? "justify-center"
+                : "justify-start"
+            }`}
+          >
+            <div className="w-full sm:w-80">
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{
+                  border: props.bordered ? `1px solid ${color}30` : "none",
+                }}
+              >
+                {/* Subtotals */}
+                <div
+                  className="p-4 space-y-3"
+                  style={{
+                    backgroundColor: props.backgroundColor || "#fafafa",
+                  }}
+                >
+                  {props.showSubtotal && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal</span>
+                      <span className="text-gray-800 font-medium">
+                        {formatCurrency(invoiceData?.subtotal || 100000)}
+                      </span>
+                    </div>
+                  )}
+                  {props.showDiscount && invoiceData?.discount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Discount</span>
+                      <span className="text-red-600 font-medium">
+                        -{formatCurrency(invoiceData?.discount || 0)}
+                      </span>
+                    </div>
+                  )}
+                  {props.showTax && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Tax (7.5%)</span>
+                      <span className="text-gray-800 font-medium">
+                        {formatCurrency(invoiceData?.tax || 7500)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {/* Grand Total */}
+                <div
+                  className="p-4 flex justify-between items-center"
+                  style={{
+                    backgroundColor:
+                      props.grandTotalBgColor === "accent"
+                        ? color
+                        : props.grandTotalBgColor || color,
+                  }}
+                >
+                  <span className="text-white font-medium text-lg">
+                    Total Due
+                  </span>
+                  <span className="text-white font-bold text-xl sm:text-2xl">
+                    {formatCurrency(invoiceData?.total || 107500)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case "footer": {
+        const props = section.props || {};
+        return (
+          <div
+            className={`text-${props.alignment || "center"} pt-6 border-t`}
+            style={{ borderColor: `${color}30` }}
+          >
+            {props.showThankYou && (
+              <p className="text-gray-500 text-sm italic">
+                Thank you for your business!
+              </p>
+            )}
+            {props.showDecorative && (
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <div className="w-8 h-px" style={{ backgroundColor: color }} />
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: color }}
+                />
+                <div className="w-8 h-px" style={{ backgroundColor: color }} />
+              </div>
+            )}
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -622,7 +878,6 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
       style={{
         fontFamily: "Arial, sans-serif",
         boxSizing: "border-box",
-        minHeight: "500px",
       }}
     >
       <div
