@@ -18,6 +18,9 @@ const InvoicePDFFactory = ({
   console.log("=== InvoicePDFFactory Debug ===");
   console.log("Template Type:", templateType);
   console.log("Is Custom:", isCustom);
+  console.log("Custom Data:", customData);
+  console.log("Custom Data Sections:", customData?.sections);
+  console.log("Custom Data Color:", customData?.color);
   console.log("Company Info:", companyInfo);
   console.log("Logo (base64):", companyInfo?.logo?.substring(0, 50) + "...");
   console.log("Logo length:", companyInfo?.logo?.length);
