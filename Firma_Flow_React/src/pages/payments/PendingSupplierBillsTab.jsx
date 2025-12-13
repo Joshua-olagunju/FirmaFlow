@@ -1,10 +1,15 @@
+import { useState } from "react";
+import { Eye, DollarSign } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
+import MakeSupplierPaymentModal from "./MakeSupplierPaymentModal";
 
 // eslint-disable-next-line no-unused-vars
 const PendingSupplierBillsTab = ({ bills, onRefresh, searchQuery }) => {
   const { theme } = useTheme();
   const { formatCurrency, formatDate } = useSettings();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedBill, setSelectedBill] = useState(null);
 
   // Filter bills based on search query
   const filteredBills = bills.filter((bill) => {
@@ -48,8 +53,21 @@ const PendingSupplierBillsTab = ({ bills, onRefresh, searchQuery }) => {
   };
 
   const handlePay = (bill) => {
-    // TODO: Implement payment modal for supplier bills
-    console.log("Pay bill:", bill);
+    setSelectedBill(bill);
+    setShowPaymentModal(true);
+  };
+
+  const handleViewBill = (bill) => {
+    // Navigate to purchase view or open modal
+    window.open(`/purchases/${bill.id}`, "_blank");
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentModal(false);
+    setSelectedBill(null);
+    if (onRefresh) {
+      onRefresh();
+    }
   };
 
   return (
@@ -138,30 +156,53 @@ const PendingSupplierBillsTab = ({ bills, onRefresh, searchQuery }) => {
               <td className={`p-4 ${theme.textSecondary}`}>
                 {formatCurrency(bill.amount_paid || 0)}
               </td>
-              <td className={`p-4 ${theme.textPrimary} font-semibold`}>
+              <td className={`p-4 ${theme.textPrimary}`}>
                 {formatCurrency(calculateBalance(bill))}
               </td>
-              <td className="p-4">
+              <td className={`p-4`}>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(
+                  className={`inline-block px-2 py-1 text-xs rounded ${getStatusColor(
                     bill.status
                   )}`}
                 >
-                  {bill.status || "Unpaid"}
+                  {bill.status
+                    ? bill.status.charAt(0).toUpperCase() + bill.status.slice(1)
+                    : "Unpaid"}
                 </span>
               </td>
               <td className="p-4">
-                <button
-                  onClick={() => handlePay(bill)}
-                  className="px-4 py-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-sm font-medium rounded-lg hover:opacity-90 transition shadow-sm"
-                >
-                  Pay
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleViewBill(bill)}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                    title="View Bill"
+                  >
+                    <Eye size={18} className={theme.textSecondary} />
+                  </button>
+                  <button
+                    onClick={() => handlePay(bill)}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white text-sm font-medium rounded-lg hover:opacity-90 transition shadow-sm"
+                  >
+                    <DollarSign size={16} />
+                    Pay
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* Make Payment Modal */}
+      <MakeSupplierPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setSelectedBill(null);
+        }}
+        bill={selectedBill}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 };

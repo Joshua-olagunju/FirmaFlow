@@ -463,7 +463,7 @@ $_SESSION[‘logged_in’] = true;
 // Send welcome email to the new user (non-blocking; errors logged)
 try {
 // Adjust path if your app folder is at a different location
-require_once DIR . ‘/…/app/mailer.php’;
+require_once __DIR__ . '/../app/mailer.php';
 
 // call the Mailer. This returns ['success' => bool, 'error' => null|string]
 $result_mail = \FirmaFlow\Mailer::sendWelcome($email, $firstName . ($lastName ? " $lastName" : ''), $firstName);
