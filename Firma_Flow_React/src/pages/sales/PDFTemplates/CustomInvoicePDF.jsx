@@ -33,6 +33,7 @@ const getPadding = (padding) => {
     2: 8,
     3: 12,
     4: 16,
+    5: 20,
     6: 24,
     8: 32,
   };
@@ -54,6 +55,45 @@ const getFlexAlign = (alignment) => {
     default:
       return "flex-start";
   }
+};
+
+// Helper to get justify content based on alignment
+const getJustifyContent = (alignment) => {
+  switch (alignment) {
+    case "center":
+      return "center";
+    case "right":
+      return "flex-end";
+    default:
+      return "flex-start";
+  }
+};
+
+// Helper to get logo dimensions based on size
+const getLogoDimensions = (size) => {
+  const sizeMap = {
+    sm: { width: 40, height: 32 },
+    md: { width: 60, height: 48 },
+    lg: { width: 80, height: 64 },
+    xl: { width: 100, height: 80 },
+  };
+  return sizeMap[size] || sizeMap.md;
+};
+
+// Helper to lighten a color (for backgrounds)
+const lightenColor = (color, amount = 0.9) => {
+  if (!color || color === "transparent") return "transparent";
+  if (color.startsWith("#")) {
+    const hex = color.replace("#", "");
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const newR = Math.round(r + (255 - r) * amount);
+    const newG = Math.round(g + (255 - g) * amount);
+    const newB = Math.round(b + (255 - b) * amount);
+    return `rgb(${newR}, ${newG}, ${newB})`;
+  }
+  return color;
 };
 
 // Create dynamic styles based on custom template data
@@ -143,12 +183,6 @@ const createStyles = (templateData) => {
       color: color,
       fontSize: 12,
     },
-    logo: {
-      width: 60,
-      height: 48,
-      objectFit: "contain",
-      marginBottom: 10,
-    },
   });
 };
 
@@ -204,9 +238,15 @@ const CustomInvoicePDF = ({
       alignItems: getFlexAlign(props?.alignment),
     };
 
-    // Background color
-    if (props?.backgroundColor && props?.backgroundColor !== "transparent") {
-      baseStyles.backgroundColor = props.backgroundColor;
+    // Background color - handle 'accent' and 'accentLight' values
+    if (props?.backgroundColor) {
+      if (props.backgroundColor === "accent") {
+        baseStyles.backgroundColor = templateColor;
+      } else if (props.backgroundColor === "accentLight") {
+        baseStyles.backgroundColor = lightenColor(templateColor, 0.85);
+      } else if (props.backgroundColor !== "transparent") {
+        baseStyles.backgroundColor = props.backgroundColor;
+      }
     }
 
     // Border
@@ -220,38 +260,565 @@ const CustomInvoicePDF = ({
     return baseStyles;
   };
 
+  // Render Accent Bar Section (for elegant template)
+  const renderAccentBar = (section) => {
+    const height = (parseInt(section.props?.height) || 2) * 4;
+
+    return (
+      <View
+        style={{
+          width: "100%",
+          height: height,
+          backgroundColor: templateColor,
+          marginBottom: section.props?.position === "top" ? 10 : 0,
+          marginTop: section.props?.position === "bottom" ? 10 : 0,
+        }}
+      />
+    );
+  };
+
+  // Render Diamond Divider Section (for elegant template)
+  const renderDiamondDivider = (section) => {
+    const marginTop = (parseInt(section.props?.marginTop) || 8) * 4;
+    const marginBottom = (parseInt(section.props?.marginBottom) || 8) * 4;
+    const showDiamond = section.props?.showDiamond !== false;
+
+    return (
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginTop,
+          marginBottom,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            height: 1,
+            backgroundColor: lightenColor(templateColor, 0.7),
+          }}
+        />
+        {showDiamond && (
+          <View
+            style={{
+              width: 8,
+              height: 8,
+              backgroundColor: templateColor,
+              transform: "rotate(45deg)",
+              marginHorizontal: 10,
+            }}
+          />
+        )}
+        <View
+          style={{
+            flex: 1,
+            height: 1,
+            backgroundColor: lightenColor(templateColor, 0.7),
+          }}
+        />
+      </View>
+    );
+  };
+
+  // Render Three Column Info Section (for elegant template)
+  const renderThreeColumnInfo = (section) => {
+    const fontSize = getFontSize(section.props?.fontSize || "xs");
+    const bgColor = section.props?.backgroundColor || "#fafafa";
+    const hasLeftAccent = section.props?.borderStyle === "leftAccent";
+
+    const columnStyle = {
+      width: "32%",
+      padding: 12,
+      backgroundColor: bgColor === "transparent" ? undefined : bgColor,
+      borderRadius: 4,
+      ...(hasLeftAccent && {
+        borderLeftWidth: 3,
+        borderLeftColor: templateColor,
+      }),
+    };
+
+    return (
+      <View
+        style={{
+          ...styles.section,
+          flexDirection: "row",
+          justifyContent: "space-between",
+        }}
+      >
+        {/* From Section */}
+        <View style={columnStyle}>
+          <Text
+            style={{
+              fontSize: fontSize,
+              fontFamily: "Open Sans",
+              fontWeight: "bold",
+              color: templateColor,
+              marginBottom: 8,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+            }}
+          >
+            From
+          </Text>
+          <Text
+            style={{
+              fontSize: fontSize + 1,
+              fontFamily: "Open Sans",
+              fontWeight: "bold",
+              color: "#333",
+              marginBottom: 4,
+            }}
+          >
+            {companyInfo?.name || "Company Name"}
+          </Text>
+          <Text style={{ fontSize: fontSize, color: "#666", lineHeight: 1.4 }}>
+            {companyInfo?.address}
+          </Text>
+          <Text style={{ fontSize: fontSize, color: "#666" }}>
+            {companyInfo?.phone}
+          </Text>
+        </View>
+
+        {/* Bill To Section */}
+        <View style={columnStyle}>
+          <Text
+            style={{
+              fontSize: fontSize,
+              fontFamily: "Open Sans",
+              fontWeight: "bold",
+              color: templateColor,
+              marginBottom: 8,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+            }}
+          >
+            Bill To
+          </Text>
+          <Text
+            style={{
+              fontSize: fontSize + 1,
+              fontFamily: "Open Sans",
+              fontWeight: "bold",
+              color: "#333",
+              marginBottom: 4,
+            }}
+          >
+            {invoiceData?.customer?.name}
+          </Text>
+          <Text style={{ fontSize: fontSize, color: "#666", lineHeight: 1.4 }}>
+            {invoiceData?.customer?.address}
+          </Text>
+        </View>
+
+        {/* Details Section */}
+        <View style={columnStyle}>
+          <Text
+            style={{
+              fontSize: fontSize,
+              fontFamily: "Open Sans",
+              fontWeight: "bold",
+              color: templateColor,
+              marginBottom: 8,
+              textTransform: "uppercase",
+              letterSpacing: 1,
+            }}
+          >
+            Details
+          </Text>
+          <View style={{ marginBottom: 6 }}>
+            <View
+              style={{ flexDirection: "row", justifyContent: "space-between" }}
+            >
+              <Text style={{ fontSize: fontSize, color: "#666" }}>
+                Invoice #:
+              </Text>
+              <Text
+                style={{
+                  fontSize: fontSize,
+                  fontFamily: "Open Sans",
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              >
+                {invoiceData?.invoiceNumber}
+              </Text>
+            </View>
+          </View>
+          <View style={{ marginBottom: 6 }}>
+            <View
+              style={{ flexDirection: "row", justifyContent: "space-between" }}
+            >
+              <Text style={{ fontSize: fontSize, color: "#666" }}>
+                Issue Date:
+              </Text>
+              <Text
+                style={{
+                  fontSize: fontSize,
+                  fontFamily: "Open Sans",
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              >
+                {invoiceData?.date}
+              </Text>
+            </View>
+          </View>
+          <View style={{ marginBottom: 6 }}>
+            <View
+              style={{ flexDirection: "row", justifyContent: "space-between" }}
+            >
+              <Text style={{ fontSize: fontSize, color: "#666" }}>
+                Due Date:
+              </Text>
+              <Text
+                style={{
+                  fontSize: fontSize,
+                  fontFamily: "Open Sans",
+                  fontWeight: "bold",
+                  color: templateColor,
+                }}
+              >
+                {invoiceData?.dueDate}
+              </Text>
+            </View>
+          </View>
+          {section.props?.showStatus && (
+            <View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontSize: fontSize, color: "#666" }}>
+                  Status:
+                </Text>
+                <View
+                  style={{
+                    backgroundColor: lightenColor(templateColor, 0.8),
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: fontSize,
+                      fontFamily: "Open Sans",
+                      fontWeight: "bold",
+                      color: templateColor,
+                    }}
+                  >
+                    {invoiceData?.status || "Pending"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  // Render Modern Totals Section (for elegant template)
+  const renderModernTotals = (section) => {
+    const fontSize = getFontSize(section.props?.fontSize || "base");
+    const alignment = section.props?.alignment || "right";
+    const bgColor = section.props?.backgroundColor || "#fafafa";
+    const grandTotalBgColor =
+      section.props?.grandTotalBgColor === "accent"
+        ? templateColor
+        : section.props?.grandTotalBgColor || templateColor;
+    const isBordered = section.props?.bordered;
+
+    return (
+      <View
+        style={{
+          ...styles.section,
+          flexDirection: "row",
+          justifyContent: getJustifyContent(alignment),
+        }}
+      >
+        <View
+          style={{
+            width: 220,
+            borderRadius: 6,
+            overflow: "hidden",
+            ...(isBordered && {
+              borderWidth: 1,
+              borderColor: lightenColor(templateColor, 0.7),
+            }),
+          }}
+        >
+          {/* Subtotals section */}
+          <View
+            style={{
+              padding: 12,
+              backgroundColor: bgColor === "transparent" ? undefined : bgColor,
+            }}
+          >
+            {section.props?.showSubtotal !== false && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ fontSize: fontSize, color: "#666" }}>
+                  Subtotal
+                </Text>
+                <Text
+                  style={{
+                    fontSize: fontSize,
+                    fontFamily: "Open Sans",
+                    fontWeight: "bold",
+                    color: "#333",
+                  }}
+                >
+                  {formatCurrency(invoiceData?.subtotal)}
+                </Text>
+              </View>
+            )}
+            {section.props?.showDiscount !== false &&
+              (invoiceData?.discount > 0 ||
+                invoiceData?.discount_amount > 0) && (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: fontSize, color: "#666" }}>
+                    Discount
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: fontSize,
+                      fontFamily: "Open Sans",
+                      fontWeight: "bold",
+                      color: "#dc2626",
+                    }}
+                  >
+                    -
+                    {formatCurrency(
+                      invoiceData?.discount || invoiceData?.discount_amount
+                    )}
+                  </Text>
+                </View>
+              )}
+            {section.props?.showTax && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ fontSize: fontSize, color: "#666" }}>
+                  Tax{" "}
+                  {invoiceData?.tax_rate ? `(${invoiceData.tax_rate}%)` : ""}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: fontSize,
+                    fontFamily: "Open Sans",
+                    fontWeight: "bold",
+                    color: "#333",
+                  }}
+                >
+                  {formatCurrency(
+                    invoiceData?.tax || invoiceData?.tax_amount || 0
+                  )}
+                </Text>
+              </View>
+            )}
+          </View>
+          {/* Grand Total */}
+          <View
+            style={{
+              padding: 12,
+              backgroundColor: grandTotalBgColor,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: fontSize + 2,
+                fontFamily: "Open Sans",
+                fontWeight: "bold",
+                color: "#ffffff",
+              }}
+            >
+              Total Due
+            </Text>
+            <Text
+              style={{
+                fontSize: fontSize + 4,
+                fontFamily: "Open Sans",
+                fontWeight: "bold",
+                color: "#ffffff",
+              }}
+            >
+              {formatCurrency(invoiceData?.total)}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  // Render Footer Section (for elegant template)
+  const renderFooter = (section) => {
+    const fontSize = getFontSize(section.props?.fontSize || "sm");
+    const alignment = section.props?.alignment || "center";
+
+    return (
+      <View
+        style={{
+          ...styles.section,
+          paddingTop: 15,
+          borderTopWidth: 1,
+          borderTopColor: lightenColor(templateColor, 0.7),
+          alignItems: getFlexAlign(alignment),
+        }}
+      >
+        {section.props?.showThankYou !== false && (
+          <Text
+            style={{
+              fontSize: fontSize,
+              color: "#666",
+              fontStyle: "italic",
+              textAlign: alignment,
+              marginBottom: 8,
+            }}
+          >
+            Thank you for your business!
+          </Text>
+        )}
+        {section.props?.showDecorative && (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: 8,
+            }}
+          >
+            <View
+              style={{
+                width: 30,
+                height: 1,
+                backgroundColor: templateColor,
+              }}
+            />
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: templateColor,
+                marginHorizontal: 8,
+              }}
+            />
+            <View
+              style={{
+                width: 30,
+                height: 1,
+                backgroundColor: templateColor,
+              }}
+            />
+          </View>
+        )}
+      </View>
+    );
+  };
+
   // Render Header Section
   const renderHeader = (section) => {
     const sectionStyles = getSectionStyles(section.props);
     const fontSize = getFontSize(section.props?.fontSize || "2xl");
     const isBold = section.props?.fontWeight === "bold";
     const alignment = section.props?.alignment || "left";
-
-    // Determine flex alignment based on alignment prop
     const flexAlign = getFlexAlign(alignment);
+    const logoDimensions = getLogoDimensions(section.props?.logoSize || "md");
+
+    // Check if header has dark background
+    const hasDarkBg =
+      section.props?.backgroundColor &&
+      section.props.backgroundColor !== "transparent" &&
+      section.props.backgroundColor !== "#ffffff" &&
+      section.props.backgroundColor !== "#f9fafb" &&
+      section.props.backgroundColor !== "#f3f4f6";
+
+    const textColor = hasDarkBg ? "#ffffff" : templateColor;
 
     return (
       <View
         style={{ ...styles.section, ...sectionStyles, alignItems: flexAlign }}
       >
         {section.props?.showLogo !== false && companyInfo?.logo && (
-          <Image src={companyInfo.logo} style={styles.logo} cache={false} />
+          <Image
+            src={companyInfo.logo}
+            style={{
+              width: logoDimensions.width,
+              height: logoDimensions.height,
+              objectFit: "contain",
+              marginBottom: 10,
+            }}
+            cache={false}
+          />
         )}
         <Text
           style={{
             fontSize: fontSize,
             fontFamily: "Open Sans",
             fontWeight: isBold ? "bold" : "normal",
-            color: templateColor,
+            color: textColor,
             marginBottom: 5,
             textAlign: alignment,
           }}
         >
           INVOICE
         </Text>
-        <Text style={{ fontSize: 10, color: "#666", textAlign: alignment }}>
-          #{invoiceData?.invoiceNumber}
-        </Text>
+        {section.props?.showInvoiceBadge && (
+          <View
+            style={{
+              backgroundColor: lightenColor(templateColor, 0.85),
+              paddingHorizontal: 12,
+              paddingVertical: 4,
+              borderRadius: 4,
+              marginTop: 5,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: fontSize - 6,
+                fontFamily: "Open Sans",
+                fontWeight: "bold",
+                color: templateColor,
+              }}
+            >
+              #{invoiceData?.invoiceNumber}
+            </Text>
+          </View>
+        )}
+        {!section.props?.showInvoiceBadge && (
+          <Text
+            style={{
+              fontSize: 10,
+              color: hasDarkBg ? "#ffffff" : "#666",
+              textAlign: alignment,
+            }}
+          >
+            #{invoiceData?.invoiceNumber}
+          </Text>
+        )}
       </View>
     );
   };
@@ -263,6 +830,18 @@ const CustomInvoicePDF = ({
     const alignment = section.props?.alignment || "left";
     const flexAlign = getFlexAlign(alignment);
 
+    // Check if section has dark background
+    const hasDarkBg =
+      section.props?.backgroundColor &&
+      section.props.backgroundColor !== "transparent" &&
+      section.props.backgroundColor !== "#ffffff" &&
+      !section.props.backgroundColor.startsWith("#f") &&
+      !section.props.backgroundColor.startsWith("#e") &&
+      !section.props.backgroundColor.startsWith("#d");
+
+    const primaryColor = hasDarkBg ? "#ffffff" : "#333";
+    const secondaryColor = hasDarkBg ? "#ffffffcc" : "#666";
+
     return (
       <View
         style={{ ...styles.section, ...sectionStyles, alignItems: flexAlign }}
@@ -272,52 +851,62 @@ const CustomInvoicePDF = ({
             fontSize: fontSize + 4,
             fontFamily: "Open Sans",
             fontWeight: "bold",
-            color: "#333",
+            color: primaryColor,
             marginBottom: 4,
             textAlign: alignment,
           }}
         >
           {companyInfo?.name || "Company Name"}
         </Text>
-        <Text
-          style={{
-            fontSize: fontSize - 1,
-            color: "#666",
-            marginBottom: 2,
-            textAlign: alignment,
-          }}
-        >
-          {companyInfo?.address}
-        </Text>
-        <Text
-          style={{
-            fontSize: fontSize - 1,
-            color: "#666",
-            marginBottom: 2,
-            textAlign: alignment,
-          }}
-        >
-          {[companyInfo?.city, companyInfo?.state].filter(Boolean).join(", ")}
-        </Text>
-        <Text
-          style={{
-            fontSize: fontSize - 1,
-            color: "#666",
-            marginBottom: 2,
-            textAlign: alignment,
-          }}
-        >
-          {companyInfo?.phone}
-        </Text>
-        <Text
-          style={{
-            fontSize: fontSize - 1,
-            color: "#666",
-            textAlign: alignment,
-          }}
-        >
-          {companyInfo?.email}
-        </Text>
+        {section.props?.showAddress !== false && (
+          <>
+            <Text
+              style={{
+                fontSize: fontSize - 1,
+                color: secondaryColor,
+                marginBottom: 2,
+                textAlign: alignment,
+              }}
+            >
+              {companyInfo?.address}
+            </Text>
+            <Text
+              style={{
+                fontSize: fontSize - 1,
+                color: secondaryColor,
+                marginBottom: 2,
+                textAlign: alignment,
+              }}
+            >
+              {[companyInfo?.city, companyInfo?.state]
+                .filter(Boolean)
+                .join(", ")}
+            </Text>
+          </>
+        )}
+        {section.props?.showPhone !== false && (
+          <Text
+            style={{
+              fontSize: fontSize - 1,
+              color: secondaryColor,
+              marginBottom: 2,
+              textAlign: alignment,
+            }}
+          >
+            {companyInfo?.phone}
+          </Text>
+        )}
+        {section.props?.showEmail !== false && (
+          <Text
+            style={{
+              fontSize: fontSize - 1,
+              color: secondaryColor,
+              textAlign: alignment,
+            }}
+          >
+            {companyInfo?.email}
+          </Text>
+        )}
       </View>
     );
   };
@@ -382,6 +971,13 @@ const CustomInvoicePDF = ({
         >
           {invoiceData?.customer?.phone}
         </Text>
+        {invoiceData?.customer?.email && (
+          <Text
+            style={{ fontSize: fontSize, color: "#666", textAlign: alignment }}
+          >
+            {invoiceData?.customer?.email}
+          </Text>
+        )}
       </View>
     );
   };
@@ -397,86 +993,79 @@ const CustomInvoicePDF = ({
       <View
         style={{ ...styles.section, ...sectionStyles, alignItems: flexAlign }}
       >
-        <View style={{ marginBottom: 8 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent:
-                alignment === "left"
-                  ? "flex-start"
-                  : alignment === "center"
-                  ? "center"
-                  : "flex-end",
-              gap: 10,
-            }}
-          >
-            <Text style={{ fontSize: fontSize, color: "#666" }}>
-              Invoice #:
-            </Text>
-            <Text
+        {section.props?.showInvoiceNumber !== false && (
+          <View style={{ marginBottom: 8 }}>
+            <View
               style={{
-                fontSize: fontSize + 1,
-                fontFamily: "Open Sans",
-                fontWeight: "bold",
-                color: "#333",
+                flexDirection: "row",
+                justifyContent: getJustifyContent(alignment),
+                gap: 10,
               }}
             >
-              {invoiceData?.invoiceNumber}
-            </Text>
+              <Text style={{ fontSize: fontSize, color: "#666" }}>
+                Invoice #:
+              </Text>
+              <Text
+                style={{
+                  fontSize: fontSize + 1,
+                  fontFamily: "Open Sans",
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              >
+                {invoiceData?.invoiceNumber}
+              </Text>
+            </View>
           </View>
-        </View>
-        <View style={{ marginBottom: 8 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent:
-                alignment === "left"
-                  ? "flex-start"
-                  : alignment === "center"
-                  ? "center"
-                  : "flex-end",
-              gap: 10,
-            }}
-          >
-            <Text style={{ fontSize: fontSize, color: "#666" }}>Date:</Text>
-            <Text
+        )}
+        {section.props?.showDate !== false && (
+          <View style={{ marginBottom: 8 }}>
+            <View
               style={{
-                fontSize: fontSize + 1,
-                fontFamily: "Open Sans",
-                fontWeight: "bold",
-                color: "#333",
+                flexDirection: "row",
+                justifyContent: getJustifyContent(alignment),
+                gap: 10,
               }}
             >
-              {invoiceData?.date}
-            </Text>
+              <Text style={{ fontSize: fontSize, color: "#666" }}>Date:</Text>
+              <Text
+                style={{
+                  fontSize: fontSize + 1,
+                  fontFamily: "Open Sans",
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              >
+                {invoiceData?.date}
+              </Text>
+            </View>
           </View>
-        </View>
-        <View>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent:
-                alignment === "left"
-                  ? "flex-start"
-                  : alignment === "center"
-                  ? "center"
-                  : "flex-end",
-              gap: 10,
-            }}
-          >
-            <Text style={{ fontSize: fontSize, color: "#666" }}>Due Date:</Text>
-            <Text
+        )}
+        {section.props?.showDueDate !== false && (
+          <View>
+            <View
               style={{
-                fontSize: fontSize + 1,
-                fontFamily: "Open Sans",
-                fontWeight: "bold",
-                color: "#333",
+                flexDirection: "row",
+                justifyContent: getJustifyContent(alignment),
+                gap: 10,
               }}
             >
-              {invoiceData?.dueDate}
-            </Text>
+              <Text style={{ fontSize: fontSize, color: "#666" }}>
+                Due Date:
+              </Text>
+              <Text
+                style={{
+                  fontSize: fontSize + 1,
+                  fontFamily: "Open Sans",
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              >
+                {invoiceData?.dueDate}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
       </View>
     );
   };
@@ -488,6 +1077,21 @@ const CustomInvoicePDF = ({
     const showBorders = section.props?.showBorders !== false;
     const borderColor = section.props?.borderColor || "#e5e7eb";
     const borderWidth = parseInt(section.props?.borderWidth || "1");
+    const zebraStripes = section.props?.zebraStripes !== false;
+
+    // Handle header colors - support 'accent' keyword
+    let headerBgColor = section.props?.headerBgColor || templateColor;
+    if (headerBgColor === "accent") {
+      headerBgColor = templateColor;
+    } else if (headerBgColor === "transparent") {
+      headerBgColor = undefined;
+    }
+
+    const headerTextColor = section.props?.headerTextColor || "#ffffff";
+    const alternateColors = section.props?.alternateColors || [
+      "#fafafa",
+      "#ffffff",
+    ];
 
     const items = invoiceData?.items || [];
     console.log("Rendering items table in PDF, items count:", items.length);
@@ -505,36 +1109,47 @@ const CustomInvoicePDF = ({
 
     const headerStyles = {
       flexDirection: "row",
-      backgroundColor: `${templateColor}15`,
+      backgroundColor: headerBgColor,
       borderBottomWidth: 2,
-      borderBottomColor: templateColor,
+      borderBottomColor: headerBgColor || templateColor,
       padding: 8,
       fontFamily: "Open Sans",
       fontWeight: "bold",
       fontSize: fontSize,
     };
 
-    const rowStyles = {
+    const getRowStyles = (index) => ({
       flexDirection: "row",
       borderBottomWidth: showBorders ? 1 : 0,
       borderBottomColor: borderColor,
       padding: 8,
       fontSize: fontSize,
-    };
+      backgroundColor: zebraStripes
+        ? index % 2 === 0
+          ? alternateColors[1]
+          : alternateColors[0]
+        : undefined,
+    });
 
     return (
       <View style={{ ...styles.section, ...sectionStyles }}>
         <View style={tableStyles}>
           {/* Table Header */}
           <View style={headerStyles}>
-            <Text style={{ flex: 3, color: "#333" }}>Description</Text>
-            <Text style={{ flex: 1, textAlign: "center", color: "#333" }}>
+            <Text style={{ flex: 3, color: headerTextColor }}>Description</Text>
+            <Text
+              style={{ flex: 1, textAlign: "center", color: headerTextColor }}
+            >
               Qty
             </Text>
-            <Text style={{ flex: 1.5, textAlign: "right", color: "#333" }}>
+            <Text
+              style={{ flex: 1.5, textAlign: "right", color: headerTextColor }}
+            >
               Rate
             </Text>
-            <Text style={{ flex: 1.5, textAlign: "right", color: "#333" }}>
+            <Text
+              style={{ flex: 1.5, textAlign: "right", color: headerTextColor }}
+            >
               Amount
             </Text>
           </View>
@@ -542,7 +1157,7 @@ const CustomInvoicePDF = ({
           {/* Table Rows */}
           {items.length > 0 ? (
             items.map((item, index) => (
-              <View key={index} style={rowStyles}>
+              <View key={index} style={getRowStyles(index)}>
                 <Text style={{ flex: 3, color: "#333" }}>
                   {item.description || item.name || "Item"}
                 </Text>
@@ -564,13 +1179,16 @@ const CustomInvoicePDF = ({
                   }}
                 >
                   {formatCurrency(
-                    item.amount || item.total || item.quantity * item.rate || 0
+                    item.amount ||
+                      item.total ||
+                      (item.quantity || item.qty || 0) *
+                        (item.rate || item.unit_price || item.price || 0)
                   )}
                 </Text>
               </View>
             ))
           ) : (
-            <View style={rowStyles}>
+            <View style={getRowStyles(0)}>
               <Text style={{ flex: 1, textAlign: "center", color: "#666" }}>
                 No items
               </Text>
@@ -597,46 +1215,11 @@ const CustomInvoicePDF = ({
       >
         <View style={{ width: 200 }}>
           {/* Subtotal */}
-          <View style={styles.totalRow}>
-            <Text style={{ fontSize: fontSize, color: "#666" }}>Subtotal:</Text>
-            <Text
-              style={{
-                fontSize: fontSize,
-                fontFamily: "Open Sans",
-                fontWeight: isBold ? "bold" : "normal",
-                color: "#333",
-              }}
-            >
-              {formatCurrency(invoiceData?.subtotal)}
-            </Text>
-          </View>
-
-          {/* Discount */}
-          {(invoiceData?.discount > 0 || invoiceData?.discount_amount > 0) && (
+          {section.props?.showSubtotal !== false && (
             <View style={styles.totalRow}>
               <Text style={{ fontSize: fontSize, color: "#666" }}>
-                Discount:
+                Subtotal:
               </Text>
-              <Text
-                style={{
-                  fontSize: fontSize,
-                  fontFamily: "Open Sans",
-                  fontWeight: isBold ? "bold" : "normal",
-                  color: "#dc2626",
-                }}
-              >
-                -
-                {formatCurrency(
-                  invoiceData?.discount || invoiceData?.discount_amount
-                )}
-              </Text>
-            </View>
-          )}
-
-          {/* Tax */}
-          {(invoiceData?.tax > 0 || invoiceData?.tax_amount > 0) && (
-            <View style={styles.totalRow}>
-              <Text style={{ fontSize: fontSize, color: "#666" }}>Tax:</Text>
               <Text
                 style={{
                   fontSize: fontSize,
@@ -645,7 +1228,51 @@ const CustomInvoicePDF = ({
                   color: "#333",
                 }}
               >
-                {formatCurrency(invoiceData?.tax || invoiceData?.tax_amount)}
+                {formatCurrency(invoiceData?.subtotal)}
+              </Text>
+            </View>
+          )}
+
+          {/* Discount */}
+          {section.props?.showDiscount !== false &&
+            (invoiceData?.discount > 0 || invoiceData?.discount_amount > 0) && (
+              <View style={styles.totalRow}>
+                <Text style={{ fontSize: fontSize, color: "#666" }}>
+                  Discount:
+                </Text>
+                <Text
+                  style={{
+                    fontSize: fontSize,
+                    fontFamily: "Open Sans",
+                    fontWeight: isBold ? "bold" : "normal",
+                    color: "#dc2626",
+                  }}
+                >
+                  -
+                  {formatCurrency(
+                    invoiceData?.discount || invoiceData?.discount_amount
+                  )}
+                </Text>
+              </View>
+            )}
+
+          {/* Tax */}
+          {section.props?.showTax && (
+            <View style={styles.totalRow}>
+              <Text style={{ fontSize: fontSize, color: "#666" }}>
+                Tax {invoiceData?.tax_rate ? `(${invoiceData.tax_rate}%)` : ""}:
+              </Text>
+              <Text
+                style={{
+                  fontSize: fontSize,
+                  fontFamily: "Open Sans",
+                  fontWeight: isBold ? "bold" : "normal",
+                  color: "#333",
+                }}
+              >
+                {formatCurrency(
+                  invoiceData?.tax || invoiceData?.tax_amount || 0
+                )}
               </Text>
             </View>
           )}
@@ -684,7 +1311,134 @@ const CustomInvoicePDF = ({
     const fontSize = getFontSize(section.props?.fontSize || "xs");
     const alignment = section.props?.alignment || "left";
     const flexAlign = getFlexAlign(alignment);
+    const layout = section.props?.layout || "default";
+    const hasDashedBorder = section.props?.borderStyle === "dashed";
 
+    // Check if section has dark background
+    const hasDarkBg =
+      section.props?.backgroundColor &&
+      section.props.backgroundColor !== "transparent" &&
+      section.props.backgroundColor !== "#ffffff" &&
+      !section.props.backgroundColor.startsWith("#f") &&
+      !section.props.backgroundColor.startsWith("#e") &&
+      !section.props.backgroundColor.startsWith("#d") &&
+      section.props.backgroundColor !== "accentLight";
+
+    const titleColor = hasDarkBg ? "#ffffff" : templateColor;
+    const labelColor = hasDarkBg ? "#ffffffcc" : "#666";
+    const valueColor = hasDarkBg ? "#ffffff" : "#333";
+
+    // Three column layout for elegant style
+    if (layout === "threeColumn") {
+      return (
+        <View
+          style={{
+            ...styles.section,
+            ...sectionStyles,
+            ...(hasDashedBorder && {
+              borderWidth: 1,
+              borderStyle: "dashed",
+              borderColor: lightenColor(templateColor, 0.6),
+              borderRadius: 6,
+            }),
+          }}
+        >
+          <Text
+            style={{
+              fontSize: fontSize + 1,
+              fontFamily: "Open Sans",
+              fontWeight: "bold",
+              color: titleColor,
+              marginBottom: 12,
+              textAlign: alignment,
+            }}
+          >
+            Payment Information
+          </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            {section.props?.showBankName !== false && (
+              <View style={{ width: "30%", paddingRight: 10 }}>
+                <Text
+                  style={{
+                    fontSize: fontSize,
+                    color: labelColor,
+                    marginBottom: 2,
+                  }}
+                >
+                  Bank
+                </Text>
+                <Text
+                  style={{
+                    fontSize: fontSize + 1,
+                    fontFamily: "Open Sans",
+                    fontWeight: "bold",
+                    color: valueColor,
+                  }}
+                >
+                  {companyInfo?.bank_name || "N/A"}
+                </Text>
+              </View>
+            )}
+            {section.props?.showAccountNumber !== false && (
+              <View style={{ width: "35%", paddingHorizontal: 5 }}>
+                <Text
+                  style={{
+                    fontSize: fontSize,
+                    color: labelColor,
+                    marginBottom: 2,
+                  }}
+                >
+                  Account Number
+                </Text>
+                <Text
+                  style={{
+                    fontSize: fontSize + 1,
+                    fontFamily: "Open Sans",
+                    fontWeight: "bold",
+                    color: valueColor,
+                  }}
+                >
+                  {companyInfo?.bank_account ||
+                    companyInfo?.account_number ||
+                    "N/A"}
+                </Text>
+              </View>
+            )}
+            {section.props?.showAccountName !== false && (
+              <View style={{ width: "35%", paddingLeft: 5 }}>
+                <Text
+                  style={{
+                    fontSize: fontSize,
+                    color: labelColor,
+                    marginBottom: 2,
+                  }}
+                >
+                  Account Name
+                </Text>
+                <Text
+                  style={{
+                    fontSize: fontSize + 1,
+                    fontFamily: "Open Sans",
+                    fontWeight: "bold",
+                    color: valueColor,
+                  }}
+                >
+                  {companyInfo?.account_name || "N/A"}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      );
+    }
+
+    // Default layout
     return (
       <View
         style={{ ...styles.section, ...sectionStyles, alignItems: flexAlign }}
@@ -694,7 +1448,7 @@ const CustomInvoicePDF = ({
             fontSize: fontSize + 1,
             fontFamily: "Open Sans",
             fontWeight: "bold",
-            color: templateColor,
+            color: titleColor,
             marginBottom: 8,
             textAlign: alignment,
           }}
@@ -705,45 +1459,53 @@ const CustomInvoicePDF = ({
           style={{
             flexDirection: "row",
             justifyContent: alignment === "center" ? "center" : "flex-start",
-            gap: 30,
+            width: "100%",
           }}
         >
+          {section.props?.showBankName !== false && (
+            <View style={{ marginRight: 30 }}>
+              <Text style={{ fontSize: fontSize, color: labelColor }}>
+                Bank:
+              </Text>
+              <Text
+                style={{
+                  fontSize: fontSize,
+                  fontFamily: "Open Sans",
+                  fontWeight: "bold",
+                  color: valueColor,
+                }}
+              >
+                {companyInfo?.bank_name || "N/A"}
+              </Text>
+            </View>
+          )}
+          {section.props?.showAccountNumber !== false && (
+            <View style={{ marginRight: 30 }}>
+              <Text style={{ fontSize: fontSize, color: labelColor }}>
+                Account:
+              </Text>
+              <Text
+                style={{
+                  fontSize: fontSize,
+                  fontFamily: "Open Sans",
+                  fontWeight: "bold",
+                  color: valueColor,
+                }}
+              >
+                {companyInfo?.bank_account ||
+                  companyInfo?.account_number ||
+                  "N/A"}
+              </Text>
+            </View>
+          )}
           <View>
-            <Text style={{ fontSize: fontSize, color: "#666" }}>Bank:</Text>
+            <Text style={{ fontSize: fontSize, color: labelColor }}>Name:</Text>
             <Text
               style={{
                 fontSize: fontSize,
                 fontFamily: "Open Sans",
                 fontWeight: "bold",
-                color: "#333",
-              }}
-            >
-              {companyInfo?.bank_name || "N/A"}
-            </Text>
-          </View>
-          <View>
-            <Text style={{ fontSize: fontSize, color: "#666" }}>Account:</Text>
-            <Text
-              style={{
-                fontSize: fontSize,
-                fontFamily: "Open Sans",
-                fontWeight: "bold",
-                color: "#333",
-              }}
-            >
-              {companyInfo?.bank_account ||
-                companyInfo?.account_number ||
-                "N/A"}
-            </Text>
-          </View>
-          <View>
-            <Text style={{ fontSize: fontSize, color: "#666" }}>Name:</Text>
-            <Text
-              style={{
-                fontSize: fontSize,
-                fontFamily: "Open Sans",
-                fontWeight: "bold",
-                color: "#333",
+                color: valueColor,
               }}
             >
               {companyInfo?.account_name || "N/A"}
@@ -789,10 +1551,11 @@ const CustomInvoicePDF = ({
 
   // Render Divider Section
   const renderDivider = (section) => {
-    const marginTop = parseInt(section.props?.marginTop || "4") * 4;
-    const marginBottom = parseInt(section.props?.marginBottom || "4") * 4;
+    const marginTop = (parseInt(section.props?.marginTop) || 4) * 4;
+    const marginBottom = (parseInt(section.props?.marginBottom) || 4) * 4;
     const thickness = parseInt(section.props?.thickness || "1");
     const color = section.props?.color || "#e5e7eb";
+    const style = section.props?.style || "solid";
 
     return (
       <View style={{ marginTop, marginBottom }}>
@@ -800,9 +1563,18 @@ const CustomInvoicePDF = ({
           style={{
             borderBottomWidth: thickness,
             borderBottomColor: color,
-            borderBottomStyle: section.props?.style || "solid",
+            borderStyle: style === "double" ? "solid" : style,
           }}
         />
+        {style === "double" && (
+          <View
+            style={{
+              borderBottomWidth: thickness,
+              borderBottomColor: color,
+              marginTop: 2,
+            }}
+          />
+        )}
       </View>
     );
   };
@@ -830,6 +1602,16 @@ const CustomInvoicePDF = ({
         return <View key={index}>{renderCustomText(section)}</View>;
       case "divider":
         return <View key={index}>{renderDivider(section)}</View>;
+      case "accentBar":
+        return <View key={index}>{renderAccentBar(section)}</View>;
+      case "diamondDivider":
+        return <View key={index}>{renderDiamondDivider(section)}</View>;
+      case "threeColumnInfo":
+        return <View key={index}>{renderThreeColumnInfo(section)}</View>;
+      case "modernTotals":
+        return <View key={index}>{renderModernTotals(section)}</View>;
+      case "footer":
+        return <View key={index}>{renderFooter(section)}</View>;
       default:
         console.log("Unknown section type:", section.type);
         return null;
@@ -851,26 +1633,31 @@ const CustomInvoicePDF = ({
     );
   }
 
+  // Check if template has a footer section
+  const hasFooterSection = sections.some((s) => s.type === "footer");
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Render all sections */}
         {sections.map((section, index) => renderSection(section, index))}
 
-        {/* Footer */}
-        <View
-          style={{
-            borderTopWidth: 1,
-            borderTopColor: "#e5e7eb",
-            paddingTop: 15,
-            marginTop: 20,
-            textAlign: "center",
-          }}
-        >
-          <Text style={{ fontSize: 10, color: "#666" }}>
-            Thank you for your business!
-          </Text>
-        </View>
+        {/* Default Footer if no footer section exists */}
+        {!hasFooterSection && (
+          <View
+            style={{
+              borderTopWidth: 1,
+              borderTopColor: "#e5e7eb",
+              paddingTop: 15,
+              marginTop: 20,
+              textAlign: "center",
+            }}
+          >
+            <Text style={{ fontSize: 10, color: "#666" }}>
+              Thank you for your business!
+            </Text>
+          </View>
+        )}
       </Page>
     </Document>
   );
