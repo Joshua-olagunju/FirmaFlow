@@ -1,6 +1,37 @@
 <?php
+// Clean output buffer and suppress errors to ensure JSON output
+if (ob_get_level()) {
+    ob_clean();
+}
+error_reporting(0);
+ini_set('display_errors', 0);
+
+// Start session first
 session_start();
 header('Content-Type: application/json');
+
+// CORS Headers - allow credentials
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && in_array($origin, $allowed_origins, true)) {
+    header('Vary: Origin');
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+}
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/journal_helpers.php';
 require_once __DIR__ . '/../includes/AccountResolver.php';
@@ -143,13 +174,15 @@ try {
                 }
 
                 // AUTO-CREATE PRODUCT FOR NEW ITEMS (but not for expenses)
-                if ($item['item_type'] === 'new' && !empty($item['description'])) {
-                    error_log("🆕 Creating new product from purchase: " . $item['description']);
+                if ($item['item_type'] === 'new' && (!empty($item['description']) || !empty($item['new_product_name']))) {
+                    // Use new_product_name if provided, otherwise fall back to description
+                    $product_name = !empty($item['new_product_name']) ? $item['new_product_name'] : $item['description'];
+                    error_log("🆕 Creating new product from purchase: " . $product_name);
                     
                     try {
                         // Check if product with same name already exists
                         $stmt = $pdo->prepare("SELECT id FROM products WHERE name = ? AND company_id = ? LIMIT 1");
-                        $stmt->execute([$item['description'], $company_id]);
+                        $stmt->execute([$product_name, $company_id]);
                         $existing_product = $stmt->fetch();
                         
                         if ($existing_product) {
@@ -158,12 +191,17 @@ try {
                             error_log("✅ Found existing product with same name: ID $product_id");
                         } else {
                             // Create new product - get selling price from item if provided
-                            $selling_price = isset($item['selling_price']) ? floatval($item['selling_price']) : floatval($item['unit_cost']) * 1.3; // 30% markup as default
+                            $selling_price = isset($item['new_product_selling_price']) && floatval($item['new_product_selling_price']) > 0 
+                                ? floatval($item['new_product_selling_price']) 
+                                : (isset($item['selling_price']) ? floatval($item['selling_price']) : floatval($item['unit_cost']) * 1.3); // 30% markup as default
+                            
+                            // Use provided SKU or auto-generate
+                            $sku = !empty($item['new_product_sku']) ? $item['new_product_sku'] : 'AUTO-' . uniqid();
                             
                             $new_product_data = [
-                                'name' => $item['description'],
+                                'name' => $product_name,
                                 'description' => 'Auto-created from Purchase ' . $reference,
-                                'sku' => 'AUTO-' . uniqid(),
+                                'sku' => $sku,
                                 'unit' => 'pcs',
                                 'stock_quantity' => floatval($item['quantity']),
                                 'selling_price' => $selling_price,

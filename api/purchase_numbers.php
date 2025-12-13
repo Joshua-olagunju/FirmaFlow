@@ -1,14 +1,28 @@
 <?php
+// Start session first
+session_start();
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit(0);
+// CORS Headers - allow credentials
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && in_array($origin, $allowed_origins, true)) {
+    header('Vary: Origin');
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 }
 
-session_start();
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit(0);
+}
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id']) || !isset($_SESSION['company_id'])) {
@@ -30,6 +44,7 @@ try {
         echo json_encode([
             'success' => true,
             'purchase_number' => $next_number,
+            'next_number' => $next_number,
             'year' => $current_year,
             'company_id' => $company_id
         ]);
@@ -105,10 +120,10 @@ function getNextPurchaseNumber($pdo, $company_id, $year) {
         // Format: PUR-YYYY-NNNN (e.g., PUR-2025-0001)
         $formatted_number = sprintf("PUR-%s-%04d", $year, $next_number);
         
-        // Check if this number already exists in purchases table
+        // Check if this number already exists in purchase_bills table
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as count 
-            FROM purchases 
+            FROM purchase_bills 
             WHERE company_id = ? AND reference = ?
         ");
         $stmt->execute([$company_id, $formatted_number]);
@@ -156,7 +171,7 @@ function confirmPurchaseNumber($pdo, $company_id, $year, $purchase_number) {
         // Check if this number is still available
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as count 
-            FROM purchases 
+            FROM purchase_bills 
             WHERE company_id = ? AND reference = ?
         ");
         $stmt->execute([$company_id, $purchase_number]);

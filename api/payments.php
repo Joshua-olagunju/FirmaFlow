@@ -1,7 +1,37 @@
 <?php
+// Clean output buffer and suppress errors to ensure JSON output
+if (ob_get_level()) {
+    ob_clean();
+}
+error_reporting(0);
+ini_set('display_errors', 0);
+
 // Start session first
 session_start();
 header('Content-Type: application/json');
+
+// CORS Headers - allow credentials
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && in_array($origin, $allowed_origins, true)) {
+    header('Vary: Origin');
+    header("Access-Control-Allow-Origin: $origin");
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+}
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/journal_helpers.php';
 require_once __DIR__ . '/../includes/company_settings_helper.php';
@@ -95,6 +125,106 @@ try {
             echo json_encode($payments);
         }
     } else if ($method === 'POST') {
+        // Handle refund action
+        if (isset($_GET['action']) && $_GET['action'] === 'refund') {
+            $invoice_id = $input['invoice_id'] ?? 0;
+            $refund_amount = floatval($input['amount'] ?? 0);
+            $reason = $input['reason'] ?? '';
+            $is_full_refund = $input['is_full_refund'] ?? false;
+            
+            if ($refund_amount <= 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Refund amount must be greater than 0']);
+                exit;
+            }
+            
+            if (!$invoice_id) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invoice ID is required']);
+                exit;
+            }
+            
+            // Get invoice details
+            $stmt = $pdo->prepare("SELECT * FROM sales_invoices WHERE id = ? AND company_id = ?");
+            $stmt->execute([$invoice_id, $company_id]);
+            $invoice = $stmt->fetch();
+            
+            if (!$invoice) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Invoice not found']);
+                exit;
+            }
+            
+            $amount_paid = floatval($invoice['amount_paid']);
+            
+            if ($refund_amount > $amount_paid) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Refund amount cannot exceed paid amount']);
+                exit;
+            }
+            
+            $pdo->beginTransaction();
+            
+            try {
+                // Generate refund reference
+                $stmt = $pdo->prepare("SELECT COALESCE(MAX(CAST(SUBSTRING(reference, 4) AS UNSIGNED)), 0) + 1 as next_number FROM payments WHERE company_id = ? AND reference LIKE 'REF%'");
+                $stmt->execute([$company_id]);
+                $next_number = $stmt->fetch()['next_number'];
+                $reference = 'REF' . str_pad($next_number, 4, '0', STR_PAD_LEFT);
+                
+                // Create refund payment record
+                $stmt = $pdo->prepare("
+                    INSERT INTO payments (company_id, reference, reference_type, reference_id, type, party_type, party_id, amount, method, payment_date, status, notes, created_at, updated_at) 
+                    VALUES (?, ?, 'customer', ?, 'refund', 'customer', ?, ?, 'refund', NOW(), 'completed', ?, NOW(), NOW())
+                ");
+                $stmt->execute([
+                    $company_id,
+                    $reference,
+                    $invoice['customer_id'],
+                    $invoice['customer_id'],
+                    $refund_amount,
+                    "Refund for Invoice #{$invoice['invoice_no']}" . ($reason ? " - Reason: $reason" : "")
+                ]);
+                
+                $refund_id = $pdo->lastInsertId();
+                
+                // Update invoice - reduce amount_paid
+                $new_amount_paid = $amount_paid - $refund_amount;
+                $new_status = $new_amount_paid <= 0 ? 'unpaid' : ($new_amount_paid >= floatval($invoice['total']) ? 'paid' : 'partial');
+                
+                $stmt = $pdo->prepare("UPDATE sales_invoices SET amount_paid = ?, status = ?, updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$new_amount_paid, $new_status, $invoice_id]);
+                
+                // Update original payment status if full refund
+                if ($is_full_refund || $refund_amount >= $amount_paid) {
+                    // Find and update original payments for this invoice
+                    $stmt = $pdo->prepare("
+                        UPDATE payments 
+                        SET status = 'refunded', updated_at = NOW() 
+                        WHERE company_id = ? AND reference_type = 'customer' AND type = 'received'
+                        AND notes LIKE ?
+                    ");
+                    $stmt->execute([$company_id, "%Invoice: {$invoice['invoice_no']}%"]);
+                }
+                
+                $pdo->commit();
+                
+                echo json_encode([
+                    'success' => true,
+                    'id' => $refund_id,
+                    'reference' => $reference,
+                    'message' => 'Refund processed successfully'
+                ]);
+                exit;
+                
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                http_response_code(500);
+                echo json_encode(['error' => 'Failed to process refund: ' . $e->getMessage()]);
+                exit;
+            }
+        }
+        
         // Handle both JSON and form data (for file uploads)
         if (isset($_POST['reference_type'])) {
             // Form data with potential file upload
@@ -492,4 +622,3 @@ try {
     http_response_code(500);
     echo json_encode(['error' => $e->getMessage()]);
 }
-?>
