@@ -444,8 +444,14 @@ const CustomInvoicePreview = ({ templateData, companyInfo, invoiceData }) => {
                 <thead>
                   <tr
                     style={{
-                      backgroundColor: props.headerBgColor || `${color}15`,
-                      color: props.headerTextColor || "#000000",
+                      backgroundColor:
+                        props.headerBgColor === "accent"
+                          ? color
+                          : props.headerBgColor || `${color}15`,
+                      color:
+                        props.headerBgColor === "accent"
+                          ? "#ffffff"
+                          : props.headerTextColor || "#000000",
                     }}
                   >
                     <th className="text-left p-1 sm:p-2">Description</th>
