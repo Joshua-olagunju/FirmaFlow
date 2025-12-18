@@ -3,6 +3,7 @@ import ClassicReceiptPDF from "./ClassicReceiptPDF";
 import ThermalReceiptPDF from "./ThermalReceiptPDF";
 import CompactReceiptPDF from "./CompactReceiptPDF";
 import DetailedReceiptPDF from "./DetailedReceiptPDF";
+import CustomReceiptPDF from "./CustomReceiptPDF";
 
 // Map template types to PDF components
 const templateMap = {
@@ -11,6 +12,7 @@ const templateMap = {
   thermal: ThermalReceiptPDF,
   compact: CompactReceiptPDF,
   detailed: DetailedReceiptPDF,
+  custom: CustomReceiptPDF,
 };
 
 // Default colors for each template
@@ -25,7 +27,7 @@ const defaultColors = {
 /**
  * Factory component that returns the appropriate receipt PDF template
  * @param {Object} props - Component props
- * @param {string} props.templateType - The type of template to use (modern, classic, thermal, etc.)
+ * @param {string} props.templateType - The type of template to use (modern, classic, thermal, compact, detailed, custom)
  * @param {Object} props.companyInfo - Company information for the receipt
  * @param {Object} props.receiptData - Payment/receipt data
  * @param {string} props.color - Optional custom color for the template
@@ -47,7 +49,21 @@ const ReceiptPDFFactory = ({
   console.log("Receipt Data:", receiptData);
   console.log("Items:", receiptData?.items);
   console.log("Color:", color);
+  console.log("Is Custom:", isCustom);
+  console.log("Custom Data:", customData);
   console.log("===============================");
+
+  // If it's a custom template, use CustomReceiptPDF
+  if (isCustom && customData) {
+    return (
+      <CustomReceiptPDF
+        templateData={customData}
+        companyInfo={companyInfo}
+        receiptData={receiptData}
+        color={color || customData.color || "#667eea"}
+      />
+    );
+  }
 
   // Normalize template type to lowercase
   const normalizedType = templateType?.toLowerCase() || "modern";
@@ -58,19 +74,6 @@ const ReceiptPDFFactory = ({
   // Get color - use custom color, template default, or modern default
   const templateColor =
     color || defaultColors[normalizedType] || defaultColors.modern;
-
-  // If it's a custom template, use modern template with custom color
-  if (isCustom && customData) {
-    const customColor =
-      customData.primaryColor || customData.color || templateColor;
-    return (
-      <ModernReceiptPDF
-        companyInfo={companyInfo}
-        receiptData={receiptData}
-        color={customColor}
-      />
-    );
-  }
 
   return (
     <PDFComponent
@@ -89,6 +92,7 @@ export {
   ThermalReceiptPDF,
   CompactReceiptPDF,
   DetailedReceiptPDF,
+  CustomReceiptPDF,
 };
 
 export default ReceiptPDFFactory;

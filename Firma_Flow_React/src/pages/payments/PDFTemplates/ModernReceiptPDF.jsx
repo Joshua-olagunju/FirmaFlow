@@ -1,284 +1,271 @@
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-  Image,
-  Svg,
-  Path,
-} from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import "./pdfFonts"; // Register Unicode fonts
+import { currencySymbols } from "./pdfFonts";
 
-// Create styles for Modern Receipt
+// Modern Receipt - Fresh redesign matching ModernReceipt.jsx - thermal width
 const createStyles = (color = "#667eea") =>
   StyleSheet.create({
     page: {
-      padding: 40,
       fontSize: 10,
-      fontFamily: "Helvetica",
+      fontFamily: "NotoSans",
       backgroundColor: "#ffffff",
-      position: "relative",
+      width: 226, // 80mm thermal width
     },
-    // Diagonal design overlay at top right
-    diagonalDesign: {
-      position: "absolute",
-      top: 0,
-      right: 0,
-      width: 150,
-      height: 150,
+    // Colored Header Bar
+    headerBar: {
+      padding: 16,
+      backgroundColor: color,
+      textAlign: "center",
     },
-    // Header section
-    header: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginBottom: 30,
-      zIndex: 1,
+    headerSubtitle: {
+      fontSize: 9,
+      color: "#ffffffee",
+      marginBottom: 4,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
     },
-    leftHeader: {
-      flex: 1,
+    headerTitle: {
+      fontSize: 18,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#ffffff",
+      marginBottom: 8,
     },
-    rightHeader: {
-      flex: 1,
-      alignItems: "flex-end",
+    headerDate: {
+      fontSize: 8,
+      color: "#ffffffcc",
     },
-    logo: {
-      width: 60,
-      height: 48,
-      marginBottom: 10,
-      objectFit: "contain",
+    // Company Info Card
+    companyCard: {
+      padding: 16,
+      backgroundColor: "#f9fafb",
+      borderBottomWidth: 1,
+      borderBottomColor: "#e5e7eb",
     },
-    receiptTitle: {
-      fontSize: 28,
-      fontFamily: "Helvetica-Bold",
-      marginBottom: 5,
-    },
-    receiptNumber: {
-      fontSize: 10,
-      color: "#666666",
+    companyCardCentered: {
+      textAlign: "center",
     },
     companyName: {
-      fontSize: 16,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
-      marginBottom: 5,
+      fontSize: 9,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#1f2937",
+      marginBottom: 4,
     },
     companyInfo: {
-      fontSize: 9,
-      color: "#666666",
+      fontSize: 8,
+      color: "#6b7280",
       marginBottom: 2,
-      textAlign: "right",
     },
-    // Receipt Details Section
-    detailsSection: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginBottom: 30,
+    companyInfoRow: {
+      fontSize: 8,
+      color: "#6b7280",
+      marginTop: 4,
     },
-    detailColumn: {
-      flex: 1,
+    // Customer Section
+    customerSection: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: "#e5e7eb",
     },
-    detailColumnRight: {
-      flex: 1,
-      alignItems: "flex-end",
-    },
-    sectionTitle: {
-      fontSize: 11,
-      fontFamily: "Helvetica-Bold",
+    sectionLabel: {
+      fontSize: 8,
+      color: color,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
       marginBottom: 8,
     },
     customerName: {
-      fontSize: 11,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
-      marginBottom: 3,
+      fontSize: 9,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#111827",
+      marginBottom: 4,
     },
     customerInfo: {
-      fontSize: 9,
-      color: "#666666",
+      fontSize: 8,
+      color: "#6b7280",
       marginBottom: 2,
     },
-    dateLabel: {
-      fontSize: 9,
-      color: "#666666",
-      marginBottom: 2,
-    },
-    dateValue: {
-      fontSize: 10,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
-      marginBottom: 8,
-    },
-    // Payment Details Box
-    paymentBox: {
-      padding: 20,
-      marginBottom: 25,
-      borderRadius: 5,
+    // Payment Method & Status
+    paymentStatusSection: {
+      padding: 16,
+      backgroundColor: "#f9fafb",
+      borderBottomWidth: 1,
+      borderBottomColor: "#e5e7eb",
     },
     paymentRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingVertical: 8,
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    paymentRowLabel: {
+      fontSize: 8,
+      color: "#6b7280",
+    },
+    paymentRowValue: {
+      fontSize: 8,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#111827",
+    },
+    statusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 3,
+    },
+    statusText: {
+      fontSize: 8,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#ffffff",
+    },
+    // Items Section
+    itemsSection: {
+      padding: 16,
       borderBottomWidth: 1,
       borderBottomColor: "#e5e7eb",
     },
-    paymentLabel: {
-      fontSize: 10,
-      color: "#666666",
-    },
-    paymentValue: {
-      fontSize: 10,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
-    },
-    // Amount Section
-    amountSection: {
-      marginTop: 20,
-      marginBottom: 25,
-    },
-    amountBox: {
-      width: "100%",
-    },
-    amountRow: {
+    itemRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: "#e5e7eb",
+      marginBottom: 8,
     },
-    amountLabel: {
-      fontSize: 10,
-      color: "#666666",
+    itemDetails: {
+      flex: 1,
     },
-    amountValue: {
-      fontSize: 10,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
+    itemName: {
+      fontSize: 8,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#111827",
+      marginBottom: 2,
+    },
+    itemQty: {
+      fontSize: 8,
+      color: "#6b7280",
+    },
+    itemTotal: {
+      fontSize: 8,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#111827",
+      textAlign: "right",
+    },
+    // Totals Section
+    totalsSection: {
+      padding: 16,
     },
     totalRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      paddingVertical: 12,
-      marginTop: 8,
-      paddingHorizontal: 10,
-    },
-    totalLabel: {
-      fontSize: 14,
-      fontFamily: "Helvetica-Bold",
-    },
-    totalValue: {
-      fontSize: 14,
-      fontFamily: "Helvetica-Bold",
-    },
-    // Invoice Reference
-    referenceSection: {
-      marginTop: 20,
-      padding: 15,
-      backgroundColor: "#f9fafb",
-      borderRadius: 5,
-    },
-    referenceTitle: {
-      fontSize: 10,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
       marginBottom: 8,
     },
-    referenceRow: {
+    totalLabel: {
+      fontSize: 8,
+      color: "#6b7280",
+    },
+    totalValue: {
+      fontSize: 8,
+      color: "#111827",
+    },
+    discountValue: {
+      fontSize: 8,
+      color: "#dc2626",
+    },
+    grandTotalRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginBottom: 5,
+      paddingTop: 12,
+      marginTop: 12,
+      borderTopWidth: 2,
+      borderTopColor: color,
     },
-    referenceLabel: {
+    grandTotalLabel: {
       fontSize: 9,
-      color: "#666666",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: color,
     },
-    referenceValue: {
-      fontSize: 9,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
+    grandTotalValue: {
+      fontSize: 14,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: color,
     },
-    // Notes section
-    notesSection: {
-      marginTop: 20,
-      padding: 15,
+    // Invoice Reference
+    invoiceSection: {
+      padding: 16,
       backgroundColor: "#f9fafb",
-      borderRadius: 5,
+      borderTopWidth: 1,
+      borderTopColor: "#e5e7eb",
+    },
+    invoiceRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 4,
+    },
+    invoiceLabel: {
+      fontSize: 8,
+      color: "#6b7280",
+    },
+    invoiceValue: {
+      fontSize: 8,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#111827",
+    },
+    // Notes Section
+    notesSection: {
+      padding: 16,
+      backgroundColor: "#fef3c7",
+      borderTopWidth: 1,
+      borderTopColor: "#fcd34d",
     },
     notesTitle: {
-      fontSize: 10,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
-      marginBottom: 5,
+      fontSize: 8,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#78350f",
+      marginBottom: 4,
     },
     notesText: {
-      fontSize: 9,
-      color: "#666666",
-      lineHeight: 1.5,
+      fontSize: 8,
+      color: "#92400e",
     },
     // Footer
     footer: {
+      padding: 16,
+      backgroundColor: "#f9fafb",
       borderTopWidth: 1,
       borderTopColor: "#e5e7eb",
-      paddingTop: 15,
       textAlign: "center",
-      marginTop: "auto",
     },
     footerText: {
-      fontSize: 10,
-      color: "#666666",
-    },
-    pageNumber: {
-      position: "absolute",
       fontSize: 8,
-      bottom: 20,
-      left: 0,
-      right: 0,
-      textAlign: "center",
-      color: "#999999",
+      color: "#6b7280",
+      marginBottom: 4,
     },
-    // Status badge
-    statusBadge: {
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 20,
-      alignSelf: "flex-start",
-      marginBottom: 10,
-    },
-    statusText: {
-      fontSize: 10,
-      fontFamily: "Helvetica-Bold",
-      color: "#ffffff",
+    footerTextSmall: {
+      fontSize: 7,
+      color: "#9ca3af",
     },
   });
 
 const ModernReceiptPDF = ({ companyInfo, receiptData, color = "#667eea" }) => {
   const styles = createStyles(color);
 
-  // Currency formatter
-  const formatCurrency =
-    receiptData?.formatCurrency ||
-    ((amount) => {
-      const currencyMap = {
-        NGN: "₦",
-        USD: "$",
-        EUR: "€",
-        GBP: "£",
-        JPY: "¥",
-        CNY: "¥",
-        INR: "₹",
-        ZAR: "R",
-        KES: "KSh",
-        GHS: "₵",
-      };
-      const symbol =
-        currencyMap[receiptData?.currency] ||
-        receiptData?.currency + " " ||
-        "₦";
-      const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      return `${symbol}${formatted}`;
+  // Currency formatter with actual Unicode currency symbols (NotoSans font required)
+  const formatCurrency = (amount) => {
+    const symbol =
+      currencySymbols[receiptData?.currency] || receiptData?.currency || "₦";
+    const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
+    return `${symbol}${formatted}`;
+  };
 
   const formatMethod = (method) => {
     if (!method) return "N/A";
@@ -287,24 +274,19 @@ const ModernReceiptPDF = ({ companyInfo, receiptData, color = "#667eea" }) => {
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
-        {/* Diagonal Design at Top Right */}
-        <Svg style={styles.diagonalDesign} viewBox="0 0 150 150">
-          <Path d="M150 0 L0 0 L150 150 Z" fill={color} opacity="0.1" />
-        </Svg>
+      <Page size={{ width: 226, height: 842 }} style={styles.page}>
+        {/* Colored Header Bar */}
+        <View style={styles.headerBar}>
+          <Text style={styles.headerSubtitle}>PAYMENT RECEIPT</Text>
+          <Text style={styles.headerTitle}>
+            #{receiptData?.reference || receiptData?.receiptNumber}
+          </Text>
+          <Text style={styles.headerDate}>{receiptData?.date}</Text>
+        </View>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.leftHeader}>
-            {companyInfo?.logo && (
-              <Image src={companyInfo.logo} style={styles.logo} cache={false} />
-            )}
-            <Text style={[styles.receiptTitle, { color: color }]}>
-              PAYMENT RECEIPT
-            </Text>
-            <Text style={styles.receiptNumber}>#{receiptData?.reference}</Text>
-          </View>
-          <View style={styles.rightHeader}>
+        {/* Company Info Card */}
+        <View style={styles.companyCard}>
+          <View style={styles.companyCardCentered}>
             <Text style={styles.companyName}>
               {companyInfo?.name || companyInfo?.company_name || "Company Name"}
             </Text>
@@ -314,46 +296,42 @@ const ModernReceiptPDF = ({ companyInfo, receiptData, color = "#667eea" }) => {
                 .filter(Boolean)
                 .join(", ")}
             </Text>
-            <Text style={styles.companyInfo}>{companyInfo?.phone}</Text>
-            <Text style={styles.companyInfo}>{companyInfo?.email}</Text>
+            <Text style={styles.companyInfoRow}>
+              {companyInfo?.phone} • {companyInfo?.email}
+            </Text>
           </View>
         </View>
 
-        {/* Receipt Details */}
-        <View style={styles.detailsSection}>
-          <View style={styles.detailColumn}>
-            <Text style={[styles.sectionTitle, { color: color }]}>
-              RECEIVED FROM:
+        {/* Customer Info */}
+        <View style={styles.customerSection}>
+          <Text style={styles.sectionLabel}>Received From</Text>
+          <Text style={styles.customerName}>
+            {receiptData?.customer?.name ||
+              receiptData?.entity_name ||
+              "Customer"}
+          </Text>
+          {receiptData?.customer?.phone && (
+            <Text style={styles.customerInfo}>
+              {receiptData.customer.phone}
             </Text>
-            <Text style={styles.customerName}>
-              {receiptData?.customer?.name ||
-                receiptData?.entity_name ||
-                "Customer"}
+          )}
+          {receiptData?.customer?.email && (
+            <Text style={styles.customerInfo}>
+              {receiptData.customer.email}
             </Text>
-            {receiptData?.customer?.address && (
-              <Text style={styles.customerInfo}>
-                {receiptData.customer.address}
-              </Text>
-            )}
-            {receiptData?.customer?.phone && (
-              <Text style={styles.customerInfo}>
-                {receiptData.customer.phone}
-              </Text>
-            )}
-            {receiptData?.customer?.email && (
-              <Text style={styles.customerInfo}>
-                {receiptData.customer.email}
-              </Text>
-            )}
+          )}
+        </View>
+
+        {/* Payment Method & Status */}
+        <View style={styles.paymentStatusSection}>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentRowLabel}>Payment Method</Text>
+            <Text style={styles.paymentRowValue}>
+              {formatMethod(receiptData?.paymentMethod || receiptData?.method)}
+            </Text>
           </View>
-          <View style={styles.detailColumnRight}>
-            <Text style={styles.dateLabel}>Payment Date:</Text>
-            <Text style={styles.dateValue}>{receiptData?.date}</Text>
-            <Text style={styles.dateLabel}>Payment Method:</Text>
-            <Text style={styles.dateValue}>
-              {formatMethod(receiptData?.method)}
-            </Text>
-            {/* Status Badge */}
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentRowLabel}>Status</Text>
             <View
               style={[
                 styles.statusBadge,
@@ -370,75 +348,97 @@ const ModernReceiptPDF = ({ companyInfo, receiptData, color = "#667eea" }) => {
           </View>
         </View>
 
-        {/* Payment Amount Box */}
-        <View style={[styles.paymentBox, { backgroundColor: `${color}08` }]}>
-          <View style={styles.amountBox}>
-            <View style={styles.amountRow}>
-              <Text style={styles.amountLabel}>Payment Reference:</Text>
-              <Text style={styles.amountValue}>{receiptData?.reference}</Text>
-            </View>
-            <View style={styles.amountRow}>
-              <Text style={styles.amountLabel}>Payment Type:</Text>
-              <Text style={styles.amountValue}>
-                {receiptData?.type === "received"
-                  ? "Payment Received"
-                  : "Payment Made"}
+        {/* Items */}
+        {receiptData?.items && receiptData.items.length > 0 && (
+          <View style={styles.itemsSection}>
+            <Text style={styles.sectionLabel}>Items</Text>
+            {receiptData.items.map((item, index) => (
+              <View key={index} style={styles.itemRow}>
+                <View style={styles.itemDetails}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemQty}>
+                    {item.quantity} x {formatCurrency(item.price)}
+                  </Text>
+                </View>
+                <Text style={styles.itemTotal}>
+                  {formatCurrency(item.total)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Totals */}
+        <View style={styles.totalsSection}>
+          {receiptData?.subtotal && (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Subtotal</Text>
+              <Text style={styles.totalValue}>
+                {formatCurrency(receiptData.subtotal)}
               </Text>
             </View>
-            <View style={styles.amountRow}>
-              <Text style={styles.amountLabel}>Payment Method:</Text>
-              <Text style={styles.amountValue}>
-                {formatMethod(receiptData?.method)}
+          )}
+          {receiptData?.discount > 0 && (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Discount</Text>
+              <Text style={styles.discountValue}>
+                -{formatCurrency(receiptData.discount)}
               </Text>
             </View>
-            <View style={[styles.totalRow, { backgroundColor: `${color}15` }]}>
-              <Text style={[styles.totalLabel, { color: color }]}>
-                AMOUNT PAID:
-              </Text>
-              <Text style={[styles.totalValue, { color: color }]}>
-                {formatCurrency(receiptData?.amount)}
+          )}
+          {receiptData?.tax > 0 && (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Tax</Text>
+              <Text style={styles.totalValue}>
+                {formatCurrency(receiptData.tax)}
               </Text>
             </View>
+          )}
+          <View style={styles.grandTotalRow}>
+            <Text style={styles.grandTotalLabel}>TOTAL PAID</Text>
+            <Text style={styles.grandTotalValue}>
+              {formatCurrency(
+                receiptData?.amountPaid ||
+                  receiptData?.total ||
+                  receiptData?.amount
+              )}
+            </Text>
           </View>
         </View>
 
-        {/* Invoice Reference (if applicable) */}
+        {/* Invoice Reference */}
         {receiptData?.invoice && (
-          <View style={styles.referenceSection}>
-            <Text style={styles.referenceTitle}>Invoice Reference</Text>
-            <View style={styles.referenceRow}>
-              <Text style={styles.referenceLabel}>Invoice Number:</Text>
-              <Text style={styles.referenceValue}>
+          <View style={styles.invoiceSection}>
+            <Text style={styles.sectionLabel}>Invoice Reference</Text>
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceLabel}>Invoice #:</Text>
+              <Text style={styles.invoiceValue}>
                 {receiptData.invoice.invoice_no || receiptData.invoice_number}
               </Text>
             </View>
-            <View style={styles.referenceRow}>
-              <Text style={styles.referenceLabel}>Invoice Total:</Text>
-              <Text style={styles.referenceValue}>
+            <View style={styles.invoiceRow}>
+              <Text style={styles.invoiceLabel}>Invoice Total:</Text>
+              <Text style={styles.invoiceValue}>
                 {formatCurrency(
                   receiptData.invoice_total || receiptData.invoice?.total
                 )}
               </Text>
             </View>
-            <View style={styles.referenceRow}>
-              <Text style={styles.referenceLabel}>Balance Before:</Text>
-              <Text style={styles.referenceValue}>
-                {formatCurrency(receiptData.balance_before)}
-              </Text>
-            </View>
-            <View style={styles.referenceRow}>
-              <Text style={styles.referenceLabel}>Balance After:</Text>
-              <Text style={styles.referenceValue}>
-                {formatCurrency(receiptData.balance_after)}
-              </Text>
-            </View>
+            {receiptData.balance_after !== undefined && (
+              <View style={styles.invoiceRow}>
+                <Text style={styles.invoiceLabel}>Balance:</Text>
+                <Text style={styles.invoiceValue}>
+                  {formatCurrency(receiptData.balance_after)}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
         {/* Notes */}
         {receiptData?.notes && (
           <View style={styles.notesSection}>
-            <Text style={styles.notesTitle}>Notes:</Text>
+            <Text style={styles.notesTitle}>Note</Text>
             <Text style={styles.notesText}>{receiptData.notes}</Text>
           </View>
         )}
@@ -446,18 +446,8 @@ const ModernReceiptPDF = ({ companyInfo, receiptData, color = "#667eea" }) => {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Thank you for your payment!</Text>
-          <Text style={[styles.footerText, { marginTop: 5 }]}>
-            This is a computer-generated receipt.
-          </Text>
+          <Text style={styles.footerTextSmall}>Powered by FirmaFlow</Text>
         </View>
-
-        <Text
-          style={styles.pageNumber}
-          render={({ pageNumber, totalPages }) =>
-            `Page ${pageNumber} of ${totalPages}`
-          }
-          fixed
-        />
       </Page>
     </Document>
   );

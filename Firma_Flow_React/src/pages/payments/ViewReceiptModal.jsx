@@ -19,6 +19,8 @@ import CompactReceipt from "../Settings/ReceiptTemplates/templates/CompactReceip
 import DetailedReceipt from "../Settings/ReceiptTemplates/templates/DetailedReceipt";
 import ReceiptPDFFactory from "./PDFTemplates/ReceiptPDFFactory";
 
+import CustomReceiptPreview from "../Settings/ReceiptTemplates/CustomReceiptPreview";
+
 const ViewReceiptModal = ({
   isOpen,
   onClose,
@@ -34,7 +36,7 @@ const ViewReceiptModal = ({
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [pendingAction, setPendingAction] = useState(initialAction);
-  const [invoiceData, setInvoiceData] = useState(null);
+  const [fullPayment, setFullPayment] = useState(null);
   const contentRef = useRef(null);
 
   const templateComponents = {
@@ -196,23 +198,31 @@ const ViewReceiptModal = ({
 
         if (defaultTemplate) {
           const templateData = defaultTemplate.template_data || {};
+          const isCustom =
+            templateData.type === "custom" ||
+            templateData.type === "custom-freeform";
+
           setTemplateSettings({
             template:
               templateData.templateId ||
               defaultTemplate.template_name?.toLowerCase() ||
               "modern",
             color: templateData.color || "#667eea",
+            isCustom: isCustom,
+            customData: isCustom ? templateData : null,
           });
         } else {
           setTemplateSettings({
             template: "modern",
             color: "#667eea",
+            isCustom: false,
           });
         }
       } else {
         setTemplateSettings({
           template: "modern",
           color: "#667eea",
+          isCustom: false,
         });
       }
     } catch (err) {
@@ -220,45 +230,44 @@ const ViewReceiptModal = ({
       setTemplateSettings({
         template: "modern",
         color: "#667eea",
+        isCustom: false,
       });
     }
   }, []);
 
-  // Fetch invoice data if payment has an invoice_id
-  const fetchInvoiceData = useCallback(async () => {
-    if (!payment?.invoice_id) {
-      setInvoiceData(null);
-      return;
-    }
+  // Fetch full payment details including stored_items
+  const fetchFullPayment = useCallback(async () => {
+    if (!payment?.id) return;
 
     try {
       const response = await fetch(
-        buildApiUrl(`api/sales.php?id=${payment.invoice_id}`),
+        buildApiUrl(`api/payments.php?id=${payment.id}`),
         {
           method: "GET",
           credentials: "include",
         }
       );
       const data = await response.json();
-      if (data.success) {
-        setInvoiceData(data.data);
+      if (data && data.id) {
+        setFullPayment(data);
       }
     } catch (err) {
-      console.error("Error fetching invoice data:", err);
+      console.error("Error fetching full payment:", err);
     }
-  }, [payment?.invoice_id]);
+  }, [payment?.id]);
 
   // Build receipt data from payment
   const buildReceiptData = useCallback(() => {
-    if (!payment) return;
+    const paymentData = fullPayment || payment;
+    if (!paymentData) return;
 
-    const paymentDate = payment.payment_date
-      ? new Date(payment.payment_date)
+    const paymentDate = paymentData.payment_date
+      ? new Date(paymentData.payment_date)
       : new Date();
 
     const receiptInfo = {
-      id: payment.id,
-      reference: payment.reference || `PAY-${payment.id}`,
+      id: paymentData.id,
+      reference: paymentData.reference || `PAY-${paymentData.id}`,
       date: formatDate
         ? formatDate(paymentDate)
         : paymentDate.toLocaleDateString(),
@@ -266,55 +275,56 @@ const ViewReceiptModal = ({
         hour: "2-digit",
         minute: "2-digit",
       }),
-      type: payment.type || "received",
-      amount: parseFloat(payment.amount) || 0,
-      method: payment.method || "cash",
-      status: payment.status || "completed",
-      notes: payment.notes || "",
-      entity_name: payment.entity_name || "Customer",
+      type: paymentData.type || "received",
+      amount: parseFloat(paymentData.amount) || 0,
+      method: paymentData.method || "cash",
+      status: paymentData.status || "completed",
+      notes: paymentData.notes || "",
+      entity_name: paymentData.entity_name || "Customer",
       customer: {
-        name: payment.entity_name || "Customer",
-        address: payment.entity_address || "",
-        phone: payment.entity_phone || "",
-        email: payment.entity_email || "",
+        name: paymentData.entity_name || "Customer",
+        address: paymentData.entity_address || "",
+        phone: paymentData.entity_phone || "",
+        email: paymentData.entity_email || "",
       },
       currency: currency,
-      invoice: invoiceData
+      invoice: paymentData.invoice_number
         ? {
-            invoice_no: invoiceData.invoice_no || invoiceData.invoice_number,
-            total: invoiceData.total,
+            invoice_no: paymentData.invoice_number,
+            total: paymentData.invoice_total,
           }
-        : payment.invoice_number
-        ? { invoice_no: payment.invoice_number }
         : null,
-      invoice_number: payment.invoice_number || invoiceData?.invoice_no,
-      invoice_total: payment.invoice_total || invoiceData?.total,
-      balance_before: payment.balance_before,
-      balance_after: payment.balance_after,
+      invoice_number: paymentData.invoice_number,
+      invoice_total: paymentData.invoice_total,
+      balance_before: paymentData.balance_before,
+      balance_after: paymentData.balance_after,
+      // Use stored payment items from payment_items table
+      // Backend returns them as 'stored_items' when fetching a single payment
+      invoice_items: paymentData.stored_items || null,
     };
 
     setReceiptData(receiptInfo);
-  }, [payment, invoiceData, currency, formatDate]);
+  }, [fullPayment, payment, currency, formatDate]);
 
   useEffect(() => {
     if (isOpen && payment) {
       fetchCompanyInfo();
       fetchTemplateSettings();
-      fetchInvoiceData();
+      fetchFullPayment();
     }
   }, [
     isOpen,
     payment,
     fetchCompanyInfo,
     fetchTemplateSettings,
-    fetchInvoiceData,
+    fetchFullPayment,
   ]);
 
   useEffect(() => {
-    if (payment) {
+    if (fullPayment || payment) {
       buildReceiptData();
     }
-  }, [payment, invoiceData, buildReceiptData]);
+  }, [fullPayment, payment, buildReceiptData]);
 
   // Handle pending share action
   useEffect(() => {
@@ -355,18 +365,31 @@ const ViewReceiptModal = ({
       // Build complete receipt data with items array for PDF
       const pdfReceiptData = {
         ...receiptData,
-        items: [
-          {
-            name:
-              receiptData.type === "received"
-                ? "Payment Received"
-                : "Payment Made",
-            quantity: 1,
-            price: receiptData.amount,
-            total: receiptData.amount,
-          },
-        ],
-        subtotal: receiptData.amount,
+        currency: currency, // Add user's selected currency
+        items:
+          receiptData.invoice_items && receiptData.invoice_items.length > 0
+            ? receiptData.invoice_items.map((item) => ({
+                name: item.description || item.product_name || item.name,
+                quantity: parseFloat(item.quantity) || 1,
+                price: parseFloat(item.unit_price || item.price) || 0,
+                total:
+                  parseFloat(item.total_price || item.total || item.amount) ||
+                  0,
+              }))
+            : [
+                {
+                  name:
+                    receiptData.type === "received"
+                      ? "Payment Received"
+                      : "Payment Made",
+                  quantity: 1,
+                  price: receiptData.amount,
+                  total: receiptData.amount,
+                },
+              ],
+        subtotal: receiptData.invoice_total
+          ? parseFloat(receiptData.invoice_total)
+          : receiptData.amount,
         discount: 0,
         tax: 0,
         total: receiptData.amount,
@@ -389,6 +412,8 @@ const ViewReceiptModal = ({
           companyInfo={pdfCompanyInfo}
           receiptData={pdfReceiptData}
           color={templateSettings?.color || "#667eea"}
+          isCustom={templateSettings?.isCustom}
+          customData={templateSettings?.customData}
         />
       ).toBlob();
 
@@ -532,18 +557,31 @@ const ViewReceiptModal = ({
       // Build complete receipt data with items array for PDF
       const pdfReceiptData = {
         ...receiptData,
-        items: [
-          {
-            name:
-              receiptData.type === "received"
-                ? "Payment Received"
-                : "Payment Made",
-            quantity: 1,
-            price: receiptData.amount,
-            total: receiptData.amount,
-          },
-        ],
-        subtotal: receiptData.amount,
+        currency: currency, // Add user's selected currency
+        items:
+          receiptData.invoice_items && receiptData.invoice_items.length > 0
+            ? receiptData.invoice_items.map((item) => ({
+                name: item.description || item.product_name || item.name,
+                quantity: parseFloat(item.quantity) || 1,
+                price: parseFloat(item.unit_price || item.price) || 0,
+                total:
+                  parseFloat(item.total_price || item.total || item.amount) ||
+                  0,
+              }))
+            : [
+                {
+                  name:
+                    receiptData.type === "received"
+                      ? "Payment Received"
+                      : "Payment Made",
+                  quantity: 1,
+                  price: receiptData.amount,
+                  total: receiptData.amount,
+                },
+              ],
+        subtotal: receiptData.invoice_total
+          ? parseFloat(receiptData.invoice_total)
+          : receiptData.amount,
         discount: 0,
         tax: 0,
         total: receiptData.amount,
@@ -566,6 +604,8 @@ const ViewReceiptModal = ({
           companyInfo={pdfCompanyInfo}
           receiptData={pdfReceiptData}
           color={templateSettings?.color || "#667eea"}
+          isCustom={templateSettings?.isCustom}
+          customData={templateSettings?.customData}
         />
       ).toBlob();
 
@@ -709,6 +749,7 @@ const ViewReceiptModal = ({
   // Get the template component
   const templateType = templateSettings?.template || "modern";
   const TemplateComponent = templateComponents[templateType] || ModernReceipt;
+  const isCustomTemplate = templateSettings.isCustom;
 
   // Prepare receipt data for template preview
   const templateReceiptData = receiptData
@@ -716,18 +757,30 @@ const ViewReceiptModal = ({
         receiptNumber: receiptData.reference,
         date: receiptData.date,
         time: receiptData.time,
-        items: [
-          {
-            name:
-              receiptData.type === "received"
-                ? "Payment Received"
-                : "Payment Made",
-            quantity: 1,
-            price: receiptData.amount,
-            total: receiptData.amount,
-          },
-        ],
-        subtotal: receiptData.amount,
+        items:
+          receiptData.invoice_items && receiptData.invoice_items.length > 0
+            ? receiptData.invoice_items.map((item) => ({
+                name: item.description || item.product_name || item.name,
+                quantity: parseFloat(item.quantity) || 1,
+                price: parseFloat(item.unit_price || item.price) || 0,
+                total:
+                  parseFloat(item.total_price || item.total || item.amount) ||
+                  0,
+              }))
+            : [
+                {
+                  name:
+                    receiptData.type === "received"
+                      ? "Payment Received"
+                      : "Payment Made",
+                  quantity: 1,
+                  price: receiptData.amount,
+                  total: receiptData.amount,
+                },
+              ],
+        subtotal: receiptData.invoice_total
+          ? parseFloat(receiptData.invoice_total)
+          : receiptData.amount,
         discount: 0,
         tax: 0,
         total: receiptData.amount,
@@ -923,17 +976,30 @@ const ViewReceiptModal = ({
               id="receipt-paper-container"
               className="bg-white shadow-lg mx-auto"
               style={{
-                width: templateType === "thermal" ? "80mm" : "210mm",
+                width: isCustomTemplate
+                  ? "80mm"
+                  : templateType === "thermal"
+                  ? "80mm"
+                  : "210mm",
                 boxSizing: "border-box",
               }}
             >
-              {templateReceiptData && companyInfo && (
-                <TemplateComponent
-                  receiptData={templateReceiptData}
+              {isCustomTemplate ? (
+                <CustomReceiptPreview
+                  templateData={templateSettings.customData}
                   companyInfo={companyInfo}
-                  formatCurrency={formatCurrency}
-                  color={templateSettings?.color}
+                  receiptData={templateReceiptData}
                 />
+              ) : (
+                templateReceiptData &&
+                companyInfo && (
+                  <TemplateComponent
+                    receiptData={templateReceiptData}
+                    companyInfo={companyInfo}
+                    formatCurrency={formatCurrency}
+                    color={templateSettings?.color}
+                  />
+                )
               )}
             </div>
           </div>

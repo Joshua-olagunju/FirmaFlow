@@ -230,7 +230,7 @@ try {
             // Form data with potential file upload
             $reference_type = $_POST['reference_type'] ?? '';
             $reference_id = $_POST['reference_id'] ?? null;
-            $amount = floatval($_POST['amount'] ?? 0);
+            $amount = round(floatval($_POST['amount'] ?? 0), 2);
             $payment_method = $_POST['payment_method'] ?? 'cash';
             $payment_date = $_POST['payment_date'] ?? date('Y-m-d');
             $notes = $_POST['notes'] ?? '';
@@ -241,7 +241,7 @@ try {
             // JSON data (backward compatibility)
             $reference_type = $input['reference_type'] ?? '';
             $reference_id = $input['reference_id'] ?? null;
-            $amount = floatval($input['amount'] ?? 0);
+            $amount = round(floatval($input['amount'] ?? 0), 2);
             $payment_method = $input['payment_method'] ?? 'cash';
             $payment_date = $input['payment_date'] ?? date('Y-m-d');
             $notes = $input['notes'] ?? '';
@@ -434,9 +434,18 @@ try {
                 $bill = $stmt->fetch();
                 
                 if ($bill) {
-                    $total = floatval($bill['total']);
-                    $currentPaid = floatval($bill['amount_paid']);
-                    $newAmountPaid = $currentPaid + $amount;
+                    $total = round(floatval($bill['total']), 2);
+                    $currentPaid = round(floatval($bill['amount_paid']), 2);
+                    $newAmountPaid = round($currentPaid + $amount, 2);
+                    
+                    // Calculate remaining balance
+                    $balance = round($total - $newAmountPaid, 2);
+                    
+                    // If balance is very small (less than 1 cent), snap to exact total
+                    if (abs($balance) < 0.01) {
+                        $newAmountPaid = $total;
+                        $balance = 0;
+                    }
                     
                     // Prevent overpayment
                     if ($newAmountPaid > $total) {
@@ -450,11 +459,18 @@ try {
                     $stmt->execute([$newAmountPaid, $bill_id]);
                     
                     // Update purchase bill status
-                    $newStatus = ($newAmountPaid >= $total) ? 'paid' : (($newAmountPaid > 0) ? 'partially_paid' : 'received');
+                    if ($balance < 0.01) {
+                        $newStatus = 'paid';
+                    } elseif ($newAmountPaid > 0) {
+                        $newStatus = 'partially_paid';
+                    } else {
+                        $newStatus = 'received';
+                    }
+                    
                     $stmt = $pdo->prepare("UPDATE purchase_bills SET status = ? WHERE id = ?");
                     $stmt->execute([$newStatus, $bill_id]);
                     
-                    error_log("✅ Purchase bill updated: ID $bill_id, Amount Paid: $newAmountPaid, Status: $newStatus");
+                    error_log("✅ Purchase bill updated: ID $bill_id, Amount Paid: $newAmountPaid, Status: $newStatus, Balance: $balance");
                 } else {
                     error_log("❌ Purchase bill not found: ID $bill_id for company $company_id");
                 }
@@ -468,9 +484,18 @@ try {
                 $invoice = $stmt->fetch();
                 
                 if ($invoice) {
-                    $total = floatval($invoice['total']);
-                    $currentPaid = floatval($invoice['amount_paid']);
-                    $newAmountPaid = $currentPaid + $amount;
+                    $total = round(floatval($invoice['total']), 2);
+                    $currentPaid = round(floatval($invoice['amount_paid']), 2);
+                    $newAmountPaid = round($currentPaid + $amount, 2);
+                    
+                    // Calculate remaining balance
+                    $balance = round($total - $newAmountPaid, 2);
+                    
+                    // If balance is very small (less than 1 cent), snap to exact total
+                    if (abs($balance) < 0.01) {
+                        $newAmountPaid = $total;
+                        $balance = 0;
+                    }
                     
                     // Prevent overpayment
                     if ($newAmountPaid > $total) {
@@ -484,7 +509,14 @@ try {
                     $stmt->execute([$newAmountPaid, $invoice_id]);
                     
                     // Update invoice status
-                    $newStatus = ($newAmountPaid >= $total) ? 'paid' : (($newAmountPaid > 0) ? 'partially_paid' : 'pending');
+                    if ($balance < 0.01) {
+                        $newStatus = 'paid';
+                    } elseif ($newAmountPaid > 0) {
+                        $newStatus = 'partially_paid';
+                    } else {
+                        $newStatus = 'pending';
+                    }
+                    
                     $stmt = $pdo->prepare("UPDATE sales_invoices SET status = ? WHERE id = ?");
                     $stmt->execute([$newStatus, $invoice_id]);
                 }

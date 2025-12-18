@@ -9,12 +9,13 @@ import {
   Svg,
   Path,
 } from "@react-pdf/renderer";
+import "./fontConfig"; // Register NotoSans font for Unicode currency symbols
 
 // Create styles that match the Elegant template EXACTLY
 const createStyles = (color = "#667eea") =>
   StyleSheet.create({
     page: {
-      fontFamily: "Helvetica",
+      fontFamily: "NotoSans",
       fontSize: 10,
       backgroundColor: "#ffffff",
     },
@@ -56,7 +57,7 @@ const createStyles = (color = "#667eea") =>
     },
     companyName: {
       fontSize: 22,
-      fontFamily: "Helvetica",
+      fontFamily: "NotoSans",
       color: "#1a1a1a",
       letterSpacing: 0.5,
     },
@@ -74,7 +75,7 @@ const createStyles = (color = "#667eea") =>
     },
     invoiceTitle: {
       fontSize: 20,
-      fontFamily: "Helvetica",
+      fontFamily: "NotoSans",
       color: color,
       letterSpacing: 3,
       textAlign: "right",
@@ -128,7 +129,8 @@ const createStyles = (color = "#667eea") =>
     },
     infoCardTitle: {
       fontSize: 8,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: color,
       textTransform: "uppercase",
       letterSpacing: 1,
@@ -136,7 +138,8 @@ const createStyles = (color = "#667eea") =>
     },
     infoCardName: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
       marginBottom: 4,
     },
@@ -157,12 +160,14 @@ const createStyles = (color = "#667eea") =>
     },
     detailValue: {
       fontSize: 9,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
     },
     detailValueAccent: {
       fontSize: 9,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: color,
     },
     statusBadge: {
@@ -173,7 +178,8 @@ const createStyles = (color = "#667eea") =>
     },
     statusText: {
       fontSize: 8,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: color,
     },
     // Table styles
@@ -189,7 +195,8 @@ const createStyles = (color = "#667eea") =>
     },
     tableHeaderText: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#ffffff",
     },
     tableRow: {
@@ -229,7 +236,8 @@ const createStyles = (color = "#667eea") =>
     },
     tableCellTextBold: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#1a1a1a",
     },
     // Totals section
@@ -258,12 +266,14 @@ const createStyles = (color = "#667eea") =>
     },
     totalsValue: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
     },
     discountValue: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#dc2626",
     },
     grandTotalSection: {
@@ -275,12 +285,14 @@ const createStyles = (color = "#667eea") =>
     },
     grandTotalLabel: {
       fontSize: 12,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#ffffff",
     },
     grandTotalValue: {
       fontSize: 16,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#ffffff",
     },
     // Payment section - dashed border style
@@ -306,7 +318,8 @@ const createStyles = (color = "#667eea") =>
     },
     paymentTitle: {
       fontSize: 11,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
     },
     paymentGrid: {
@@ -324,7 +337,8 @@ const createStyles = (color = "#667eea") =>
     },
     paymentValue: {
       fontSize: 11,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
     },
     // Footer
@@ -336,7 +350,8 @@ const createStyles = (color = "#667eea") =>
     },
     footerText: {
       fontSize: 10,
-      fontFamily: "Helvetica-Oblique",
+      fontFamily: "NotoSans",
+      fontStyle: "italic",
       color: "#888888",
       marginBottom: 12,
     },

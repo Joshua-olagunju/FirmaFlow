@@ -1,6 +1,22 @@
+/**
+ * PDF Font Registration for @react-pdf/renderer
+ *
+ * This file registers Noto Sans fonts which have full Unicode support
+ * for currency symbols including:
+ * - ₦ (Nigerian Naira)
+ * - € (Euro)
+ * - £ (British Pound)
+ * - ¥ (Japanese Yen / Chinese Yuan)
+ * - ₹ (Indian Rupee)
+ * - ₵ (Ghana Cedi)
+ *
+ * IMPORTANT: Import this file at the top of any PDF component that needs
+ * currency symbol support BEFORE defining styles or components.
+ */
+
 import { Font } from "@react-pdf/renderer";
 
-// Register NotoSans fonts - LOCAL files with FULL Unicode support
+// Register Noto Sans fonts - LOCAL files with FULL Unicode support
 // Supports ALL currency symbols: ₦ (Naira), ₵ (Cedi), ₹ (Rupee), € (Euro), £ (Pound), ¥ (Yen)
 Font.register({
   family: "NotoSans",
@@ -19,6 +35,7 @@ Font.register({
 });
 
 // Currency symbols mapping with actual Unicode symbols
+// These will render correctly when using NotoSans font family
 export const currencySymbols = {
   NGN: "₦", // Nigerian Naira
   USD: "$", // US Dollar
@@ -44,48 +61,11 @@ export const formatCurrencyWithSymbol = (amount, currency = "NGN") => {
 
 // Export font family name for easy reference
 export const PDF_FONT_FAMILY = "NotoSans";
+export const PDF_FONT_BOLD = "NotoSans";
 
-// Font family mappings for templates - all using NotoSans now
-export const fontFamilyMap = {
-  "Arial, sans-serif": "NotoSans",
-  "Helvetica, sans-serif": "NotoSans",
-  "sans-serif": "NotoSans",
-  Arial: "NotoSans",
-  Helvetica: "NotoSans",
-  "Georgia, serif": "NotoSans",
-  "'Times New Roman', serif": "NotoSans",
-  "Times New Roman": "NotoSans",
-  Georgia: "NotoSans",
-  serif: "NotoSans",
+export default {
+  currencySymbols,
+  formatCurrencyWithSymbol,
+  PDF_FONT_FAMILY,
+  PDF_FONT_BOLD,
 };
-
-// Get PDF font family from HTML font family
-export const getPDFFont = (htmlFont) => {
-  return fontFamilyMap[htmlFont] || "NotoSans";
-};
-
-// Default font families for each template type - all NotoSans now
-export const templateFonts = {
-  modern: {
-    primary: "NotoSans",
-    bold: "NotoSans",
-  },
-  classic: {
-    primary: "NotoSans",
-    bold: "NotoSans",
-  },
-  minimal: {
-    primary: "NotoSans",
-    bold: "NotoSans",
-  },
-  professional: {
-    primary: "NotoSans",
-    bold: "NotoSans",
-  },
-  elegant: {
-    primary: "NotoSans",
-    bold: "NotoSans",
-  },
-};
-
-export default fontFamilyMap;
