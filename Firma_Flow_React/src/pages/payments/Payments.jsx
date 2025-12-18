@@ -90,7 +90,7 @@ const Payments = () => {
     setIsLoading(true);
     setError("");
     try {
-      const url = buildApiUrl(`api/purchases.php?status=unpaid,partial`);
+      const url = buildApiUrl(`api/purchases.php?action=pending`);
 
       const response = await fetch(url, {
         method: "GET",
@@ -101,11 +101,7 @@ const Payments = () => {
 
       if (response.ok) {
         const bills = Array.isArray(data) ? data : data.data || [];
-        setPendingBills(
-          bills.filter(
-            (bill) => bill.status === "unpaid" || bill.status === "partial"
-          )
-        );
+        setPendingBills(bills);
       } else {
         setError(data.error || "Failed to fetch pending bills");
       }

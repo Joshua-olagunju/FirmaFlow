@@ -1,4 +1,4 @@
-// Modern Receipt - Updated to match PDF version exactly
+// Modern Receipt - Fresh redesign with thermal POS width
 const ModernReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-NG", {
@@ -14,193 +14,184 @@ const ModernReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
 
   return (
     <div
-      className="bg-white p-10 mx-auto print:p-10"
+      className="bg-white mx-auto"
       style={{
-        width: "100%",
-        maxWidth: "210mm",
-        minHeight: "297mm",
-        fontFamily: "Helvetica, Arial, sans-serif",
+        width: "80mm",
+        maxWidth: "80mm",
+        fontFamily: "'Inter', -apple-system, sans-serif",
+        fontSize: "10px",
         boxSizing: "border-box",
-        position: "relative",
       }}
     >
-      {/* Diagonal Design Overlay */}
+      {/* Colored Header Bar */}
       <div
+        className="p-4 text-white"
         style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          width: "150px",
-          height: "150px",
-          opacity: 0.1,
-          background: `linear-gradient(135deg, transparent 50%, ${color} 50%)`,
-          pointerEvents: "none",
+          background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
         }}
-      />
-
-      {/* Header */}
-      <div
-        className="flex justify-between mb-8"
-        style={{ zIndex: 1, position: "relative" }}
       >
-        <div className="flex-1">
-          {companyInfo?.logo && (
-            <img
-              src={companyInfo.logo}
-              alt="Logo"
-              className="mb-2"
-              style={{
-                width: "60px",
-                height: "48px",
-                objectFit: "contain",
-              }}
-            />
-          )}
-          <h2
-            className="text-3xl font-bold mb-1"
-            style={{ color: color, fontSize: "28px", marginBottom: "5px" }}
-          >
-            PAYMENT RECEIPT
-          </h2>
-          <p className="text-sm text-gray-600">#{receiptData?.receiptNumber}</p>
-        </div>
-        <div className="flex-1 text-right">
-          <h3 className="text-lg font-bold text-gray-800 mb-1">
-            {companyInfo?.name || companyInfo?.company_name || "Company Name"}
-          </h3>
-          <p className="text-sm text-gray-600">{companyInfo?.address}</p>
-          <p className="text-sm text-gray-600">
-            {[companyInfo?.city, companyInfo?.state].filter(Boolean).join(", ")}
-          </p>
-          <p className="text-sm text-gray-600">{companyInfo?.phone}</p>
-          <p className="text-sm text-gray-600">{companyInfo?.email}</p>
+        <div className="text-center">
+          <div className="text-sm opacity-90 mb-1">PAYMENT RECEIPT</div>
+          <div className="text-xl font-bold mb-2">
+            #{receiptData?.receiptNumber}
+          </div>
+          <div className="text-xs opacity-80">{receiptData?.date}</div>
         </div>
       </div>
 
-      {/* Receipt Details */}
-      <div className="flex justify-between mb-6">
-        <div className="flex-1">
-          <h4 className="text-xs font-bold mb-2" style={{ color: color }}>
-            RECEIVED FROM:
-          </h4>
-          <p className="text-base font-bold text-gray-800 mb-1">
-            {receiptData?.customer?.name || "Customer"}
-          </p>
-          {receiptData?.customer?.address && (
-            <p className="text-sm text-gray-600">
-              {receiptData.customer.address}
-            </p>
-          )}
-          {receiptData?.customer?.phone && (
-            <p className="text-sm text-gray-600">
-              {receiptData.customer.phone}
-            </p>
-          )}
-          {receiptData?.customer?.email && (
-            <p className="text-sm text-gray-600">
-              {receiptData.customer.email}
-            </p>
-          )}
+      {/* Company Info Card */}
+      <div className="p-4 bg-gray-50 border-b border-gray-200">
+        <div className="text-center">
+          <div className="text-sm font-bold text-gray-800 mb-1">
+            {companyInfo?.name || companyInfo?.company_name || "Company Name"}
+          </div>
+          <div className="text-xs text-gray-600">{companyInfo?.address}</div>
+          <div className="text-xs text-gray-600">
+            {[companyInfo?.city, companyInfo?.state].filter(Boolean).join(", ")}
+          </div>
+          <div className="text-xs text-gray-600 mt-1">
+            {companyInfo?.phone} • {companyInfo?.email}
+          </div>
         </div>
-        <div className="flex-1 text-right">
-          <p className="text-sm text-gray-600 mb-0.5">Payment Date:</p>
-          <p className="text-base font-bold text-gray-800 mb-2">
-            {receiptData?.date}
-          </p>
-          <p className="text-sm text-gray-600 mb-0.5">Payment Method:</p>
-          <p className="text-base font-bold text-gray-800 mb-2">
+      </div>
+
+      {/* Customer Info */}
+      <div className="p-4 border-b border-gray-200">
+        <div
+          className="text-xs uppercase tracking-wide mb-2"
+          style={{ color: color }}
+        >
+          Received From
+        </div>
+        <div className="text-sm font-bold text-gray-900 mb-1">
+          {receiptData?.customer?.name || "Customer"}
+        </div>
+        {receiptData?.customer?.phone && (
+          <div className="text-xs text-gray-600">
+            {receiptData.customer.phone}
+          </div>
+        )}
+        {receiptData?.customer?.email && (
+          <div className="text-xs text-gray-600">
+            {receiptData.customer.email}
+          </div>
+        )}
+      </div>
+
+      {/* Payment Method & Status */}
+      <div className="p-4 bg-gray-50 border-b border-gray-200">
+        <div className="flex justify-between items-center mb-2">
+          <div className="text-xs text-gray-600">Payment Method</div>
+          <div className="text-xs font-bold text-gray-900">
             {formatMethod(receiptData?.paymentMethod)}
-          </p>
-          {/* Status Badge */}
-          <span
-            className="inline-block px-3 py-1 rounded-full text-xs font-bold text-white mt-1"
+          </div>
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="text-xs text-gray-600">Status</div>
+          <div
+            className="px-2 py-0.5 rounded text-xs font-bold text-white"
             style={{
               backgroundColor:
                 receiptData?.status === "completed" ? "#10b981" : "#f59e0b",
             }}
           >
             {receiptData?.status?.toUpperCase() || "COMPLETED"}
-          </span>
+          </div>
         </div>
       </div>
 
-      {/* Payment Amount Box */}
-      <div
-        className="p-5 mb-6 rounded"
-        style={{
-          backgroundColor: `${color}08`,
-        }}
-      >
-        <div className="space-y-2">
-          <div className="flex justify-between py-2 border-b border-gray-200">
-            <span className="text-sm text-gray-600">Payment Reference:</span>
-            <span className="text-sm font-bold text-gray-800">
-              {receiptData?.receiptNumber}
-            </span>
-          </div>
-          <div className="flex justify-between py-2 border-b border-gray-200">
-            <span className="text-sm text-gray-600">Payment Type:</span>
-            <span className="text-sm font-bold text-gray-800">
-              {receiptData?.type === "received"
-                ? "Payment Received"
-                : "Payment Made"}
-            </span>
-          </div>
-          <div className="flex justify-between py-2 border-b border-gray-200">
-            <span className="text-sm text-gray-600">Payment Method:</span>
-            <span className="text-sm font-bold text-gray-800">
-              {formatMethod(receiptData?.paymentMethod)}
-            </span>
-          </div>
+      {/* Items */}
+      {receiptData?.items && receiptData.items.length > 0 && (
+        <div className="p-4 border-b border-gray-200">
           <div
-            className="flex justify-between py-3 px-2 mt-2 rounded"
-            style={{
-              backgroundColor: `${color}15`,
-            }}
+            className="text-xs uppercase tracking-wide mb-3"
+            style={{ color: color }}
           >
-            <span className="text-base font-bold" style={{ color: color }}>
-              AMOUNT PAID:
-            </span>
-            <span className="text-lg font-bold" style={{ color: color }}>
-              {formatCurrency(receiptData?.amountPaid || receiptData?.total)}
-            </span>
+            Items
+          </div>
+          {receiptData.items.map((item, index) => (
+            <div key={index} className="flex justify-between mb-2 text-xs">
+              <div className="flex-1">
+                <div className="font-medium text-gray-900">{item.name}</div>
+                <div className="text-gray-500">
+                  {item.quantity} x {formatCurrency(item.price)}
+                </div>
+              </div>
+              <div className="font-bold text-gray-900">
+                {formatCurrency(item.total)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Totals */}
+      <div className="p-4">
+        {receiptData?.subtotal && (
+          <div className="flex justify-between mb-2 text-xs">
+            <div className="text-gray-600">Subtotal</div>
+            <div className="text-gray-900">
+              {formatCurrency(receiptData.subtotal)}
+            </div>
+          </div>
+        )}
+        {receiptData?.discount > 0 && (
+          <div className="flex justify-between mb-2 text-xs">
+            <div className="text-gray-600">Discount</div>
+            <div className="text-red-600">
+              -{formatCurrency(receiptData.discount)}
+            </div>
+          </div>
+        )}
+        {receiptData?.tax > 0 && (
+          <div className="flex justify-between mb-2 text-xs">
+            <div className="text-gray-600">Tax</div>
+            <div className="text-gray-900">
+              {formatCurrency(receiptData.tax)}
+            </div>
+          </div>
+        )}
+        <div
+          className="flex justify-between py-3 mt-3 border-t-2"
+          style={{ borderColor: color }}
+        >
+          <div className="text-sm font-bold" style={{ color: color }}>
+            TOTAL PAID
+          </div>
+          <div className="text-lg font-bold" style={{ color: color }}>
+            {formatCurrency(receiptData?.amountPaid || receiptData?.total)}
           </div>
         </div>
       </div>
 
-      {/* Invoice Reference (if applicable) */}
+      {/* Invoice Reference */}
       {receiptData?.invoice && (
-        <div className="bg-gray-50 p-4 mb-5 rounded">
-          <h4 className="text-sm font-bold text-gray-800 mb-2">
+        <div className="p-4 bg-gray-50 border-t border-gray-200">
+          <div
+            className="text-xs uppercase tracking-wide mb-2"
+            style={{ color: color }}
+          >
             Invoice Reference
-          </h4>
-          <div className="space-y-1">
+          </div>
+          <div className="space-y-1 text-xs">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Invoice Number:</span>
-              <span className="text-sm font-bold text-gray-800">
+              <span className="text-gray-600">Invoice #:</span>
+              <span className="font-bold text-gray-900">
                 {receiptData.invoice.invoice_no || receiptData.invoice_number}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Invoice Total:</span>
-              <span className="text-sm font-bold text-gray-800">
+              <span className="text-gray-600">Invoice Total:</span>
+              <span className="font-bold text-gray-900">
                 {formatCurrency(
                   receiptData.invoice_total || receiptData.invoice?.total
                 )}
               </span>
             </div>
-            {receiptData.balance_before !== undefined && (
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Balance Before:</span>
-                <span className="text-sm font-bold text-gray-800">
-                  {formatCurrency(receiptData.balance_before)}
-                </span>
-              </div>
-            )}
             {receiptData.balance_after !== undefined && (
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Balance After:</span>
-                <span className="text-sm font-bold text-gray-800">
+                <span className="text-gray-600">Balance:</span>
+                <span className="font-bold text-gray-900">
                   {formatCurrency(receiptData.balance_after)}
                 </span>
               </div>
@@ -211,20 +202,18 @@ const ModernReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
 
       {/* Notes */}
       {receiptData?.notes && (
-        <div className="bg-gray-50 p-4 mb-5 rounded">
-          <h4 className="text-sm font-bold text-gray-800 mb-1">Notes:</h4>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            {receiptData.notes}
-          </p>
+        <div className="p-4 bg-yellow-50 border-t border-yellow-200">
+          <div className="text-xs font-bold text-yellow-900 mb-1">Note</div>
+          <div className="text-xs text-yellow-800">{receiptData.notes}</div>
         </div>
       )}
 
       {/* Footer */}
-      <div className="border-t border-gray-200 pt-4 mt-auto text-center">
-        <p className="text-sm text-gray-600">Thank you for your payment!</p>
-        <p className="text-sm text-gray-600 mt-1">
-          This is a computer-generated receipt.
-        </p>
+      <div className="p-4 bg-gray-50 border-t border-gray-200 text-center">
+        <div className="text-xs text-gray-600 mb-1">
+          Thank you for your payment!
+        </div>
+        <div className="text-xs text-gray-500">Powered by FirmaFlow</div>
       </div>
     </div>
   );

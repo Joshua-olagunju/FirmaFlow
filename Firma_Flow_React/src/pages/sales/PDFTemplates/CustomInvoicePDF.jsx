@@ -104,7 +104,7 @@ const createStyles = (templateData) => {
   return StyleSheet.create({
     page: {
       padding: docBorder?.enabled ? parseInt(docBorder.margin || 20) : 40,
-      fontFamily: "Open Sans",
+      fontFamily: "NotoSans",
       fontSize: 10,
       backgroundColor: "#ffffff",
       ...(docBorder?.enabled && {
@@ -128,7 +128,7 @@ const createStyles = (templateData) => {
       borderBottomWidth: 2,
       borderBottomColor: color,
       padding: 8,
-      fontFamily: "Open Sans",
+      fontFamily: "NotoSans",
       fontWeight: "bold",
       fontSize: 9,
     },
@@ -153,7 +153,7 @@ const createStyles = (templateData) => {
     tableColAmount: {
       flex: 1.5,
       textAlign: "right",
-      fontFamily: "Open Sans",
+      fontFamily: "NotoSans",
       fontWeight: "bold",
     },
     // Totals
@@ -167,7 +167,7 @@ const createStyles = (templateData) => {
       color: "#666",
     },
     totalValue: {
-      fontFamily: "Open Sans",
+      fontFamily: "NotoSans",
       fontWeight: "bold",
       color: "#333",
     },
@@ -178,7 +178,7 @@ const createStyles = (templateData) => {
       marginTop: 5,
     },
     grandTotalText: {
-      fontFamily: "Open Sans",
+      fontFamily: "NotoSans",
       fontWeight: "bold",
       color: color,
       fontSize: 12,
@@ -351,7 +351,7 @@ const CustomInvoicePDF = ({
           <Text
             style={{
               fontSize: fontSize,
-              fontFamily: "Open Sans",
+              fontFamily: "NotoSans",
               fontWeight: "bold",
               color: templateColor,
               marginBottom: 8,
@@ -364,7 +364,7 @@ const CustomInvoicePDF = ({
           <Text
             style={{
               fontSize: fontSize + 1,
-              fontFamily: "Open Sans",
+              fontFamily: "NotoSans",
               fontWeight: "bold",
               color: "#333",
               marginBottom: 4,
@@ -385,7 +385,7 @@ const CustomInvoicePDF = ({
           <Text
             style={{
               fontSize: fontSize,
-              fontFamily: "Open Sans",
+              fontFamily: "NotoSans",
               fontWeight: "bold",
               color: templateColor,
               marginBottom: 8,
@@ -398,7 +398,7 @@ const CustomInvoicePDF = ({
           <Text
             style={{
               fontSize: fontSize + 1,
-              fontFamily: "Open Sans",
+              fontFamily: "NotoSans",
               fontWeight: "bold",
               color: "#333",
               marginBottom: 4,
@@ -416,7 +416,7 @@ const CustomInvoicePDF = ({
           <Text
             style={{
               fontSize: fontSize,
-              fontFamily: "Open Sans",
+              fontFamily: "NotoSans",
               fontWeight: "bold",
               color: templateColor,
               marginBottom: 8,
@@ -436,7 +436,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: "bold",
                   color: "#333",
                 }}
@@ -455,7 +455,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: "bold",
                   color: "#333",
                 }}
@@ -474,7 +474,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: "bold",
                   color: templateColor,
                 }}
@@ -506,7 +506,7 @@ const CustomInvoicePDF = ({
                   <Text
                     style={{
                       fontSize: fontSize,
-                      fontFamily: "Open Sans",
+                      fontFamily: "NotoSans",
                       fontWeight: "bold",
                       color: templateColor,
                     }}
@@ -573,7 +573,7 @@ const CustomInvoicePDF = ({
                 <Text
                   style={{
                     fontSize: fontSize,
-                    fontFamily: "Open Sans",
+                    fontFamily: "NotoSans",
                     fontWeight: "bold",
                     color: "#333",
                   }}
@@ -598,7 +598,7 @@ const CustomInvoicePDF = ({
                   <Text
                     style={{
                       fontSize: fontSize,
-                      fontFamily: "Open Sans",
+                      fontFamily: "NotoSans",
                       fontWeight: "bold",
                       color: "#dc2626",
                     }}
@@ -625,7 +625,7 @@ const CustomInvoicePDF = ({
                 <Text
                   style={{
                     fontSize: fontSize,
-                    fontFamily: "Open Sans",
+                    fontFamily: "NotoSans",
                     fontWeight: "bold",
                     color: "#333",
                   }}
@@ -650,7 +650,7 @@ const CustomInvoicePDF = ({
             <Text
               style={{
                 fontSize: fontSize + 2,
-                fontFamily: "Open Sans",
+                fontFamily: "NotoSans",
                 fontWeight: "bold",
                 color: "#ffffff",
               }}
@@ -660,7 +660,7 @@ const CustomInvoicePDF = ({
             <Text
               style={{
                 fontSize: fontSize + 4,
-                fontFamily: "Open Sans",
+                fontFamily: "NotoSans",
                 fontWeight: "bold",
                 color: "#ffffff",
               }}
@@ -777,7 +777,7 @@ const CustomInvoicePDF = ({
         <Text
           style={{
             fontSize: fontSize,
-            fontFamily: "Open Sans",
+            fontFamily: "NotoSans",
             fontWeight: isBold ? "bold" : "normal",
             color: textColor,
             marginBottom: 5,
@@ -799,7 +799,7 @@ const CustomInvoicePDF = ({
             <Text
               style={{
                 fontSize: fontSize - 6,
-                fontFamily: "Open Sans",
+                fontFamily: "NotoSans",
                 fontWeight: "bold",
                 color: templateColor,
               }}
@@ -849,7 +849,7 @@ const CustomInvoicePDF = ({
         <Text
           style={{
             fontSize: fontSize + 4,
-            fontFamily: "Open Sans",
+            fontFamily: "NotoSans",
             fontWeight: "bold",
             color: primaryColor,
             marginBottom: 4,
@@ -925,7 +925,7 @@ const CustomInvoicePDF = ({
         <Text
           style={{
             fontSize: fontSize,
-            fontFamily: "Open Sans",
+            fontFamily: "NotoSans",
             fontWeight: "bold",
             color: templateColor,
             marginBottom: 5,
@@ -937,7 +937,7 @@ const CustomInvoicePDF = ({
         <Text
           style={{
             fontSize: fontSize + 1,
-            fontFamily: "Open Sans",
+            fontFamily: "NotoSans",
             fontWeight: "bold",
             color: "#333",
             marginBottom: 3,
@@ -1008,7 +1008,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize + 1,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: "bold",
                   color: "#333",
                 }}
@@ -1031,7 +1031,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize + 1,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: "bold",
                   color: "#333",
                 }}
@@ -1056,7 +1056,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize + 1,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: "bold",
                   color: "#333",
                 }}
@@ -1113,7 +1113,7 @@ const CustomInvoicePDF = ({
       borderBottomWidth: 2,
       borderBottomColor: headerBgColor || templateColor,
       padding: 8,
-      fontFamily: "Open Sans",
+      fontFamily: "NotoSans",
       fontWeight: "bold",
       fontSize: fontSize,
     };
@@ -1173,7 +1173,7 @@ const CustomInvoicePDF = ({
                   style={{
                     flex: 1.5,
                     textAlign: "right",
-                    fontFamily: "Open Sans",
+                    fontFamily: "NotoSans",
                     fontWeight: "bold",
                     color: "#333",
                   }}
@@ -1223,7 +1223,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: isBold ? "bold" : "normal",
                   color: "#333",
                 }}
@@ -1243,7 +1243,7 @@ const CustomInvoicePDF = ({
                 <Text
                   style={{
                     fontSize: fontSize,
-                    fontFamily: "Open Sans",
+                    fontFamily: "NotoSans",
                     fontWeight: isBold ? "bold" : "normal",
                     color: "#dc2626",
                   }}
@@ -1265,7 +1265,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: isBold ? "bold" : "normal",
                   color: "#333",
                 }}
@@ -1282,7 +1282,7 @@ const CustomInvoicePDF = ({
             <Text
               style={{
                 fontSize: fontSize + 2,
-                fontFamily: "Open Sans",
+                fontFamily: "NotoSans",
                 fontWeight: "bold",
                 color: templateColor,
               }}
@@ -1292,7 +1292,7 @@ const CustomInvoicePDF = ({
             <Text
               style={{
                 fontSize: fontSize + 2,
-                fontFamily: "Open Sans",
+                fontFamily: "NotoSans",
                 fontWeight: "bold",
                 color: templateColor,
               }}
@@ -1346,7 +1346,7 @@ const CustomInvoicePDF = ({
           <Text
             style={{
               fontSize: fontSize + 1,
-              fontFamily: "Open Sans",
+              fontFamily: "NotoSans",
               fontWeight: "bold",
               color: titleColor,
               marginBottom: 12,
@@ -1376,7 +1376,7 @@ const CustomInvoicePDF = ({
                 <Text
                   style={{
                     fontSize: fontSize + 1,
-                    fontFamily: "Open Sans",
+                    fontFamily: "NotoSans",
                     fontWeight: "bold",
                     color: valueColor,
                   }}
@@ -1399,7 +1399,7 @@ const CustomInvoicePDF = ({
                 <Text
                   style={{
                     fontSize: fontSize + 1,
-                    fontFamily: "Open Sans",
+                    fontFamily: "NotoSans",
                     fontWeight: "bold",
                     color: valueColor,
                   }}
@@ -1424,7 +1424,7 @@ const CustomInvoicePDF = ({
                 <Text
                   style={{
                     fontSize: fontSize + 1,
-                    fontFamily: "Open Sans",
+                    fontFamily: "NotoSans",
                     fontWeight: "bold",
                     color: valueColor,
                   }}
@@ -1446,7 +1446,7 @@ const CustomInvoicePDF = ({
         <Text
           style={{
             fontSize: fontSize + 1,
-            fontFamily: "Open Sans",
+            fontFamily: "NotoSans",
             fontWeight: "bold",
             color: titleColor,
             marginBottom: 8,
@@ -1470,7 +1470,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: "bold",
                   color: valueColor,
                 }}
@@ -1487,7 +1487,7 @@ const CustomInvoicePDF = ({
               <Text
                 style={{
                   fontSize: fontSize,
-                  fontFamily: "Open Sans",
+                  fontFamily: "NotoSans",
                   fontWeight: "bold",
                   color: valueColor,
                 }}
@@ -1503,7 +1503,7 @@ const CustomInvoicePDF = ({
             <Text
               style={{
                 fontSize: fontSize,
-                fontFamily: "Open Sans",
+                fontFamily: "NotoSans",
                 fontWeight: "bold",
                 color: valueColor,
               }}
@@ -1534,7 +1534,7 @@ const CustomInvoicePDF = ({
         <Text
           style={{
             fontSize: fontSize,
-            fontFamily: "Open Sans",
+            fontFamily: "NotoSans",
             fontWeight: isBold ? "bold" : "normal",
             fontStyle: isItalic ? "italic" : "normal",
             textDecoration:

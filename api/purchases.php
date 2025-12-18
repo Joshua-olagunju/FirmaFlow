@@ -53,7 +53,53 @@ error_log("PURCHASES API - Method: $method, Company ID: $company_id");
 
 try {
     if ($method === 'GET') {
-        if (isset($_GET['id'])) {
+        // Check for pending bills endpoint
+        if (isset($_GET['action']) && $_GET['action'] === 'pending') {
+            // Get pending supplier bills (unpaid or partially paid)
+            $search = $_GET['search'] ?? '';
+            $whereClause = "WHERE pb.company_id = ? AND pb.status IN ('received', 'partial', 'unpaid', 'partially_paid')";
+            $params = [$company_id];
+            
+            // Filter to only show bills with outstanding balance (1 cent or more)
+            $whereClause .= " AND ROUND(pb.total - COALESCE(pb.amount_paid, 0), 2) >= 0.01";
+            
+            if (!empty($search)) {
+                $whereClause .= " AND (s.name LIKE ? OR pb.reference LIKE ?)";
+                $params[] = "%$search%";
+                $params[] = "%$search%";
+            }
+            
+            $stmt = $pdo->prepare("
+                SELECT 
+                    pb.*,
+                    COALESCE(s.name, 'Unknown Supplier') as supplier_name,
+                    pb.reference as bill_number,
+                    pb.reference as purchase_number,
+                    pb.bill_date,
+                    pb.due_date,
+                    pb.total,
+                    pb.total as grand_total,
+                    COALESCE(pb.amount_paid, 0) as amount_paid,
+                    ROUND(pb.total - COALESCE(pb.amount_paid, 0), 2) as balance,
+                    CASE 
+                        WHEN ROUND(pb.total - COALESCE(pb.amount_paid, 0), 2) < 0.01 THEN 'paid'
+                        WHEN pb.due_date < CURDATE() AND ROUND(pb.total - COALESCE(pb.amount_paid, 0), 2) >= 0.01 THEN 'overdue'
+                        WHEN COALESCE(pb.amount_paid, 0) > 0 AND ROUND(pb.total - COALESCE(pb.amount_paid, 0), 2) >= 0.01 THEN 'partial'
+                        WHEN COALESCE(pb.amount_paid, 0) <= 0.01 THEN 'unpaid'
+                        ELSE pb.status
+                    END as status
+                FROM purchase_bills pb 
+                LEFT JOIN suppliers s ON pb.supplier_id = s.id 
+                $whereClause 
+                ORDER BY pb.due_date ASC, pb.bill_date DESC
+            ");
+            $stmt->execute($params);
+            $bills = $stmt->fetchAll();
+            
+            error_log("Retrieved " . count($bills) . " pending supplier bills");
+            echo json_encode($bills);
+            
+        } else if (isset($_GET['id'])) {
             // Get single purchase bill
             $stmt = $pdo->prepare("SELECT * FROM purchase_bills WHERE id = ? AND company_id = ?");
             $stmt->execute([$_GET['id'], $company_id]);
@@ -284,10 +330,10 @@ try {
                 }
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO purchase_lines (purchase_id, product_id, description, quantity, unit_cost, line_total, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+                    INSERT INTO purchase_lines (purchase_id, product_id, description, quantity, unit, unit_cost, line_total, created_at, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                 ");
-                $stmt->execute([$bill_id, $product_id, $item['description'], $item['quantity'], $item['unit_cost'], $line_total]);
+                $stmt->execute([$bill_id, $product_id, $item['description'], $item['quantity'], $unit, $item['unit_cost'], $line_total]);
 
                 // UPDATE INVENTORY FOR EXISTING PRODUCTS ONLY (skip new products and expenses)
                 if ($product_id && $item['item_type'] === 'existing') {
@@ -508,6 +554,44 @@ try {
             $tax_rate_id = $input['tax_rate_id'] ?? null;
             $total_amount = $subtotal + $tax_amount;
 
+            // Get existing purchase lines to revert inventory
+            $stmt = $pdo->prepare("SELECT product_id, quantity FROM purchase_lines WHERE purchase_id = ? AND product_id IS NOT NULL");
+            $stmt->execute([$purchase_id]);
+            $old_lines = $stmt->fetchAll();
+
+            // Revert inventory for old quantities
+            foreach ($old_lines as $old_line) {
+                $product_id = $old_line['product_id'];
+                $old_qty = floatval($old_line['quantity']);
+
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? AND company_id = ?");
+                    $stmt->execute([$product_id, $company_id]);
+                    $product = $stmt->fetch();
+
+                    if ($product) {
+                        $quantity_column = null;
+                        foreach (['stock_quantity', 'quantity', 'qty'] as $col) {
+                            if (array_key_exists($col, $product)) {
+                                $quantity_column = $col;
+                                break;
+                            }
+                        }
+
+                        if ($quantity_column) {
+                            $current_qty = floatval($product[$quantity_column] ?? 0);
+                            $new_qty = max(0, $current_qty - $old_qty); // Don't go negative
+
+                            $stmt = $pdo->prepare("UPDATE products SET `{$quantity_column}` = ?, updated_at = NOW() WHERE id = ? AND company_id = ?");
+                            $stmt->execute([$new_qty, $product_id, $company_id]);
+                            error_log("📦 Reverted inventory for product $product_id: $current_qty - $old_qty = $new_qty");
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("⚠️ Error reverting inventory: " . $e->getMessage());
+                }
+            }
+
             // Update purchase bill
             $stmt = $pdo->prepare("
                 UPDATE purchase_bills 
@@ -520,16 +604,67 @@ try {
             $stmt = $pdo->prepare("DELETE FROM purchase_lines WHERE purchase_id = ?");
             $stmt->execute([$purchase_id]);
 
-            // Insert new purchase lines
+            // Insert new purchase lines and update inventory
             foreach ($items as $item) {
                 $line_total = $item['quantity'] * $item['unit_cost'];
                 $product_id = ($item['item_type'] === 'existing') ? ($item['product_id'] ?? null) : null;
+                $unit = $item['unit'] ?? 'Pieces';
 
                 $stmt = $pdo->prepare("
-                    INSERT INTO purchase_lines (purchase_id, product_id, description, quantity, unit_cost, line_total, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+                    INSERT INTO purchase_lines (purchase_id, product_id, description, quantity, unit, unit_cost, line_total, created_at, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                 ");
-                $stmt->execute([$purchase_id, $product_id, $item['description'], $item['quantity'], $item['unit_cost'], $line_total]);
+                $stmt->execute([$purchase_id, $product_id, $item['description'], $item['quantity'], $unit, $item['unit_cost'], $line_total]);
+
+                // Add inventory back with new quantities
+                if ($product_id) {
+                    try {
+                        $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? AND company_id = ?");
+                        $stmt->execute([$product_id, $company_id]);
+                        $product = $stmt->fetch();
+
+                        if ($product) {
+                            $quantity_column = null;
+                            $cost_column = null;
+
+                            foreach (['stock_quantity', 'quantity', 'qty'] as $col) {
+                                if (array_key_exists($col, $product)) {
+                                    $quantity_column = $col;
+                                    break;
+                                }
+                            }
+                            foreach (['cost_price', 'price', 'cost', 'unit_cost'] as $col) {
+                                if (array_key_exists($col, $product)) {
+                                    $cost_column = $col;
+                                    break;
+                                }
+                            }
+
+                            if ($quantity_column && $cost_column) {
+                                $current_qty = floatval($product[$quantity_column] ?? 0);
+                                $purchased_qty = floatval($item['quantity']);
+                                $new_total_qty = $current_qty + $purchased_qty;
+
+                                $current_cost = floatval($product[$cost_column] ?? 0);
+                                $new_cost = floatval($item['unit_cost']);
+
+                                // Weighted average cost
+                                $weighted_avg_cost = $current_cost;
+                                if ($new_total_qty > 0) {
+                                    $current_value = $current_qty * $current_cost;
+                                    $new_value = $purchased_qty * $new_cost;
+                                    $weighted_avg_cost = ($current_value + $new_value) / $new_total_qty;
+                                }
+
+                                $stmt = $pdo->prepare("UPDATE products SET `{$quantity_column}` = ?, `{$cost_column}` = ?, updated_at = NOW() WHERE id = ? AND company_id = ?");
+                                $stmt->execute([$new_total_qty, $weighted_avg_cost, $product_id, $company_id]);
+                                error_log("📦 Updated inventory for product $product_id: quantity=$new_total_qty, cost=$weighted_avg_cost");
+                            }
+                        }
+                    } catch (Exception $e) {
+                        error_log("⚠️ Error updating inventory: " . $e->getMessage());
+                    }
+                }
             }
 
             $pdo->commit();
@@ -563,6 +698,44 @@ try {
         $pdo->beginTransaction();
 
         try {
+            // Get purchase lines to deduct inventory
+            $stmt = $pdo->prepare("SELECT product_id, quantity FROM purchase_lines WHERE purchase_id = ? AND product_id IS NOT NULL");
+            $stmt->execute([$purchase_id]);
+            $lines = $stmt->fetchAll();
+
+            // Deduct inventory for each product
+            foreach ($lines as $line) {
+                $product_id = $line['product_id'];
+                $qty_to_remove = floatval($line['quantity']);
+
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? AND company_id = ?");
+                    $stmt->execute([$product_id, $company_id]);
+                    $product = $stmt->fetch();
+
+                    if ($product) {
+                        $quantity_column = null;
+                        foreach (['stock_quantity', 'quantity', 'qty'] as $col) {
+                            if (array_key_exists($col, $product)) {
+                                $quantity_column = $col;
+                                break;
+                            }
+                        }
+
+                        if ($quantity_column) {
+                            $current_qty = floatval($product[$quantity_column] ?? 0);
+                            $new_qty = max(0, $current_qty - $qty_to_remove); // Don't go negative
+
+                            $stmt = $pdo->prepare("UPDATE products SET `{$quantity_column}` = ?, updated_at = NOW() WHERE id = ? AND company_id = ?");
+                            $stmt->execute([$new_qty, $product_id, $company_id]);
+                            error_log("📦 Deducted inventory for product $product_id: $current_qty - $qty_to_remove = $new_qty");
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("⚠️ Error deducting inventory: " . $e->getMessage());
+                }
+            }
+
             // Delete purchase lines first (foreign key constraint)
             $stmt = $pdo->prepare("DELETE FROM purchase_lines WHERE purchase_id = ?");
             $stmt->execute([$purchase_id]);

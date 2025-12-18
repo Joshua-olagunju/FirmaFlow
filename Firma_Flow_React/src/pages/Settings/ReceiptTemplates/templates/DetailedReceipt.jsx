@@ -10,8 +10,8 @@ const DetailedReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
     <div
       className="bg-white p-3 sm:p-4 md:p-6 lg:p-8 print:p-8 mx-auto shadow-xl"
       style={{
-        width: "100%",
-        maxWidth: "450px",
+        width: "80mm",
+        maxWidth: "80mm",
         fontFamily: "Arial, sans-serif",
         boxSizing: "border-box",
         pageBreakInside: "avoid",
@@ -212,17 +212,6 @@ const DetailedReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
           )}
         </div>
       </div>
-
-      {/* Bank Information */}
-      {companyInfo?.bank_name && (
-        <div className="mb-3 sm:mb-4 md:mb-6 print:mb-6 p-2 sm:p-3 print:p-3 border rounded text-[10px] sm:text-xs print:text-xs">
-          <h4 className="font-semibold text-gray-700 mb-1 sm:mb-2 print:mb-2">
-            Bank Transfer Details
-          </h4>
-          <p className="text-gray-600">Bank: {companyInfo.bank_name}</p>
-          <p className="text-gray-600">Account: {companyInfo.bank_account}</p>
-        </div>
-      )}
 
       {/* Footer */}
       <div className="text-center pt-3 sm:pt-4 print:pt-4 border-t">

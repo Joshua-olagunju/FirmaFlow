@@ -8,6 +8,7 @@ import {
   Svg,
   Path,
 } from "@react-pdf/renderer";
+import "./fontConfig"; // Register NotoSans font for Unicode currency symbols
 
 // Create styles that match the Modern template EXACTLY
 // eslint-disable-next-line no-unused-vars
@@ -16,7 +17,7 @@ const createStyles = (color = "#667eea") =>
     page: {
       padding: 40,
       fontSize: 10,
-      fontFamily: "Helvetica",
+      fontFamily: "NotoSans",
       backgroundColor: "#ffffff",
       position: "relative",
     },
@@ -50,7 +51,8 @@ const createStyles = (color = "#667eea") =>
     },
     invoiceTitle: {
       fontSize: 32,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       marginBottom: 5,
     },
     invoiceNumber: {
@@ -59,7 +61,8 @@ const createStyles = (color = "#667eea") =>
     },
     companyName: {
       fontSize: 18,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
       marginBottom: 5,
     },
@@ -84,12 +87,14 @@ const createStyles = (color = "#667eea") =>
     },
     sectionTitle: {
       fontSize: 11,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       marginBottom: 8,
     },
     customerName: {
       fontSize: 11,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
       marginBottom: 3,
     },
@@ -105,7 +110,8 @@ const createStyles = (color = "#667eea") =>
     },
     dateValue: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
       marginBottom: 8,
     },
@@ -116,7 +122,8 @@ const createStyles = (color = "#667eea") =>
     tableHeader: {
       flexDirection: "row",
       padding: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       fontSize: 10,
     },
     tableRow: {
@@ -140,7 +147,8 @@ const createStyles = (color = "#667eea") =>
     tableColAmount: {
       flex: 1.5,
       textAlign: "right",
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
     },
     // Totals section
     totalsSection: {
@@ -164,12 +172,14 @@ const createStyles = (color = "#667eea") =>
     },
     totalValue: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
     },
     discountValue: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#dc2626",
     },
     grandTotalRow: {
@@ -181,11 +191,13 @@ const createStyles = (color = "#667eea") =>
     },
     grandTotalLabel: {
       fontSize: 14,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
     },
     grandTotalValue: {
       fontSize: 14,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
     },
     // Payment info
     paymentSection: {
@@ -196,7 +208,8 @@ const createStyles = (color = "#667eea") =>
     },
     paymentTitle: {
       fontSize: 11,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
       marginBottom: 10,
     },
@@ -214,7 +227,8 @@ const createStyles = (color = "#667eea") =>
     },
     paymentValue: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333333",
     },
     // Footer

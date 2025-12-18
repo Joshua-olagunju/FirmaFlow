@@ -4,9 +4,10 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { buildApiUrl } from "../../config/api.config";
 
-const RecordPurchaseModal = ({ isOpen, onClose, onSuccess }) => {
+const RecordPurchaseModal = ({ isOpen, onClose, onSuccess, purchase }) => {
   const { theme } = useTheme();
   const { formatCurrency } = useSettings();
+  const isEditMode = !!purchase;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,6 +31,7 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess }) => {
       product_id: "",
       description: "",
       quantity: 1,
+      unit: "Pieces",
       unit_cost: 0,
       total: 0,
       // For new product creation
@@ -54,15 +56,46 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess }) => {
     { value: "expense", label: "One-time Expense" },
   ];
 
+  // Unit options
+  const unitOptions = [
+    { value: "Pieces", label: "Pieces" },
+    { value: "Kilograms", label: "Kilograms" },
+    { value: "Pounds", label: "Pounds" },
+    { value: "Liters", label: "Liters" },
+    { value: "Meters", label: "Meters" },
+    { value: "Boxes", label: "Boxes" },
+    { value: "Cartons", label: "Cartons" },
+  ];
+
   // Fetch initial data
   useEffect(() => {
     if (isOpen) {
-      setPurchaseDateToToday();
-      generateReferenceNumber();
+      if (isEditMode && purchase) {
+        // Load purchase data for editing
+        loadPurchaseData();
+      } else {
+        // New purchase - set defaults
+        setPurchaseDateToToday();
+        generateReferenceNumber();
+        setItems([
+          {
+            item_type: "existing",
+            product_id: "",
+            description: "",
+            quantity: 1,
+            unit: "Pieces",
+            unit_cost: 0,
+            total: 0,
+            new_product_name: "",
+            new_product_sku: "",
+            new_product_selling_price: 0,
+          },
+        ]);
+      }
       fetchSuppliersAndTaxes();
       fetchProducts();
     }
-  }, [isOpen]);
+  }, [isOpen, purchase]);
 
   const fetchProducts = async () => {
     try {
@@ -78,6 +111,51 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess }) => {
       }
     } catch (err) {
       console.error("Error fetching products:", err);
+    }
+  };
+
+  const loadPurchaseData = async () => {
+    if (!purchase?.id) return;
+
+    try {
+      const response = await fetch(
+        buildApiUrl(`api/purchases.php?id=${purchase.id}`),
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+      const data = await response.json();
+
+      if (response.ok && data) {
+        setReferenceNumber(data.reference || data.reference_number || "");
+        setSupplierId(data.supplier_id || "");
+        setPurchaseDate(data.bill_date || "");
+        setTaxRateId(data.tax_rate_id || "");
+        setPaymentMethod(data.payment_method || "cash");
+
+        // Load items with proper unit field
+        if (data.lines && data.lines.length > 0) {
+          const loadedItems = data.lines.map((line) => ({
+            item_type: line.product_id ? "existing" : "expense",
+            product_id: line.product_id || "",
+            description: line.description || "",
+            quantity: parseFloat(line.quantity) || 1,
+            unit: line.unit || "Pieces", // Load unit from database
+            unit_cost: parseFloat(line.unit_cost) || 0,
+            total:
+              (parseFloat(line.quantity) || 1) *
+              (parseFloat(line.unit_cost) || 0),
+            new_product_name: "",
+            new_product_sku: "",
+            new_product_selling_price: 0,
+          }));
+          setItems(loadedItems);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading purchase data:", err);
+      setError("Failed to load purchase data");
     }
   };
 
@@ -194,6 +272,7 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess }) => {
         product_id: "",
         description: "",
         quantity: 1,
+        unit: "Pieces",
         unit_cost: 0,
         total: 0,
         new_product_name: "",
@@ -305,39 +384,45 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess }) => {
     setIsLoading(true);
 
     try {
+      const purchaseData = {
+        supplier_id: supplierId,
+        bill_date: purchaseDate,
+        due_date: purchaseDate,
+        tax_rate_id: taxRateId,
+        payment_method: paymentMethod,
+        items: items
+          .filter((item) => isItemValid(item))
+          .map((item) => ({
+            item_type: item.item_type,
+            product_id: item.product_id,
+            description:
+              item.item_type === "new"
+                ? item.new_product_name
+                : item.description,
+            quantity: item.quantity,
+            unit: item.unit || "Pieces",
+            unit_cost: item.unit_cost,
+            tax_rate: taxRate,
+            ...(item.item_type === "new" && {
+              new_product_name: item.new_product_name,
+              new_product_sku: item.new_product_sku,
+              new_product_selling_price:
+                item.new_product_selling_price || item.unit_cost * 1.3,
+            }),
+          })),
+      };
+
+      if (isEditMode) {
+        purchaseData.id = purchase.id;
+      }
+
       const response = await fetch(buildApiUrl("api/purchases.php"), {
-        method: "POST",
+        method: isEditMode ? "PUT" : "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          supplier_id: supplierId,
-          bill_date: purchaseDate,
-          due_date: purchaseDate, // Same as bill date for now
-          tax_rate_id: taxRateId,
-          payment_method: paymentMethod,
-          items: items
-            .filter((item) => isItemValid(item))
-            .map((item) => ({
-              item_type: item.item_type,
-              product_id: item.product_id,
-              description:
-                item.item_type === "new"
-                  ? item.new_product_name
-                  : item.description,
-              quantity: item.quantity,
-              unit_cost: item.unit_cost,
-              tax_rate: taxRate,
-              // Include new product data if creating new product
-              ...(item.item_type === "new" && {
-                new_product_name: item.new_product_name,
-                new_product_sku: item.new_product_sku,
-                new_product_selling_price:
-                  item.new_product_selling_price || item.unit_cost * 1.3, // Default 30% markup
-              }),
-            })),
-        }),
+        body: JSON.stringify(purchaseData),
       });
 
       const data = await response.json();
@@ -365,7 +450,9 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess }) => {
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] p-6 flex justify-between items-center rounded-t-xl sticky top-0 z-10">
-          <h2 className="text-2xl font-bold text-white">Record Purchase</h2>
+          <h2 className="text-2xl font-bold text-white">
+            {isEditMode ? "Edit Purchase" : "Record Purchase"}
+          </h2>
           <button
             onClick={onClose}
             className="text-white hover:bg-white/20 rounded-full p-1 transition"
@@ -591,16 +678,63 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess }) => {
                     <input
                       type="number"
                       min="1"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        updateItem(
-                          index,
-                          "quantity",
-                          parseInt(e.target.value) || 0
-                        )
-                      }
+                      step="1"
+                      value={item.quantity === 0 ? "" : item.quantity}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "") {
+                          updateItem(index, "quantity", "");
+                        } else {
+                          const numValue = parseInt(value);
+                          updateItem(
+                            index,
+                            "quantity",
+                            isNaN(numValue) ? "" : numValue
+                          );
+                        }
+                      }}
+                      onBlur={(e) => {
+                        // Ensure minimum value on blur
+                        const value = e.target.value;
+                        if (value === "" || parseInt(value) < 1) {
+                          updateItem(index, "quantity", 1);
+                        }
+                      }}
                       className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgCard} ${theme.textPrimary} text-sm focus:ring-2 focus:ring-[#667eea]`}
                     />
+                  </div>
+
+                  {/* Unit */}
+                  <div className="md:col-span-2">
+                    <label
+                      className={`block text-xs font-medium ${theme.textSecondary} mb-1`}
+                    >
+                      Unit
+                    </label>
+                    {isEditMode &&
+                    item.item_type === "existing" &&
+                    item.product_id ? (
+                      <div
+                        className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgAccent} ${theme.textSecondary} text-sm font-medium`}
+                        title="Unit cannot be changed when editing existing products"
+                      >
+                        {item.unit}
+                      </div>
+                    ) : (
+                      <select
+                        value={item.unit}
+                        onChange={(e) =>
+                          updateItem(index, "unit", e.target.value)
+                        }
+                        className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgCard} ${theme.textPrimary} text-sm focus:ring-2 focus:ring-[#667eea]`}
+                      >
+                        {unitOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   {/* Unit Cost */}
@@ -772,7 +906,13 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess }) => {
                 isLoading ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
-              {isLoading ? "Recording..." : "Record Purchase"}
+              {isLoading
+                ? isEditMode
+                  ? "Updating..."
+                  : "Recording..."
+                : isEditMode
+                ? "Update Purchase"
+                : "Record Purchase"}
             </button>
           </div>
         </form>

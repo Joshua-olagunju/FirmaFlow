@@ -53,7 +53,7 @@ const MakeSupplierPaymentModal = ({ isOpen, onClose, bill, onSuccess }) => {
 
     try {
       const balance = calculateBalance(bill);
-      const paymentAmount = parseFloat(formData.amount);
+      const paymentAmount = parseFloat(parseFloat(formData.amount).toFixed(2));
 
       if (paymentAmount <= 0) {
         setError("Payment amount must be greater than zero");
@@ -69,17 +69,19 @@ const MakeSupplierPaymentModal = ({ isOpen, onClose, bill, onSuccess }) => {
         return;
       }
 
-      // Create payment record
+      // Create payment record - backend will automatically update the purchase bill
       const paymentData = {
         reference_type: "supplier",
         reference_id: bill.supplier_id,
         type: "made",
         amount: paymentAmount,
-        method: formData.method,
+        payment_method: formData.method, // Backend expects payment_method
+        method: formData.method, // Keep for compatibility
         reference: formData.reference,
         notes: formData.notes,
         payment_date: formData.payment_date,
-        invoice_id: bill.id,
+        bill_id: bill.id, // Link to purchase bill
+        invoice_id: bill.id, // Some backend code uses invoice_id for bills
         invoice_number: bill.bill_number || bill.purchase_number,
         invoice_total: bill.total || bill.grand_total,
         balance_before: balance,
@@ -103,28 +105,7 @@ const MakeSupplierPaymentModal = ({ isOpen, onClose, bill, onSuccess }) => {
         throw new Error(data.error || "Failed to record payment");
       }
 
-      // Update bill payment status
-      const updateResponse = await fetch(
-        buildApiUrl(`api/purchases.php?id=${bill.id}`),
-        {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount_paid: (
-              parseFloat(bill.amount_paid || 0) + paymentAmount
-            ).toString(),
-            status: balance - paymentAmount === 0 ? "paid" : "partial",
-          }),
-        }
-      );
-
-      if (!updateResponse.ok) {
-        console.error("Failed to update bill status");
-      }
-
+      // Backend automatically updates the purchase bill, so we don't need to do it here
       onSuccess();
       onClose();
     } catch (err) {
@@ -142,59 +123,74 @@ const MakeSupplierPaymentModal = ({ isOpen, onClose, bill, onSuccess }) => {
   const paid = parseFloat(bill.amount_paid || 0);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div
-          className="fixed inset-0 transition-opacity bg-black bg-opacity-50"
-          onClick={onClose}
-        />
-
-        <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] rounded-lg">
-                <DollarSign size={24} className="text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  Make Payment
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Pay to {bill.supplier_name}
-                </p>
-              </div>
+    <div
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className={`${theme.bgCard} rounded-xl ${theme.shadow} max-w-md w-full max-h-[90vh] overflow-y-auto`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] p-6 flex justify-between items-center rounded-t-xl sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 p-2 rounded-lg">
+              <DollarSign className="text-white" size={24} />
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
-            >
-              <X size={20} className="text-gray-500" />
-            </button>
+            <div>
+              <h2 className="text-xl font-bold text-white">Make Payment</h2>
+              <p className="text-sm text-white/80">
+                Pay to {bill.supplier_name}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-white/20 rounded-full p-1 transition"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Error Message */}
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+              {error}
+            </div>
+          )}
 
           {/* Bill Summary */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+          <div
+            className={`p-4 rounded-lg border ${theme.borderSecondary} bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20`}
+          >
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-600">Bill Number:</span>
-              <span className="font-semibold text-gray-900">
+              <span className={`text-sm ${theme.textTertiary}`}>
+                Bill Number:
+              </span>
+              <span className={`font-semibold ${theme.textPrimary}`}>
                 {bill.bill_number || bill.purchase_number}
               </span>
             </div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-600">Total Amount:</span>
-              <span className="font-semibold text-gray-900">
+              <span className={`text-sm ${theme.textTertiary}`}>
+                Total Amount:
+              </span>
+              <span className={`font-semibold ${theme.textPrimary}`}>
                 {formatCurrency(total)}
               </span>
             </div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-600">Paid:</span>
+              <span className={`text-sm ${theme.textTertiary}`}>Paid:</span>
               <span className="font-semibold text-green-600">
                 {formatCurrency(paid)}
               </span>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-              <span className="text-sm font-semibold text-gray-900">
+            <div
+              className={`flex justify-between items-center pt-2 border-t ${theme.borderSecondary}`}
+            >
+              <span className={`text-sm font-semibold ${theme.textPrimary}`}>
                 Balance Due:
               </span>
               <span className="text-lg font-bold text-red-600">
@@ -203,139 +199,139 @@ const MakeSupplierPaymentModal = ({ isOpen, onClose, bill, onSuccess }) => {
             </div>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-          {/* Payment Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Payment Amount */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Amount *
-              </label>
-              <div className="relative">
-                <DollarSign
-                  size={18}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0.01"
-                  max={balance}
-                  required
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="0.00"
-                />
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Maximum: {formatCurrency(balance)}
-              </p>
-            </div>
-
-            {/* Payment Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Date *
-              </label>
-              <div className="relative">
-                <Calendar
-                  size={18}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  type="date"
-                  name="payment_date"
-                  value={formData.payment_date}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Payment Method */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Method *
-              </label>
-              <div className="relative">
-                <CreditCard
-                  size={18}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                />
-                <select
-                  name="method"
-                  value={formData.method}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
-                >
-                  <option value="cash">Cash</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                  <option value="cheque">Cheque</option>
-                  <option value="mobile_money">Mobile Money</option>
-                  <option value="card">Card</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Reference */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Payment Reference
-              </label>
+          {/* Payment Amount */}
+          <div>
+            <label
+              className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+            >
+              Payment Amount *
+            </label>
+            <div className="relative">
+              <DollarSign
+                size={18}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
               <input
-                type="text"
-                name="reference"
-                value={formData.reference}
+                type="number"
+                name="amount"
+                value={formData.amount}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Payment reference or transaction ID"
+                step="0.01"
+                min="0.01"
+                max={balance}
+                required
+                className={`w-full pl-10 pr-4 py-2 border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary} rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                placeholder="0.00"
               />
             </div>
+            <p className={`mt-1 text-xs ${theme.textTertiary}`}>
+              Maximum: {formatCurrency(balance)}
+            </p>
+          </div>
 
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notes
-              </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
+          {/* Payment Date */}
+          <div>
+            <label
+              className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+            >
+              Payment Date *
+            </label>
+            <div className="relative">
+              <Calendar
+                size={18}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="date"
+                name="payment_date"
+                value={formData.payment_date}
                 onChange={handleChange}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Additional notes..."
+                required
+                className={`w-full pl-10 pr-4 py-2 border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary} rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               />
             </div>
+          </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+          {/* Payment Method */}
+          <div>
+            <label
+              className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+            >
+              Payment Method *
+            </label>
+            <div className="relative">
+              <CreditCard
+                size={18}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
+              <select
+                name="method"
+                value={formData.method}
+                onChange={handleChange}
+                required
+                className={`w-full pl-10 pr-4 py-2 border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary} rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none`}
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50"
-              >
-                {isSubmitting ? "Processing..." : "Make Payment"}
-              </button>
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="cheque">Cheque</option>
+                <option value="mobile_money">Mobile Money</option>
+                <option value="card">Card</option>
+              </select>
             </div>
-          </form>
-        </div>
+          </div>
+
+          {/* Reference */}
+          <div>
+            <label
+              className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+            >
+              Payment Reference
+            </label>
+            <input
+              type="text"
+              name="reference"
+              value={formData.reference}
+              onChange={handleChange}
+              className={`w-full px-4 py-2 border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary} rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              placeholder="Payment reference or transaction ID"
+            />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label
+              className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+            >
+              Notes
+            </label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows={3}
+              className={`w-full px-4 py-2 border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary} rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              placeholder="Additional notes..."
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`flex-1 px-4 py-2 border ${theme.borderSecondary} ${theme.textPrimary} rounded-lg ${theme.bgHover} transition`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg hover:opacity-90 transition disabled:opacity-50"
+            >
+              {isSubmitting ? "Processing..." : "Make Payment"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

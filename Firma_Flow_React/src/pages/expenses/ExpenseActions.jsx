@@ -1,17 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
-import { buildApiUrl } from "../../config/api.config";
-import ViewPurchaseModal from "../payments/ViewPurchaseModal";
-import RecordPurchaseModal from "./RecordPurchaseModal";
-import DeleteConfirmationModal from "../../components/modals/DeleteConfirmationModal";
 
-// eslint-disable-next-line no-unused-vars
-const PurchaseActions = ({ purchase, onRefresh }) => {
+const ExpenseActions = ({ expense, onView, onEdit, onDelete }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
@@ -47,41 +39,17 @@ const PurchaseActions = ({ purchase, onRefresh }) => {
 
   const handleView = () => {
     setIsOpen(false);
-    setShowViewModal(true);
+    onView(expense);
   };
 
   const handleEdit = () => {
     setIsOpen(false);
-    setShowEditModal(true);
+    onEdit(expense);
   };
 
   const handleDelete = () => {
     setIsOpen(false);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    try {
-      const response = await fetch(
-        buildApiUrl(`api/purchases.php?id=${purchase.id}`),
-        {
-          method: "DELETE",
-          credentials: "include",
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        if (onRefresh) onRefresh();
-      } else {
-        console.error("Failed to delete purchase:", data.error);
-        alert(data.error || "Failed to delete purchase");
-      }
-    } catch (err) {
-      console.error("Error deleting purchase:", err);
-      alert("Network error. Please try again.");
-    }
+    onDelete(expense);
   };
 
   const handleToggle = () => {
@@ -118,56 +86,26 @@ const PurchaseActions = ({ purchase, onRefresh }) => {
             className={`w-full flex items-center gap-3 px-4 py-2 text-sm ${theme.textPrimary} ${theme.bgHover} transition`}
           >
             <Eye size={16} />
-            View Purchase
+            View Expense
           </button>
           <button
             onClick={handleEdit}
             className={`w-full flex items-center gap-3 px-4 py-2 text-sm ${theme.textPrimary} ${theme.bgHover} transition`}
           >
             <Edit size={16} />
-            Edit Purchase
+            Edit Expense
           </button>
           <button
             onClick={handleDelete}
             className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 ${theme.bgHover} transition`}
           >
             <Trash2 size={16} />
-            Delete Purchase
+            Delete Expense
           </button>
         </div>
       )}
-
-      {/* View Purchase Modal */}
-      <ViewPurchaseModal
-        isOpen={showViewModal}
-        onClose={() => setShowViewModal(false)}
-        bill={purchase}
-      />
-
-      {/* Edit Purchase Modal */}
-      <RecordPurchaseModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        purchase={purchase}
-        onSuccess={() => {
-          setShowEditModal(false);
-          if (onRefresh) onRefresh();
-        }}
-      />
-
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={confirmDelete}
-        title="Delete Purchase"
-        message="Are you sure you want to delete this purchase? This will deduct the purchased quantities from your inventory."
-        itemName={`Purchase #${
-          purchase.reference || purchase.reference_number || purchase.id
-        }`}
-      />
     </div>
   );
 };
 
-export default PurchaseActions;
+export default ExpenseActions;
