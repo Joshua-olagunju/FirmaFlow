@@ -6,6 +6,8 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
+import "./pdfFonts"; // Register Unicode fonts
+import { currencySymbols } from "./pdfFonts";
 
 // Thermal/POS-style receipt - narrower width
 const createStyles = (color = "#000000") =>
@@ -14,7 +16,7 @@ const createStyles = (color = "#000000") =>
       padding: 20,
       paddingHorizontal: 25,
       fontSize: 9,
-      fontFamily: "Courier",
+      fontFamily: "NotoSans",
       backgroundColor: "#ffffff",
       width: 226, // 80mm thermal paper width
     },
@@ -27,16 +29,10 @@ const createStyles = (color = "#000000") =>
       borderBottomStyle: "dashed",
       paddingBottom: 15,
     },
-    logo: {
-      width: 50,
-      height: 40,
-      marginBottom: 8,
-      alignSelf: "center",
-      objectFit: "contain",
-    },
     companyName: {
       fontSize: 14,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       textAlign: "center",
       marginBottom: 5,
     },
@@ -53,7 +49,8 @@ const createStyles = (color = "#000000") =>
     },
     receiptTitle: {
       fontSize: 12,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       textAlign: "center",
       marginBottom: 3,
     },
@@ -81,7 +78,8 @@ const createStyles = (color = "#000000") =>
     },
     infoValue: {
       fontSize: 8,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       textAlign: "right",
     },
     // Customer Section
@@ -90,12 +88,14 @@ const createStyles = (color = "#000000") =>
     },
     sectionTitle: {
       fontSize: 9,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       marginBottom: 5,
     },
     customerName: {
       fontSize: 9,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       marginBottom: 2,
     },
     customerInfo: {
@@ -119,7 +119,8 @@ const createStyles = (color = "#000000") =>
     },
     paymentValue: {
       fontSize: 8,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
     },
     // Total
     totalSection: {
@@ -136,11 +137,13 @@ const createStyles = (color = "#000000") =>
     },
     totalLabel: {
       fontSize: 12,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
     },
     totalValue: {
       fontSize: 12,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
     },
     // Reference
     referenceSection: {
@@ -152,7 +155,8 @@ const createStyles = (color = "#000000") =>
     },
     referenceTitle: {
       fontSize: 8,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       marginBottom: 5,
     },
     referenceRow: {
@@ -177,7 +181,8 @@ const createStyles = (color = "#000000") =>
     },
     notesTitle: {
       fontSize: 8,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       marginBottom: 3,
     },
     notesText: {
@@ -206,7 +211,8 @@ const createStyles = (color = "#000000") =>
     // Status
     statusText: {
       fontSize: 8,
-      fontFamily: "Courier-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       textAlign: "center",
       marginTop: 5,
     },
@@ -221,32 +227,16 @@ const createStyles = (color = "#000000") =>
 const ThermalReceiptPDF = ({ companyInfo, receiptData, color = "#000000" }) => {
   const styles = createStyles(color);
 
-  // Currency formatter
-  const formatCurrency =
-    receiptData?.formatCurrency ||
-    ((amount) => {
-      const currencyMap = {
-        NGN: "₦",
-        USD: "$",
-        EUR: "€",
-        GBP: "£",
-        JPY: "¥",
-        CNY: "¥",
-        INR: "₹",
-        ZAR: "R",
-        KES: "KSh",
-        GHS: "₵",
-      };
-      const symbol =
-        currencyMap[receiptData?.currency] ||
-        receiptData?.currency + " " ||
-        "₦";
-      const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      return `${symbol}${formatted}`;
+  // Currency formatter with actual Unicode currency symbols (NotoSans font required)
+  const formatCurrency = (amount) => {
+    const symbol =
+      currencySymbols[receiptData?.currency] || receiptData?.currency || "₦";
+    const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
+    return `${symbol}${formatted}`;
+  };
 
   const formatMethod = (method) => {
     if (!method) return "N/A";
@@ -258,9 +248,6 @@ const ThermalReceiptPDF = ({ companyInfo, receiptData, color = "#000000" }) => {
       <Page size={{ width: 226, height: 842 }} style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          {companyInfo?.logo && (
-            <Image src={companyInfo.logo} style={styles.logo} cache={false} />
-          )}
           <Text style={styles.companyName}>
             {companyInfo?.name || companyInfo?.company_name || "Company Name"}
           </Text>
@@ -307,6 +294,48 @@ const ThermalReceiptPDF = ({ companyInfo, receiptData, color = "#000000" }) => {
         </View>
 
         <View style={styles.divider} />
+
+        {/* Items Section */}
+        {receiptData?.items && receiptData.items.length > 0 && (
+          <View>
+            <Text style={styles.sectionTitle}>ITEMS:</Text>
+            {receiptData.items.map((item, index) => (
+              <View key={index} style={{ marginBottom: 8 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    marginBottom: 2,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 8,
+                      fontFamily: "NotoSans",
+                      fontWeight: 700,
+                      flex: 1,
+                    }}
+                  >
+                    {item.name}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 8,
+                      fontFamily: "NotoSans",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {formatCurrency(item.total)}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 7, color: "#666666" }}>
+                  {item.quantity} x {formatCurrency(item.price)}
+                </Text>
+              </View>
+            ))}
+            <View style={styles.divider} />
+          </View>
+        )}
 
         {/* Payment Details */}
         <View style={styles.paymentSection}>

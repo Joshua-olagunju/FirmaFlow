@@ -7,13 +7,14 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
+import "./fontConfig"; // Register NotoSans font for Unicode currency symbols
 
 // Create styles that match the Minimal template
 const createStyles = (color = "#667eea") =>
   StyleSheet.create({
     page: {
       padding: 40,
-      fontFamily: "Helvetica",
+      fontFamily: "NotoSans",
       fontSize: 10,
       backgroundColor: "#ffffff",
     },
@@ -42,12 +43,13 @@ const createStyles = (color = "#667eea") =>
     },
     companyName: {
       fontSize: 16,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333",
     },
     invoiceTitle: {
       fontSize: 36,
-      fontFamily: "Helvetica",
+      fontFamily: "NotoSans",
       color: color,
     },
     invoiceNumber: {
@@ -86,7 +88,7 @@ const createStyles = (color = "#667eea") =>
       borderBottomColor: color,
       paddingBottom: 8,
       marginBottom: 8,
-      fontFamily: "Helvetica",
+      fontFamily: "NotoSans",
       fontSize: 9,
       color: "#666",
       textTransform: "uppercase",
@@ -112,7 +114,8 @@ const createStyles = (color = "#667eea") =>
     tableColAmount: {
       flex: 1.5,
       textAlign: "right",
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
     },
     // Totals section
     totalsSection: {
@@ -133,11 +136,13 @@ const createStyles = (color = "#667eea") =>
       color: "#666",
     },
     totalValue: {
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333",
     },
     discountValue: {
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#dc2626",
     },
     grandTotalRow: {
@@ -150,12 +155,14 @@ const createStyles = (color = "#667eea") =>
     },
     grandTotalLabel: {
       fontSize: 12,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: color,
     },
     grandTotalValue: {
       fontSize: 12,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: color,
     },
     // Payment info
@@ -167,7 +174,8 @@ const createStyles = (color = "#667eea") =>
     },
     paymentTitle: {
       fontSize: 11,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333",
       marginBottom: 10,
     },
@@ -185,7 +193,8 @@ const createStyles = (color = "#667eea") =>
     },
     paymentValue: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333",
     },
     // Footer
@@ -207,7 +216,8 @@ const createStyles = (color = "#667eea") =>
     },
     notesTitle: {
       fontSize: 10,
-      fontFamily: "Helvetica-Bold",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: "#333",
       marginBottom: 5,
     },

@@ -10,8 +10,8 @@ const CompactReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
     <div
       className="bg-white p-3 sm:p-4 print:p-4 mx-auto"
       style={{
-        width: "100%",
-        maxWidth: "320px",
+        width: "80mm",
+        maxWidth: "80mm",
         fontFamily: "Arial, sans-serif",
         fontSize: "11px",
         boxSizing: "border-box",

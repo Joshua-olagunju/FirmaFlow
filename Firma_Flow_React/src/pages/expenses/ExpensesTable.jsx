@@ -1,29 +1,16 @@
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
-import SupplierBillActions from "./SupplierBillActions";
+import ExpenseActions from "./ExpenseActions";
 
-// eslint-disable-next-line no-unused-vars
-const PendingSupplierBillsTab = ({ bills, onRefresh, searchQuery }) => {
+const ExpensesTable = ({ expenses, onView, onEdit, onDelete }) => {
   const { theme } = useTheme();
   const { formatCurrency, formatDate } = useSettings();
 
-  // Filter bills based on search query
-  const filteredBills = bills.filter((bill) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      bill.bill_number?.toLowerCase().includes(query) ||
-      bill.purchase_number?.toLowerCase().includes(query) ||
-      bill.supplier_name?.toLowerCase().includes(query) ||
-      bill.total?.toString().includes(query)
-    );
-  });
-
-  if (!filteredBills || filteredBills.length === 0) {
+  if (!expenses || expenses.length === 0) {
     return (
       <div className="p-8 text-center">
         <p className={`text-lg ${theme.textSecondary}`}>
-          No pending supplier bills found. All bills have been paid!
+          No expenses found. Record your first expense to get started.
         </p>
       </div>
     );
@@ -31,21 +18,17 @@ const PendingSupplierBillsTab = ({ bills, onRefresh, searchQuery }) => {
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case "unpaid":
-        return "bg-red-100 text-red-700";
-      case "partial":
+      case "paid":
+        return "bg-green-100 text-green-700";
+      case "pending":
         return "bg-yellow-100 text-yellow-700";
-      case "overdue":
+      case "approved":
+        return "bg-blue-100 text-blue-700";
+      case "rejected":
         return "bg-red-100 text-red-700";
       default:
         return "bg-slate-100 text-slate-700";
     }
-  };
-
-  const calculateBalance = (bill) => {
-    const total = parseFloat(bill.total || bill.grand_total || 0);
-    const paid = parseFloat(bill.amount_paid || 0);
-    return total - paid;
   };
 
   return (
@@ -62,37 +45,32 @@ const PendingSupplierBillsTab = ({ bills, onRefresh, searchQuery }) => {
             <th
               className={`text-left p-4 font-semibold text-sm ${theme.textPrimary}`}
             >
-              Bill #
+              Reference #
             </th>
             <th
               className={`text-left p-4 font-semibold ${theme.textPrimary} text-sm`}
             >
-              Supplier
+              Expense
             </th>
             <th
               className={`text-left p-4 font-semibold ${theme.textPrimary} text-sm`}
             >
-              Bill Date
+              Description
             </th>
             <th
               className={`text-left p-4 font-semibold ${theme.textPrimary} text-sm`}
             >
-              Due Date
+              Category
             </th>
             <th
               className={`text-left p-4 font-semibold ${theme.textPrimary} text-sm`}
             >
-              Total
+              Date
             </th>
             <th
               className={`text-left p-4 font-semibold ${theme.textPrimary} text-sm`}
             >
-              Paid
-            </th>
-            <th
-              className={`text-left p-4 font-semibold ${theme.textPrimary} text-sm`}
-            >
-              Balance
+              Amount
             </th>
             <th
               className={`text-left p-4 font-semibold ${theme.textPrimary} text-sm`}
@@ -107,9 +85,9 @@ const PendingSupplierBillsTab = ({ bills, onRefresh, searchQuery }) => {
           </tr>
         </thead>
         <tbody>
-          {filteredBills.map((bill, index) => (
+          {expenses.map((expense, index) => (
             <tr
-              key={bill.id || index}
+              key={expense.id || index}
               className={`border-b ${theme.borderPrimary} ${
                 theme.mode === "light"
                   ? "hover:bg-slate-50"
@@ -117,39 +95,39 @@ const PendingSupplierBillsTab = ({ bills, onRefresh, searchQuery }) => {
               } transition text-sm`}
             >
               <td className={`p-4 ${theme.textPrimary} font-medium`}>
-                {bill.bill_number || bill.purchase_number || "N/A"}
-              </td>
-              <td className={`p-4 ${theme.textSecondary}`}>
-                {bill.supplier_name || "N/A"}
-              </td>
-              <td className={`p-4 ${theme.textSecondary}`}>
-                {formatDate(bill.bill_date || bill.purchase_date)}
-              </td>
-              <td className={`p-4 ${theme.textSecondary}`}>
-                {formatDate(bill.due_date)}
-              </td>
-              <td className={`p-4 ${theme.textPrimary} font-semibold`}>
-                {formatCurrency(bill.total || bill.grand_total || 0)}
-              </td>
-              <td className={`p-4 ${theme.textSecondary}`}>
-                {formatCurrency(bill.amount_paid || 0)}
+                {expense.reference_number || "N/A"}
               </td>
               <td className={`p-4 ${theme.textPrimary}`}>
-                {formatCurrency(calculateBalance(bill))}
+                {expense.payee_name || "N/A"}
               </td>
-              <td className={`p-4`}>
+              <td className={`p-4 ${theme.textSecondary}`}>
+                {expense.description || "N/A"}
+              </td>
+              <td className={`p-4 ${theme.textSecondary}`}>
+                {expense.category || "N/A"}
+              </td>
+              <td className={`p-4 ${theme.textSecondary}`}>
+                {formatDate(expense.expense_date)}
+              </td>
+              <td className={`p-4 ${theme.textPrimary} font-semibold`}>
+                {formatCurrency(expense.amount || 0)}
+              </td>
+              <td className="p-4">
                 <span
-                  className={`inline-block px-2 py-1 text-xs rounded ${getStatusColor(
-                    bill.status
+                  className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(
+                    expense.status
                   )}`}
                 >
-                  {bill.status
-                    ? bill.status.charAt(0).toUpperCase() + bill.status.slice(1)
-                    : "Unpaid"}
+                  {expense.status || "Paid"}
                 </span>
               </td>
               <td className="p-4">
-                <SupplierBillActions bill={bill} onRefresh={onRefresh} />
+                <ExpenseActions
+                  expense={expense}
+                  onView={onView}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
               </td>
             </tr>
           ))}
@@ -159,4 +137,4 @@ const PendingSupplierBillsTab = ({ bills, onRefresh, searchQuery }) => {
   );
 };
 
-export default PendingSupplierBillsTab;
+export default ExpensesTable;

@@ -36,42 +36,100 @@ import {
 } from "lucide-react";
 import { buildApiUrl } from "../../../config/api.config";
 
-// Template Presets for Thermal Receipts
+// Template Presets for Thermal Receipts - Matching actual template designs EXACTLY
 const templatePresets = {
-  modern: {
-    name: "Modern Style",
+  thermal: {
+    name: "Thermal POS Style",
+    description:
+      "Classic POS thermal receipt with monospace font and dashed borders",
+    fontFamily: "monospace",
     sections: [
       {
         id: "1",
         type: "header",
-        label: "Header",
+        label: "Company Header",
         props: {
           alignment: "center",
-          fontSize: "lg",
+          fontSize: "sm",
           fontWeight: "bold",
           backgroundColor: "transparent",
           padding: "3",
+          fontFamily: "monospace",
         },
       },
       {
         id: "2",
         type: "companyInfo",
-        label: "Company Info",
+        label: "Company Address & Phone",
         props: {
           alignment: "center",
           fontSize: "xs",
           fontWeight: "normal",
           backgroundColor: "transparent",
-          padding: "2",
-          showEmail: true,
+          padding: "0",
+          showEmail: false,
           showPhone: true,
           showAddress: true,
+          fontFamily: "monospace",
         },
       },
       {
         id: "3",
         type: "divider",
-        label: "Divider",
+        label: "Dashed Border",
+        props: {
+          thickness: "2",
+          style: "dashed",
+          color: "#9ca3af",
+          marginTop: "3",
+          marginBottom: "3",
+        },
+      },
+      {
+        id: "4",
+        type: "receiptDetails",
+        label: "Receipt #, Date & Time",
+        props: {
+          alignment: "left",
+          fontSize: "xs",
+          backgroundColor: "transparent",
+          padding: "0",
+          showReceiptNumber: true,
+          showDate: true,
+          showTime: true,
+          layout: "stacked",
+          fontFamily: "monospace",
+        },
+      },
+      {
+        id: "5",
+        type: "divider",
+        label: "Items Top Border",
+        props: {
+          thickness: "1",
+          style: "dashed",
+          color: "#9ca3af",
+          marginTop: "3",
+          marginBottom: "2",
+        },
+      },
+      {
+        id: "6",
+        type: "itemsTable",
+        label: "Items List",
+        props: {
+          showBorders: false,
+          fontSize: "xs",
+          zebraStripes: false,
+          headerBgColor: "transparent",
+          showUnitPrice: true,
+          fontFamily: "monospace",
+        },
+      },
+      {
+        id: "7",
+        type: "divider",
+        label: "Items Bottom Border",
         props: {
           thickness: "1",
           style: "dashed",
@@ -81,368 +139,505 @@ const templatePresets = {
         },
       },
       {
-        id: "4",
-        type: "receiptDetails",
-        label: "Receipt Details",
+        id: "8",
+        type: "totals",
+        label: "Totals Section",
+        props: {
+          alignment: "left",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "transparent",
+          padding: "0",
+          showSubtotal: true,
+          showTax: true,
+          showDiscount: true,
+          totalStyle: "simple",
+          fontFamily: "monospace",
+        },
+      },
+      {
+        id: "9",
+        type: "divider",
+        label: "Payment Border",
+        props: {
+          thickness: "1",
+          style: "dashed",
+          color: "#9ca3af",
+          marginTop: "3",
+          marginBottom: "2",
+        },
+      },
+      {
+        id: "10",
+        type: "paymentInfo",
+        label: "Payment Details",
         props: {
           alignment: "left",
           fontSize: "xs",
           backgroundColor: "transparent",
+          padding: "0",
+          showMethod: true,
+          showAmountPaid: true,
+          showChange: true,
+          fontFamily: "monospace",
+        },
+      },
+      {
+        id: "11",
+        type: "divider",
+        label: "Footer Border",
+        props: {
+          thickness: "2",
+          style: "dashed",
+          color: "#9ca3af",
+          marginTop: "3",
+          marginBottom: "3",
+        },
+      },
+      {
+        id: "12",
+        type: "customText",
+        label: "Thank You Message",
+        props: {
+          text: "THANK YOU!",
+          alignment: "center",
+          fontSize: "xs",
+          fontWeight: "bold",
+          backgroundColor: "transparent",
+          padding: "0",
+          fontFamily: "monospace",
+        },
+      },
+      {
+        id: "13",
+        type: "customText",
+        label: "Come Again",
+        props: {
+          text: "Please come again",
+          alignment: "center",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "transparent",
+          padding: "0",
+          fontFamily: "monospace",
+        },
+      },
+      {
+        id: "14",
+        type: "customText",
+        label: "Customer Copy",
+        props: {
+          text: "*** CUSTOMER COPY ***",
+          alignment: "center",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "transparent",
+          padding: "2",
+          fontFamily: "monospace",
+        },
+      },
+    ],
+  },
+  modern: {
+    name: "Modern Fresh Style",
+    description: "Contemporary design with gradient header and card sections",
+    fontFamily: "Inter, sans-serif",
+    sections: [
+      {
+        id: "1",
+        type: "customText",
+        label: "Header Label",
+        props: {
+          text: "PAYMENT RECEIPT",
+          alignment: "center",
+          fontSize: "sm",
+          fontWeight: "normal",
+          backgroundColor: "accent",
+          textColor: "#ffffff",
+          padding: "4",
+          opacity: "0.9",
+        },
+      },
+      {
+        id: "2",
+        type: "receiptDetails",
+        label: "Receipt Number (Large)",
+        props: {
+          alignment: "center",
+          fontSize: "xl",
+          fontWeight: "bold",
+          backgroundColor: "accent",
+          textColor: "#ffffff",
           padding: "2",
           showReceiptNumber: true,
           showDate: true,
-          showTime: true,
+          showTime: false,
+          layout: "centered",
+        },
+      },
+      {
+        id: "3",
+        type: "companyInfo",
+        label: "Company Info Card",
+        props: {
+          alignment: "center",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "#f9fafb",
+          padding: "4",
+          showEmail: true,
+          showPhone: true,
+          showAddress: true,
+          borderBottom: true,
+        },
+      },
+      {
+        id: "4",
+        type: "customText",
+        label: "Customer Label",
+        props: {
+          text: "Received From",
+          alignment: "left",
+          fontSize: "xs",
+          fontWeight: "semibold",
+          backgroundColor: "transparent",
+          textColor: "accent",
+          padding: "4",
+          textTransform: "uppercase",
+          letterSpacing: "wide",
         },
       },
       {
         id: "5",
+        type: "customerInfo",
+        label: "Customer Details",
+        props: {
+          alignment: "left",
+          fontSize: "sm",
+          fontWeight: "bold",
+          backgroundColor: "transparent",
+          padding: "4",
+          showName: true,
+          showPhone: true,
+          showEmail: true,
+        },
+      },
+      {
+        id: "6",
+        type: "paymentInfo",
+        label: "Payment Method & Status",
+        props: {
+          alignment: "left",
+          fontSize: "xs",
+          backgroundColor: "#f9fafb",
+          padding: "4",
+          showMethod: true,
+          showStatus: true,
+          layout: "horizontal",
+          borderBottom: true,
+        },
+      },
+      {
+        id: "7",
+        type: "customText",
+        label: "Items Label",
+        props: {
+          text: "Items",
+          alignment: "left",
+          fontSize: "xs",
+          fontWeight: "semibold",
+          backgroundColor: "transparent",
+          textColor: "accent",
+          padding: "4",
+          textTransform: "uppercase",
+          letterSpacing: "wide",
+        },
+      },
+      {
+        id: "8",
         type: "itemsTable",
         label: "Items List",
         props: {
           showBorders: false,
           fontSize: "xs",
           zebraStripes: false,
+          headerBgColor: "transparent",
+          showUnitPrice: true,
+          compactStyle: true,
         },
       },
       {
-        id: "6",
+        id: "9",
+        type: "divider",
+        label: "Border",
+        props: {
+          thickness: "1",
+          style: "solid",
+          color: "#e5e7eb",
+          marginTop: "2",
+          marginBottom: "2",
+        },
+      },
+      {
+        id: "10",
         type: "totals",
         label: "Totals",
         props: {
-          alignment: "right",
-          fontSize: "sm",
-          fontWeight: "semibold",
-          backgroundColor: "transparent",
-          padding: "2",
-          showSubtotal: true,
-          showTax: false,
-          showDiscount: false,
-        },
-      },
-      {
-        id: "7",
-        type: "paymentInfo",
-        label: "Payment Info",
-        props: {
-          alignment: "center",
-          fontSize: "xs",
-          backgroundColor: "#f3f4f6",
-          padding: "2",
-        },
-      },
-      {
-        id: "8",
-        type: "customText",
-        label: "Thank You Message",
-        props: {
-          text: "Thank you for your patronage!",
-          alignment: "center",
+          alignment: "left",
           fontSize: "xs",
           fontWeight: "normal",
           backgroundColor: "transparent",
-          padding: "2",
+          padding: "4",
+          showSubtotal: true,
+          showTax: true,
+          showDiscount: true,
+          grandTotalStyle: "accented",
+          grandTotalBorderColor: "accent",
+        },
+      },
+      {
+        id: "11",
+        type: "customText",
+        label: "Footer",
+        props: {
+          text: "Thank you for your payment!",
+          alignment: "center",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "#f9fafb",
+          padding: "4",
+          borderTop: true,
         },
       },
     ],
   },
   classic: {
-    name: "Classic Style",
+    name: "Classic Elegant Style",
+    description:
+      "Traditional receipt with Georgia serif font and double borders",
+    fontFamily: "Georgia, serif",
     sections: [
       {
         id: "1",
         type: "header",
-        label: "Header",
-        props: {
-          alignment: "center",
-          fontSize: "md",
-          fontWeight: "bold",
-          backgroundColor: "transparent",
-          padding: "3",
-        },
-      },
-      {
-        id: "2",
-        type: "companyInfo",
-        label: "Company Info",
-        props: {
-          alignment: "center",
-          fontSize: "xs",
-          fontWeight: "normal",
-          backgroundColor: "transparent",
-          padding: "2",
-          showEmail: false,
-          showPhone: true,
-          showAddress: true,
-        },
-      },
-      {
-        id: "3",
-        type: "divider",
-        label: "Divider",
-        props: {
-          thickness: "2",
-          style: "double",
-          color: "#000000",
-          marginTop: "3",
-          marginBottom: "3",
-        },
-      },
-      {
-        id: "4",
-        type: "receiptDetails",
-        label: "Receipt Details",
-        props: {
-          alignment: "center",
-          fontSize: "xs",
-          backgroundColor: "transparent",
-          padding: "2",
-          showReceiptNumber: true,
-          showDate: true,
-          showTime: true,
-        },
-      },
-      {
-        id: "5",
-        type: "itemsTable",
-        label: "Items List",
-        props: {
-          showBorders: true,
-          fontSize: "xs",
-          zebraStripes: false,
-        },
-      },
-      {
-        id: "6",
-        type: "totals",
-        label: "Totals",
-        props: {
-          alignment: "right",
-          fontSize: "sm",
-          fontWeight: "bold",
-          backgroundColor: "transparent",
-          padding: "2",
-          showSubtotal: true,
-          showTax: true,
-          showDiscount: true,
-        },
-      },
-      {
-        id: "7",
-        type: "paymentInfo",
-        label: "Payment Info",
-        props: {
-          alignment: "center",
-          fontSize: "xs",
-          backgroundColor: "#f9fafb",
-          padding: "2",
-        },
-      },
-      {
-        id: "8",
-        type: "divider",
-        label: "Divider",
-        props: {
-          thickness: "2",
-          style: "double",
-          color: "#000000",
-          marginTop: "3",
-          marginBottom: "3",
-        },
-      },
-      {
-        id: "9",
-        type: "customText",
-        label: "Footer",
-        props: {
-          text: "Please Come Again",
-          alignment: "center",
-          fontSize: "xs",
-          fontWeight: "bold",
-          backgroundColor: "transparent",
-          padding: "2",
-        },
-      },
-    ],
-  },
-  minimal: {
-    name: "Minimal Style",
-    sections: [
-      {
-        id: "1",
-        type: "header",
-        label: "Header",
-        props: {
-          alignment: "center",
-          fontSize: "md",
-          fontWeight: "semibold",
-          backgroundColor: "transparent",
-          padding: "2",
-        },
-      },
-      {
-        id: "2",
-        type: "companyInfo",
-        label: "Company Info",
-        props: {
-          alignment: "center",
-          fontSize: "xs",
-          fontWeight: "normal",
-          backgroundColor: "transparent",
-          padding: "1",
-          showEmail: false,
-          showPhone: false,
-          showAddress: false,
-        },
-      },
-      {
-        id: "3",
-        type: "receiptDetails",
-        label: "Receipt Details",
-        props: {
-          alignment: "center",
-          fontSize: "xs",
-          backgroundColor: "transparent",
-          padding: "1",
-          showReceiptNumber: true,
-          showDate: true,
-          showTime: false,
-        },
-      },
-      {
-        id: "4",
-        type: "itemsTable",
-        label: "Items List",
-        props: {
-          showBorders: false,
-          fontSize: "xs",
-          zebraStripes: false,
-        },
-      },
-      {
-        id: "5",
-        type: "totals",
-        label: "Totals",
-        props: {
-          alignment: "right",
-          fontSize: "sm",
-          fontWeight: "semibold",
-          backgroundColor: "transparent",
-          padding: "1",
-          showSubtotal: false,
-          showTax: false,
-          showDiscount: false,
-        },
-      },
-    ],
-  },
-  professional: {
-    name: "Professional Style",
-    sections: [
-      {
-        id: "1",
-        type: "header",
-        label: "Header",
-        props: {
-          alignment: "center",
-          fontSize: "lg",
-          fontWeight: "bold",
-          backgroundColor: "#1e40af",
-          padding: "4",
-        },
-      },
-      {
-        id: "2",
-        type: "companyInfo",
-        label: "Company Info",
-        props: {
-          alignment: "center",
-          fontSize: "xs",
-          fontWeight: "normal",
-          backgroundColor: "#dbeafe",
-          padding: "3",
-          showEmail: true,
-          showPhone: true,
-          showAddress: true,
-        },
-      },
-      {
-        id: "3",
-        type: "receiptDetails",
-        label: "Receipt Details",
-        props: {
-          alignment: "left",
-          fontSize: "xs",
-          backgroundColor: "#f3f4f6",
-          padding: "2",
-          showReceiptNumber: true,
-          showDate: true,
-          showTime: true,
-        },
-      },
-      {
-        id: "4",
-        type: "itemsTable",
-        label: "Items List",
-        props: {
-          showBorders: true,
-          fontSize: "xs",
-          zebraStripes: true,
-        },
-      },
-      {
-        id: "5",
-        type: "totals",
-        label: "Totals",
-        props: {
-          alignment: "right",
-          fontSize: "md",
-          fontWeight: "bold",
-          backgroundColor: "#dbeafe",
-          padding: "3",
-          showSubtotal: true,
-          showTax: true,
-          showDiscount: true,
-        },
-      },
-      {
-        id: "6",
-        type: "paymentInfo",
-        label: "Payment Info",
-        props: {
-          alignment: "center",
-          fontSize: "xs",
-          backgroundColor: "#1e40af",
-          padding: "2",
-        },
-      },
-      {
-        id: "7",
-        type: "customText",
-        label: "Thank You",
-        props: {
-          text: "Thank you for your business!",
-          alignment: "center",
-          fontSize: "xs",
-          fontWeight: "semibold",
-          backgroundColor: "transparent",
-          padding: "2",
-        },
-      },
-    ],
-  },
-  elegant: {
-    name: "Elegant Style",
-    sections: [
-      {
-        id: "1",
-        type: "header",
-        label: "Header",
+        label: "Company Name",
         props: {
           alignment: "center",
           fontSize: "xl",
           fontWeight: "bold",
           backgroundColor: "transparent",
-          padding: "4",
+          textColor: "accent",
+          padding: "3",
+          fontFamily: "Georgia, serif",
+        },
+      },
+      {
+        id: "2",
+        type: "companyInfo",
+        label: "Company Address",
+        props: {
+          alignment: "center",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "transparent",
+          padding: "2",
+          showEmail: false,
+          showPhone: true,
+          showAddress: true,
+          fontFamily: "Georgia, serif",
+        },
+      },
+      {
+        id: "3",
+        type: "divider",
+        label: "Colored Border",
+        props: {
+          thickness: "2",
+          style: "solid",
+          color: "accent",
+          marginTop: "3",
+          marginBottom: "4",
+        },
+      },
+      {
+        id: "4",
+        type: "customText",
+        label: "Receipt Title",
+        props: {
+          text: "RECEIPT",
+          alignment: "center",
+          fontSize: "xl",
+          fontWeight: "bold",
+          backgroundColor: "transparent",
+          textColor: "#1f2937",
+          padding: "2",
+        },
+      },
+      {
+        id: "5",
+        type: "divider",
+        label: "Title Underline",
+        props: {
+          thickness: "2",
+          style: "solid",
+          color: "accent",
+          marginTop: "2",
+          marginBottom: "2",
+          width: "64px",
+          centered: true,
+        },
+      },
+      {
+        id: "6",
+        type: "receiptDetails",
+        label: "Receipt Number",
+        props: {
+          alignment: "center",
+          fontSize: "sm",
+          backgroundColor: "transparent",
+          padding: "2",
+          showReceiptNumber: true,
+          showDate: false,
+          showTime: false,
+        },
+      },
+      {
+        id: "7",
+        type: "receiptDetails",
+        label: "Date & Time Row",
+        props: {
+          alignment: "left",
+          fontSize: "xs",
+          backgroundColor: "transparent",
+          padding: "2",
+          showReceiptNumber: false,
+          showDate: true,
+          showTime: true,
+          layout: "horizontal",
+          borderBottom: "dashed",
+          borderColor: "#9ca3af",
+        },
+      },
+      {
+        id: "8",
+        type: "itemsTable",
+        label: "Items Table",
+        props: {
+          showBorders: true,
+          fontSize: "xs",
+          zebraStripes: false,
+          headerBgColor: "transparent",
+          headerBorderColor: "accent",
+          headerBorderWidth: "2",
+          headerTextColor: "accent",
+          fontFamily: "Georgia, serif",
+        },
+      },
+      {
+        id: "9",
+        type: "divider",
+        label: "Totals Border",
+        props: {
+          thickness: "2",
+          style: "solid",
+          color: "accent",
+          marginTop: "3",
+          marginBottom: "2",
+        },
+      },
+      {
+        id: "10",
+        type: "totals",
+        label: "Totals Section",
+        props: {
+          alignment: "left",
+          fontSize: "sm",
+          fontWeight: "normal",
+          backgroundColor: "transparent",
+          padding: "2",
+          showSubtotal: true,
+          showTax: true,
+          showDiscount: true,
+          grandTotalFontSize: "lg",
+          grandTotalColor: "accent",
+        },
+      },
+      {
+        id: "11",
+        type: "paymentInfo",
+        label: "Payment Details Box",
+        props: {
+          alignment: "left",
+          fontSize: "xs",
+          backgroundColor: "transparent",
+          padding: "3",
+          borderStyle: "dashed",
+          borderColor: "accentLight",
+          borderWidth: "2",
+          showMethod: true,
+          showAmountPaid: true,
+          showChange: true,
+        },
+      },
+      {
+        id: "12",
+        type: "divider",
+        label: "Footer Border",
+        props: {
+          thickness: "2",
+          style: "solid",
+          color: "accent",
+          marginTop: "4",
+          marginBottom: "3",
+        },
+      },
+      {
+        id: "13",
+        type: "customText",
+        label: "Thank You",
+        props: {
+          text: "Thank You For Your Business!",
+          alignment: "center",
+          fontSize: "sm",
+          fontWeight: "semibold",
+          backgroundColor: "transparent",
+          textColor: "#1f2937",
+          padding: "2",
+        },
+      },
+      {
+        id: "14",
+        type: "customText",
+        label: "Appreciation Note",
+        props: {
+          text: "We appreciate your patronage",
+          alignment: "center",
+          fontSize: "xs",
+          fontWeight: "normal",
+          fontStyle: "italic",
+          backgroundColor: "transparent",
+          textColor: "#6b7280",
+          padding: "2",
+        },
+      },
+    ],
+  },
+  compact: {
+    name: "Compact Efficient Style",
+    description: "Space-efficient design with Arial font and minimal styling",
+    fontFamily: "Arial, sans-serif",
+    sections: [
+      {
+        id: "1",
+        type: "header",
+        label: "Company Name",
+        props: {
+          alignment: "center",
+          fontSize: "sm",
+          fontWeight: "bold",
+          backgroundColor: "transparent",
+          textColor: "accent",
+          padding: "3",
         },
       },
       {
@@ -452,10 +647,10 @@ const templatePresets = {
         props: {
           alignment: "center",
           fontSize: "xs",
-          fontWeight: "light",
+          fontWeight: "normal",
           backgroundColor: "transparent",
-          padding: "2",
-          showEmail: true,
+          padding: "0",
+          showEmail: false,
           showPhone: true,
           showAddress: true,
         },
@@ -463,88 +658,359 @@ const templatePresets = {
       {
         id: "3",
         type: "divider",
-        label: "Divider",
+        label: "Top Border",
         props: {
           thickness: "1",
           style: "solid",
           color: "#d1d5db",
           marginTop: "3",
-          marginBottom: "3",
+          marginBottom: "2",
         },
       },
       {
         id: "4",
         type: "receiptDetails",
-        label: "Receipt Details",
+        label: "Receipt & DateTime",
         props: {
-          alignment: "center",
-          fontSize: "sm",
-          backgroundColor: "#faf5ff",
-          padding: "3",
+          alignment: "left",
+          fontSize: "xs",
+          fontWeight: "semibold",
+          backgroundColor: "transparent",
+          padding: "2",
           showReceiptNumber: true,
           showDate: true,
           showTime: true,
+          layout: "inline",
+          borderBottom: "solid",
+          borderColor: "#d1d5db",
         },
       },
       {
         id: "5",
         type: "itemsTable",
-        label: "Items List",
+        label: "Items Compact",
         props: {
-          showBorders: true,
+          showBorders: false,
           fontSize: "xs",
-          zebraStripes: true,
+          zebraStripes: false,
+          compactStyle: true,
+          showQuantityInline: true,
         },
       },
       {
         id: "6",
-        type: "totals",
-        label: "Totals",
+        type: "divider",
+        label: "Colored Border",
         props: {
-          alignment: "right",
-          fontSize: "lg",
-          fontWeight: "semibold",
-          backgroundColor: "#faf5ff",
-          padding: "4",
-          showSubtotal: true,
-          showTax: true,
-          showDiscount: true,
+          thickness: "2",
+          style: "solid",
+          color: "accent",
+          marginTop: "2",
+          marginBottom: "2",
         },
       },
       {
         id: "7",
-        type: "divider",
-        label: "Divider",
+        type: "totals",
+        label: "Totals",
         props: {
-          thickness: "1",
-          style: "solid",
-          color: "#d1d5db",
-          marginTop: "3",
-          marginBottom: "3",
+          alignment: "left",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "transparent",
+          padding: "2",
+          showSubtotal: true,
+          showTax: true,
+          showDiscount: true,
+          grandTotalColor: "accent",
+          grandTotalFontSize: "sm",
+          grandTotalBorderColor: "accentLight",
         },
       },
       {
         id: "8",
         type: "paymentInfo",
-        label: "Payment Info",
+        label: "Payment Box",
         props: {
-          alignment: "center",
+          alignment: "left",
           fontSize: "xs",
-          backgroundColor: "#f3e8ff",
+          backgroundColor: "#f9fafb",
           padding: "2",
+          showMethod: true,
+          showAmountPaid: true,
+          showChange: true,
+          compactStyle: true,
         },
       },
       {
         id: "9",
-        type: "customText",
-        label: "Thank You Message",
+        type: "divider",
+        label: "Footer Border",
         props: {
-          text: "Thank you for choosing us!",
+          thickness: "1",
+          style: "solid",
+          color: "#d1d5db",
+          marginTop: "2",
+          marginBottom: "2",
+        },
+      },
+      {
+        id: "10",
+        type: "customText",
+        label: "Footer",
+        props: {
+          text: "Thank You!",
           alignment: "center",
-          fontSize: "sm",
+          fontSize: "xs",
+          fontWeight: "semibold",
+          backgroundColor: "transparent",
+          textColor: "#6b7280",
+          padding: "2",
+        },
+      },
+    ],
+  },
+  detailed: {
+    name: "Detailed Professional Style",
+    description:
+      "Full-featured receipt with sections, headers, and detailed info",
+    fontFamily: "Arial, sans-serif",
+    sections: [
+      {
+        id: "1",
+        type: "header",
+        label: "Company Name",
+        props: {
+          alignment: "left",
+          fontSize: "xl",
+          fontWeight: "bold",
+          backgroundColor: "transparent",
+          textColor: "accent",
+          padding: "3",
+        },
+      },
+      {
+        id: "2",
+        type: "customText",
+        label: "Company Email",
+        props: {
+          text: "{companyEmail}",
+          alignment: "left",
+          fontSize: "xs",
           fontWeight: "normal",
           backgroundColor: "transparent",
+          textColor: "#6b7280",
+          padding: "1",
+          dynamic: true,
+        },
+      },
+      {
+        id: "3",
+        type: "companyInfo",
+        label: "Company Address Box",
+        props: {
+          alignment: "left",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "#f9fafb",
           padding: "3",
+          showEmail: false,
+          showPhone: true,
+          showAddress: true,
+          borderRadius: "4",
+        },
+      },
+      {
+        id: "4",
+        type: "divider",
+        label: "Section Border",
+        props: {
+          thickness: "2",
+          style: "solid",
+          color: "accent",
+          marginTop: "4",
+          marginBottom: "4",
+        },
+      },
+      {
+        id: "5",
+        type: "receiptDetails",
+        label: "Receipt Title & Number",
+        props: {
+          alignment: "left",
+          fontSize: "lg",
+          fontWeight: "bold",
+          backgroundColor: "transparent",
+          padding: "2",
+          showReceiptNumber: true,
+          showDate: false,
+          showTime: false,
+          titleText: "OFFICIAL RECEIPT",
+          showTitle: true,
+          numberBgColor: "accentLight",
+          numberPadding: "4",
+          numberBorderRadius: "4",
+        },
+      },
+      {
+        id: "6",
+        type: "receiptDetails",
+        label: "Transaction Date/Time",
+        props: {
+          alignment: "left",
+          fontSize: "xs",
+          backgroundColor: "#f9fafb",
+          padding: "4",
+          showReceiptNumber: false,
+          showDate: true,
+          showTime: true,
+          layout: "grid",
+          gridCols: "2",
+          showLabels: true,
+          labelStyle: "small",
+        },
+      },
+      {
+        id: "7",
+        type: "customText",
+        label: "Items Header",
+        props: {
+          text: "ITEMS PURCHASED",
+          alignment: "left",
+          fontSize: "sm",
+          fontWeight: "bold",
+          backgroundColor: "transparent",
+          textColor: "accent",
+          padding: "3",
+        },
+      },
+      {
+        id: "8",
+        type: "divider",
+        label: "Items Border",
+        props: {
+          thickness: "1",
+          style: "solid",
+          color: "accent",
+          marginTop: "0",
+          marginBottom: "2",
+        },
+      },
+      {
+        id: "9",
+        type: "itemsTable",
+        label: "Items Table (Full)",
+        props: {
+          showBorders: true,
+          fontSize: "xs",
+          zebraStripes: false,
+          headerBgColor: "accentLight",
+          headerTextColor: "accent",
+          showUnitPrice: true,
+          showQuantity: true,
+          fullWidth: true,
+        },
+      },
+      {
+        id: "10",
+        type: "totals",
+        label: "Totals Box",
+        props: {
+          alignment: "left",
+          fontSize: "sm",
+          fontWeight: "semibold",
+          backgroundColor: "#f9fafb",
+          padding: "4",
+          showSubtotal: true,
+          showTax: true,
+          showDiscount: true,
+          taxLabel: "VAT (7.5%)",
+          grandTotalFontSize: "xl",
+          grandTotalColor: "accent",
+          grandTotalBorderColor: "accent",
+          grandTotalBorderWidth: "2",
+        },
+      },
+      {
+        id: "11",
+        type: "customText",
+        label: "Payment Header",
+        props: {
+          text: "PAYMENT DETAILS",
+          alignment: "left",
+          fontSize: "sm",
+          fontWeight: "bold",
+          backgroundColor: "accentLight",
+          textColor: "accent",
+          padding: "2",
+        },
+      },
+      {
+        id: "12",
+        type: "paymentInfo",
+        label: "Payment Info Box",
+        props: {
+          alignment: "left",
+          fontSize: "xs",
+          backgroundColor: "accentLight",
+          padding: "4",
+          showMethod: true,
+          showAmountPaid: true,
+          showChange: true,
+        },
+      },
+      {
+        id: "13",
+        type: "divider",
+        label: "Footer Border",
+        props: {
+          thickness: "1",
+          style: "solid",
+          color: "#d1d5db",
+          marginTop: "4",
+          marginBottom: "3",
+        },
+      },
+      {
+        id: "14",
+        type: "customText",
+        label: "Thank You",
+        props: {
+          text: "Thank You For Your Business!",
+          alignment: "center",
+          fontSize: "sm",
+          fontWeight: "bold",
+          backgroundColor: "transparent",
+          textColor: "#1f2937",
+          padding: "2",
+        },
+      },
+      {
+        id: "15",
+        type: "customText",
+        label: "Official Notice",
+        props: {
+          text: "This is an official receipt and serves as proof of payment",
+          alignment: "center",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "transparent",
+          textColor: "#6b7280",
+          padding: "1",
+        },
+      },
+      {
+        id: "16",
+        type: "customText",
+        label: "Retain Notice",
+        props: {
+          text: "Please retain this receipt for your records",
+          alignment: "center",
+          fontSize: "xs",
+          fontWeight: "normal",
+          backgroundColor: "transparent",
+          textColor: "#6b7280",
+          padding: "1",
         },
       },
     ],
@@ -863,11 +1329,17 @@ const EnhancedReceiptBuilder = ({
     const paddingClass = `p-${padding}`;
 
     switch (section.type) {
-      case "header":
+      case "header": {
+        // Resolve textColor - handle "accent" keyword
+        const resolvedTextColor =
+          props.textColor === "accent"
+            ? customColor
+            : props.textColor || undefined;
+
         return (
           <div
             className={`${alignmentClass} ${fontSizeClass} ${fontWeightClass} ${paddingClass}`}
-            style={{ backgroundColor: bgColor }}
+            style={{ backgroundColor: bgColor, color: resolvedTextColor }}
           >
             {props.showLogo && (
               <div className="mb-2">
@@ -885,67 +1357,140 @@ const EnhancedReceiptBuilder = ({
                 />
               </div>
             )}
-            <h1 style={{ color: customColor }} className="text-gray-900">
+            <h1
+              style={{ color: resolvedTextColor || customColor }}
+              className="text-gray-900"
+            >
               RECEIPT
             </h1>
           </div>
         );
+      }
 
-      case "companyInfo":
+      case "companyInfo": {
+        // Resolve textColor - handle "accent" keyword
+        const resolvedCompanyTextColor =
+          props.textColor === "accent"
+            ? customColor
+            : props.textColor || undefined;
+
         return (
           <div
             className={`${alignmentClass} ${fontSizeClass} ${fontWeightClass} ${paddingClass}`}
-            style={{ backgroundColor: bgColor }}
+            style={{
+              backgroundColor: bgColor,
+              color: resolvedCompanyTextColor,
+            }}
           >
-            <p className="font-bold text-gray-900">{sampleData.companyName}</p>
+            {props.showName !== false && (
+              <p
+                className="font-bold"
+                style={{ color: resolvedCompanyTextColor || "#111827" }}
+              >
+                {sampleData.companyName}
+              </p>
+            )}
             {props.showAddress && (
-              <p className="text-gray-700">{sampleData.companyAddress}</p>
+              <p style={{ color: resolvedCompanyTextColor || "#374151" }}>
+                {sampleData.companyAddress}
+              </p>
             )}
             {props.showPhone && (
-              <p className="text-gray-700">{sampleData.companyPhone}</p>
+              <p style={{ color: resolvedCompanyTextColor || "#374151" }}>
+                {sampleData.companyPhone}
+              </p>
             )}
             {props.showEmail && (
-              <p className="text-gray-700">{sampleData.companyEmail}</p>
+              <p style={{ color: resolvedCompanyTextColor || "#374151" }}>
+                {sampleData.companyEmail}
+              </p>
             )}
           </div>
         );
+      }
 
-      case "receiptDetails":
+      case "receiptDetails": {
+        // Resolve textColor - handle "accent" keyword
+        const resolvedReceiptTextColor =
+          props.textColor === "accent"
+            ? customColor
+            : props.textColor || undefined;
+
         return (
           <div
             className={`${alignmentClass} ${fontSizeClass} ${fontWeightClass} ${paddingClass}`}
-            style={{ backgroundColor: bgColor }}
+            style={{
+              backgroundColor: bgColor,
+              color: resolvedReceiptTextColor,
+            }}
           >
             {props.showReceiptNumber && (
-              <p className="text-gray-800">
-                <span className="font-semibold text-gray-900">Receipt #:</span>{" "}
+              <p style={{ color: resolvedReceiptTextColor || "#1f2937" }}>
+                <span className="font-semibold">Receipt #:</span>{" "}
                 {sampleData.receiptNumber}
               </p>
             )}
             {props.showDate && (
-              <p className="text-gray-800">
-                <span className="font-semibold text-gray-900">Date:</span>{" "}
-                {sampleData.date}
+              <p style={{ color: resolvedReceiptTextColor || "#1f2937" }}>
+                <span className="font-semibold">Date:</span> {sampleData.date}
               </p>
             )}
             {props.showTime && (
-              <p className="text-gray-800">
-                <span className="font-semibold text-gray-900">Time:</span>{" "}
-                {sampleData.time}
+              <p style={{ color: resolvedReceiptTextColor || "#1f2937" }}>
+                <span className="font-semibold">Time:</span> {sampleData.time}
               </p>
             )}
           </div>
         );
+      }
 
       case "invoiceDetails":
         // Keep for backwards compatibility but redirect to receiptDetails
         return null;
 
       case "customerInfo":
-        // Not used in receipts
-        return null;
+        // Render customer details preview
+        return (
+          <div
+            className={`${alignmentClass} ${fontSizeClass} ${fontWeightClass} ${paddingClass}`}
+            style={{
+              backgroundColor: bgColor,
+              color: props.textColor === "accent" ? customColor : undefined,
+            }}
+          >
+            {props.showName !== false && (
+              <p
+                className={`font-medium ${
+                  props.textColor === "accent" ? "" : "text-gray-900"
+                }`}
+              >
+                John Doe
+              </p>
+            )}
+            {props.showPhone !== false && (
+              <p className="text-gray-600 text-xs">+234 123 456 7890</p>
+            )}
+            {props.showEmail !== false && (
+              <p className="text-gray-600 text-xs">john@example.com</p>
+            )}
+          </div>
+        );
 
-      case "itemsTable":
+      case "itemsTable": {
+        // Resolve header colors - handle "transparent" and "accent" keywords
+        const resolvedHeaderBgColor =
+          props.headerBgColor === "transparent"
+            ? "transparent"
+            : props.headerBgColor === "accent"
+            ? customColor
+            : props.headerBgColor || customColor;
+        const resolvedHeaderTextColor =
+          props.headerTextColor === "accent"
+            ? customColor
+            : props.headerBgColor === "transparent"
+            ? "#000000"
+            : props.headerTextColor || "#ffffff";
+
         return (
           <div className={`${paddingClass} overflow-x-auto`}>
             <table
@@ -955,10 +1500,9 @@ const EnhancedReceiptBuilder = ({
             >
               <thead>
                 <tr
-                  className="text-white"
                   style={{
-                    backgroundColor: props.headerBgColor || customColor,
-                    color: props.headerTextColor || "#ffffff",
+                    backgroundColor: resolvedHeaderBgColor,
+                    color: resolvedHeaderTextColor,
                   }}
                 >
                   <th className="p-2 text-left">Item</th>
@@ -1009,8 +1553,19 @@ const EnhancedReceiptBuilder = ({
             </table>
           </div>
         );
+      }
 
-      case "totals":
+      case "totals": {
+        // Resolve grandTotalColor and grandTotalBorderColor
+        const resolvedGrandTotalColor =
+          props.grandTotalColor === "accent"
+            ? customColor
+            : props.grandTotalColor || customColor;
+        const resolvedGrandTotalBorderColor =
+          props.grandTotalBorderColor === "accent"
+            ? customColor
+            : props.grandTotalBorderColor || "#d1d5db";
+
         return (
           <div
             className={`${alignmentClass} ${fontSizeClass} ${fontWeightClass} ${paddingClass}`}
@@ -1035,11 +1590,14 @@ const EnhancedReceiptBuilder = ({
               </div>
             )}
             <div
-              className="flex justify-between pt-2 border-t border-gray-300 font-bold text-gray-900"
-              style={{ fontSize: "larger" }}
+              className="flex justify-between pt-2 font-bold text-gray-900"
+              style={{
+                fontSize: "larger",
+                borderTop: `1px solid ${resolvedGrandTotalBorderColor}`,
+              }}
             >
               <span>TOTAL:</span>
-              <span style={{ color: customColor }}>
+              <span style={{ color: resolvedGrandTotalColor }}>
                 {formatCurrency(sampleData.total)}
               </span>
             </div>
@@ -1051,44 +1609,93 @@ const EnhancedReceiptBuilder = ({
             )}
           </div>
         );
+      }
 
-      case "paymentInfo":
+      case "paymentInfo": {
+        // Resolve textColor - handle "accent" keyword
+        const resolvedPaymentTextColor =
+          props.textColor === "accent"
+            ? customColor
+            : props.textColor || undefined;
+
         return (
           <div
             className={`${alignmentClass} ${fontSizeClass} ${fontWeightClass} ${paddingClass}`}
-            style={{ backgroundColor: bgColor }}
+            style={{
+              backgroundColor: bgColor,
+              color: resolvedPaymentTextColor,
+            }}
           >
-            <p className="font-semibold mb-1 text-gray-900">
+            <p
+              className="font-semibold mb-1"
+              style={{ color: resolvedPaymentTextColor || "#111827" }}
+            >
               Payment Information:
             </p>
-            <p className="text-gray-800">
-              <span className="font-medium text-gray-900">Payment Method:</span>{" "}
+            <p style={{ color: resolvedPaymentTextColor || "#1f2937" }}>
+              <span
+                className="font-medium"
+                style={{ color: resolvedPaymentTextColor || "#111827" }}
+              >
+                Payment Method:
+              </span>{" "}
               {sampleData.paymentMethod}
             </p>
-            <p className="text-gray-800">
-              <span className="font-medium text-gray-900">Amount Paid:</span>{" "}
+            <p style={{ color: resolvedPaymentTextColor || "#1f2937" }}>
+              <span
+                className="font-medium"
+                style={{ color: resolvedPaymentTextColor || "#111827" }}
+              >
+                Amount Paid:
+              </span>{" "}
               {formatCurrency(sampleData.amountPaid)}
             </p>
             {sampleData.change > 0 && (
-              <p className="text-gray-800">
-                <span className="font-medium text-gray-900">Change:</span>{" "}
+              <p style={{ color: resolvedPaymentTextColor || "#1f2937" }}>
+                <span
+                  className="font-medium"
+                  style={{ color: resolvedPaymentTextColor || "#111827" }}
+                >
+                  Change:
+                </span>{" "}
                 {formatCurrency(sampleData.change)}
               </p>
             )}
           </div>
         );
+      }
 
-      case "customText":
+      case "customText": {
+        // Resolve textColor - handle "accent" keyword
+        const resolvedCustomTextColor =
+          props.textColor === "accent"
+            ? customColor
+            : props.textColor || undefined;
+        // Handle backgroundColor: "accent" with white text
+        const customTextBgIsAccent = props.backgroundColor === "accent";
+
         return (
           <div
-            className={`${alignmentClass} ${fontSizeClass} ${fontWeightClass} ${paddingClass} text-gray-900`}
-            style={{ backgroundColor: bgColor }}
+            className={`${alignmentClass} ${fontSizeClass} ${fontWeightClass} ${paddingClass}`}
+            style={{
+              backgroundColor: customTextBgIsAccent ? customColor : bgColor,
+              color: customTextBgIsAccent ? "#ffffff" : resolvedCustomTextColor,
+            }}
           >
             {props.text || "Custom text here"}
           </div>
         );
+      }
 
-      case "divider":
+      case "divider": {
+        // Resolve "accent" and "accentLight" color keywords
+        const resolvedDividerColor =
+          props.color === "accent"
+            ? customColor
+            : props.color === "accentLight"
+            ? `${customColor}30`
+            : props.color || "#e5e7eb";
+
         return (
           <div
             className={`my-${props.marginTop || 4}`}
@@ -1098,11 +1705,12 @@ const EnhancedReceiptBuilder = ({
               style={{
                 borderTop: `${props.thickness || 1}px ${
                   props.style || "solid"
-                } ${props.color || "#e5e7eb"}`,
+                } ${resolvedDividerColor}`,
               }}
             />
           </div>
         );
+      }
 
       default:
         return <p className="text-gray-500">Unknown section type</p>;
@@ -1329,8 +1937,9 @@ const EnhancedReceiptBuilder = ({
               Choose a Starting Template
             </h3>
             <p className={`${theme.textSecondary} mb-6`}>
-              Select a preset template style to customize. You can modify all
-              elements after loading.
+              Select a preset template style to customize. Each template matches
+              our built-in receipt designs. You can modify all elements after
+              loading.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -1338,16 +1947,28 @@ const EnhancedReceiptBuilder = ({
                 <button
                   key={key}
                   onClick={() => loadPreset(key)}
-                  className={`p-4 border-2 ${theme.borderSecondary} rounded-lg hover:border-[#667eea] hover:bg-blue-50 dark:hover:bg-blue-900/20 transition text-left`}
+                  className={`p-4 border-2 ${theme.borderSecondary} rounded-lg hover:border-[#667eea] hover:bg-blue-50 dark:hover:bg-blue-900/20 transition text-left group`}
                 >
-                  <h4
-                    className={`font-bold text-lg mb-2 ${theme.textPrimary} capitalize`}
-                  >
-                    {preset.name}
-                  </h4>
-                  <p className={`text-sm ${theme.textSecondary}`}>
-                    {preset.sections.length} sections
-                  </p>
+                  <div className="flex items-start justify-between mb-2">
+                    <h4
+                      className={`font-bold text-lg ${theme.textPrimary} capitalize group-hover:text-[#667eea]`}
+                    >
+                      {preset.name}
+                    </h4>
+                    <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                      {preset.sections.length} sections
+                    </span>
+                  </div>
+                  {preset.description && (
+                    <p className={`text-sm ${theme.textSecondary} mb-3`}>
+                      {preset.description}
+                    </p>
+                  )}
+                  {preset.fontFamily && (
+                    <p className={`text-xs ${theme.textSecondary} italic`}>
+                      Font: {preset.fontFamily}
+                    </p>
+                  )}
                 </button>
               ))}
             </div>

@@ -1,235 +1,182 @@
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-  Image,
-} from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import "./pdfFonts"; // Register Unicode fonts
+import { currencySymbols } from "./pdfFonts";
 
-// Compact Receipt - smaller, cleaner design
-const createStyles = (color = "#4f46e5") =>
+// Compact Receipt - matching CompactReceipt.jsx exactly - thermal POS width
+const createStyles = (color = "#667eea") =>
   StyleSheet.create({
     page: {
-      padding: 30,
-      fontSize: 9,
-      fontFamily: "Helvetica",
+      padding: 12,
+      fontSize: 11,
+      fontFamily: "NotoSans",
       backgroundColor: "#ffffff",
+      width: 226, // 80mm thermal width
     },
-    // Header
+    // Compact Header
     header: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      marginBottom: 20,
-      paddingBottom: 15,
-      borderBottomWidth: 2,
-      borderBottomColor: color,
-    },
-    logoSection: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    logo: {
-      width: 40,
-      height: 32,
-      marginRight: 10,
-      objectFit: "contain",
+      textAlign: "center",
+      marginBottom: 10,
     },
     companyName: {
-      fontSize: 14,
-      fontFamily: "Helvetica-Bold",
-      color: color,
-    },
-    headerRight: {
-      alignItems: "flex-end",
-    },
-    receiptLabel: {
-      fontSize: 16,
-      fontFamily: "Helvetica-Bold",
+      fontSize: 12,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
       color: color,
       marginBottom: 3,
     },
-    receiptNumber: {
+    companyInfo: {
       fontSize: 9,
-      color: "#666666",
-    },
-    // Two Column Layout
-    twoColumn: {
-      flexDirection: "row",
-      marginBottom: 15,
-    },
-    column: {
-      flex: 1,
-    },
-    columnRight: {
-      flex: 1,
-      alignItems: "flex-end",
-    },
-    // Labels and values
-    label: {
-      fontSize: 8,
-      color: "#999999",
-      textTransform: "uppercase",
+      color: "#6b7280",
       marginBottom: 2,
     },
-    value: {
-      fontSize: 10,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
-      marginBottom: 8,
-    },
-    valueSmall: {
-      fontSize: 9,
-      color: "#333333",
-      marginBottom: 2,
-    },
-    // Amount Box
-    amountBox: {
-      padding: 15,
-      marginVertical: 15,
-      borderRadius: 5,
-      borderWidth: 1,
-    },
-    amountRow: {
+    // Receipt Info Bar
+    receiptInfoBar: {
       flexDirection: "row",
       justifyContent: "space-between",
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: "#d1d5db",
+      paddingVertical: 6,
       marginBottom: 8,
     },
-    amountLabel: {
+    receiptLabel: {
       fontSize: 9,
-      color: "#666666",
+      fontFamily: "NotoSans",
+      fontWeight: 700,
     },
-    amountValue: {
+    receiptMeta: {
       fontSize: 9,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
+      color: "#6b7280",
     },
-    totalDivider: {
-      borderTopWidth: 1,
-      borderTopColor: "#e5e7eb",
-      paddingTop: 10,
-      marginTop: 5,
+    // Items Section
+    itemsContainer: {
+      marginBottom: 8,
+    },
+    itemRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: "#e5e7eb",
+    },
+    itemDetails: {
+      flex: 1,
+    },
+    itemName: {
+      fontSize: 9,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#1f2937",
+    },
+    itemQty: {
+      fontSize: 9,
+      color: "#6b7280",
+      marginLeft: 6,
+    },
+    itemTotal: {
+      fontSize: 9,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#1f2937",
+    },
+    // Totals Section
+    totalsSection: {
+      borderTopWidth: 2,
+      borderTopColor: color,
+      paddingTop: 8,
+      marginBottom: 8,
+    },
+    totalRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 2,
     },
     totalLabel: {
-      fontSize: 11,
-      fontFamily: "Helvetica-Bold",
+      fontSize: 9,
+      color: "#6b7280",
     },
     totalValue: {
-      fontSize: 13,
-      fontFamily: "Helvetica-Bold",
+      fontSize: 9,
+      color: "#1f2937",
     },
-    // Reference Section
-    referenceBox: {
-      backgroundColor: "#f9fafb",
-      padding: 12,
-      marginTop: 10,
-      borderRadius: 5,
+    discountValue: {
+      fontSize: 9,
+      color: "#dc2626",
     },
-    referenceTitle: {
-      fontSize: 8,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
-      marginBottom: 8,
-      textTransform: "uppercase",
-    },
-    referenceRow: {
+    grandTotalRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      marginBottom: 4,
+      marginTop: 4,
+      paddingTop: 4,
+      borderTopWidth: 1,
+      borderTopColor: `${color}80`,
     },
-    referenceLabel: {
-      fontSize: 8,
-      color: "#666666",
+    grandTotalLabel: {
+      fontSize: 11,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: color,
     },
-    referenceValue: {
-      fontSize: 8,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
+    grandTotalValue: {
+      fontSize: 11,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: color,
     },
-    // Notes
-    notesSection: {
-      marginTop: 12,
-      padding: 10,
-      borderLeftWidth: 3,
-      backgroundColor: "#fafafa",
+    // Payment Section
+    paymentSection: {
+      backgroundColor: "#f9fafb",
+      padding: 8,
+      marginBottom: 8,
     },
-    notesTitle: {
-      fontSize: 8,
-      fontFamily: "Helvetica-Bold",
-      color: "#333333",
-      marginBottom: 4,
+    paymentRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 2,
     },
-    notesText: {
-      fontSize: 8,
-      color: "#666666",
-      lineHeight: 1.4,
+    paymentLabel: {
+      fontSize: 9,
+      color: "#6b7280",
+    },
+    paymentValue: {
+      fontSize: 9,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+    },
+    changeValue: {
+      fontSize: 9,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#16a34a",
     },
     // Footer
     footer: {
-      marginTop: "auto",
-      paddingTop: 15,
+      textAlign: "center",
+      paddingTop: 8,
       borderTopWidth: 1,
       borderTopColor: "#e5e7eb",
     },
     footerText: {
-      fontSize: 8,
-      color: "#999999",
-      textAlign: "center",
-    },
-    // Status Badge
-    statusBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-      alignSelf: "flex-end",
-      marginTop: 5,
-    },
-    statusText: {
-      fontSize: 7,
-      fontFamily: "Helvetica-Bold",
-      color: "#ffffff",
-    },
-    pageNumber: {
-      position: "absolute",
-      fontSize: 7,
-      bottom: 15,
-      left: 0,
-      right: 0,
-      textAlign: "center",
-      color: "#cccccc",
+      fontSize: 9,
+      fontFamily: "NotoSans",
+      fontWeight: 700,
+      color: "#6b7280",
     },
   });
 
-const CompactReceiptPDF = ({ companyInfo, receiptData, color = "#4f46e5" }) => {
+const CompactReceiptPDF = ({ companyInfo, receiptData, color = "#667eea" }) => {
   const styles = createStyles(color);
 
-  // Currency formatter
-  const formatCurrency =
-    receiptData?.formatCurrency ||
-    ((amount) => {
-      const currencyMap = {
-        NGN: "₦",
-        USD: "$",
-        EUR: "€",
-        GBP: "£",
-        JPY: "¥",
-        CNY: "¥",
-        INR: "₹",
-        ZAR: "R",
-        KES: "KSh",
-        GHS: "₵",
-      };
-      const symbol =
-        currencyMap[receiptData?.currency] ||
-        receiptData?.currency + " " ||
-        "₦";
-      const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-      return `${symbol}${formatted}`;
+  // Currency formatter with actual Unicode currency symbols (NotoSans font required)
+  const formatCurrency = (amount) => {
+    const symbol =
+      currencySymbols[receiptData?.currency] || receiptData?.currency || "₦";
+    const formatted = parseFloat(amount || 0).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
+    return `${symbol}${formatted}`;
+  };
 
   const formatMethod = (method) => {
     if (!method) return "N/A";
@@ -238,141 +185,105 @@ const CompactReceiptPDF = ({ companyInfo, receiptData, color = "#4f46e5" }) => {
 
   return (
     <Document>
-      <Page size="A5" style={styles.page}>
-        {/* Header */}
+      <Page size={{ width: 226, height: 842 }} style={styles.page}>
+        {/* Compact Header */}
         <View style={styles.header}>
-          <View style={styles.logoSection}>
-            {companyInfo?.logo && (
-              <Image src={companyInfo.logo} style={styles.logo} cache={false} />
-            )}
-            <Text style={styles.companyName}>
-              {companyInfo?.name || companyInfo?.company_name || "Company Name"}
+          <Text style={styles.companyName}>
+            {companyInfo?.name || companyInfo?.company_name || "Company Name"}
+          </Text>
+          <Text style={styles.companyInfo}>{companyInfo?.address}</Text>
+          <Text style={styles.companyInfo}>{companyInfo?.phone}</Text>
+        </View>
+
+        {/* Receipt Info Bar */}
+        <View style={styles.receiptInfoBar}>
+          <Text style={styles.receiptLabel}>
+            Receipt: {receiptData?.reference || receiptData?.receiptNumber}
+          </Text>
+          <Text style={styles.receiptMeta}>
+            {receiptData?.date} {receiptData?.time || ""}
+          </Text>
+        </View>
+
+        {/* Items */}
+        <View style={styles.itemsContainer}>
+          {receiptData?.items?.map((item, index) => (
+            <View key={index} style={styles.itemRow}>
+              <View style={styles.itemDetails}>
+                <Text style={styles.itemName}>
+                  {item.name}
+                  <Text style={styles.itemQty}> x{item.quantity}</Text>
+                </Text>
+              </View>
+              <Text style={styles.itemTotal}>{formatCurrency(item.total)}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Totals Section */}
+        <View style={styles.totalsSection}>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Subtotal</Text>
+            <Text style={styles.totalValue}>
+              {formatCurrency(receiptData?.subtotal || receiptData?.amount)}
             </Text>
           </View>
-          <View style={styles.headerRight}>
-            <Text style={styles.receiptLabel}>Receipt</Text>
-            <Text style={styles.receiptNumber}>#{receiptData?.reference}</Text>
+          {receiptData?.discount > 0 && (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Discount</Text>
+              <Text style={styles.discountValue}>
+                -{formatCurrency(receiptData?.discount)}
+              </Text>
+            </View>
+          )}
+          {receiptData?.tax > 0 && (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Tax</Text>
+              <Text style={styles.totalValue}>
+                {formatCurrency(receiptData?.tax)}
+              </Text>
+            </View>
+          )}
+          <View style={styles.grandTotalRow}>
+            <Text style={styles.grandTotalLabel}>TOTAL</Text>
+            <Text style={styles.grandTotalValue}>
+              {formatCurrency(receiptData?.total || receiptData?.amount)}
+            </Text>
           </View>
         </View>
 
-        {/* Two Column Info */}
-        <View style={styles.twoColumn}>
-          <View style={styles.column}>
-            <Text style={styles.label}>Received From</Text>
-            <Text style={styles.value}>
-              {receiptData?.customer?.name ||
-                receiptData?.entity_name ||
-                "Customer"}
+        {/* Payment Section */}
+        <View style={styles.paymentSection}>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>
+              Paid (
+              {formatMethod(receiptData?.paymentMethod || receiptData?.method)})
             </Text>
-            <Text style={styles.label}>Payment Method</Text>
-            <Text style={styles.value}>
-              {formatMethod(receiptData?.method)}
+            <Text style={styles.paymentValue}>
+              {formatCurrency(receiptData?.amountPaid || receiptData?.amount)}
             </Text>
           </View>
-          <View style={styles.columnRight}>
-            <Text style={styles.label}>Date</Text>
-            <Text style={styles.value}>{receiptData?.date}</Text>
-            <Text style={styles.label}>Status</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                {
-                  backgroundColor:
-                    receiptData?.status === "completed" ? "#10b981" : "#f59e0b",
-                },
-              ]}
-            >
-              <Text style={styles.statusText}>
-                {receiptData?.status?.toUpperCase() || "COMPLETED"}
+          {receiptData?.change > 0 && (
+            <View style={[styles.paymentRow, { marginTop: 2 }]}>
+              <Text
+                style={[
+                  styles.paymentLabel,
+                  { fontFamily: "NotoSans", fontWeight: 700, color: "#1f2937" },
+                ]}
+              >
+                Change
+              </Text>
+              <Text style={styles.changeValue}>
+                {formatCurrency(receiptData?.change)}
               </Text>
             </View>
-          </View>
+          )}
         </View>
-
-        {/* Amount Box */}
-        <View
-          style={[
-            styles.amountBox,
-            { borderColor: color, backgroundColor: `${color}05` },
-          ]}
-        >
-          <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>Reference:</Text>
-            <Text style={styles.amountValue}>{receiptData?.reference}</Text>
-          </View>
-          <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>Type:</Text>
-            <Text style={styles.amountValue}>
-              {receiptData?.type === "received"
-                ? "Payment Received"
-                : "Payment Made"}
-            </Text>
-          </View>
-          <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>Method:</Text>
-            <Text style={styles.amountValue}>
-              {formatMethod(receiptData?.method)}
-            </Text>
-          </View>
-          <View style={styles.totalDivider}>
-            <View style={styles.amountRow}>
-              <Text style={[styles.totalLabel, { color: color }]}>
-                Amount Paid:
-              </Text>
-              <Text style={[styles.totalValue, { color: color }]}>
-                {formatCurrency(receiptData?.amount)}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Invoice Reference */}
-        {receiptData?.invoice && (
-          <View style={styles.referenceBox}>
-            <Text style={styles.referenceTitle}>Invoice Reference</Text>
-            <View style={styles.referenceRow}>
-              <Text style={styles.referenceLabel}>Invoice #:</Text>
-              <Text style={styles.referenceValue}>
-                {receiptData.invoice.invoice_no || receiptData.invoice_number}
-              </Text>
-            </View>
-            <View style={styles.referenceRow}>
-              <Text style={styles.referenceLabel}>Invoice Total:</Text>
-              <Text style={styles.referenceValue}>
-                {formatCurrency(
-                  receiptData.invoice_total || receiptData.invoice?.total
-                )}
-              </Text>
-            </View>
-            <View style={styles.referenceRow}>
-              <Text style={styles.referenceLabel}>Balance After:</Text>
-              <Text style={styles.referenceValue}>
-                {formatCurrency(receiptData.balance_after)}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Notes */}
-        {receiptData?.notes && (
-          <View style={[styles.notesSection, { borderLeftColor: color }]}>
-            <Text style={styles.notesTitle}>Notes:</Text>
-            <Text style={styles.notesText}>{receiptData.notes}</Text>
-          </View>
-        )}
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Thank you for your payment!</Text>
+          <Text style={styles.footerText}>Thank You!</Text>
         </View>
-
-        <Text
-          style={styles.pageNumber}
-          render={({ pageNumber, totalPages }) =>
-            `${pageNumber} / ${totalPages}`
-          }
-          fixed
-        />
       </Page>
     </Document>
   );

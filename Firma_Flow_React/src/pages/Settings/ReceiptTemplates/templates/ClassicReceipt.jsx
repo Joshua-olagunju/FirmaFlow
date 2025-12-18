@@ -10,8 +10,8 @@ const ClassicReceipt = ({ color = "#667eea", companyInfo, receiptData }) => {
     <div
       className="bg-white p-3 sm:p-4 md:p-6 print:p-6 mx-auto border-4 border-double"
       style={{
-        width: "100%",
-        maxWidth: "400px",
+        width: "80mm",
+        maxWidth: "80mm",
         borderColor: color,
         fontFamily: "Georgia, serif",
         boxSizing: "border-box",
