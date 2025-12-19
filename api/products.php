@@ -362,9 +362,33 @@ try {
             // Table might not exist, continue with deletion
         }
         
+        // Delete associated journal entries for product opening balances
+        try {
+            // Find journal entries for this product's opening balance
+            $stmt = $pdo->prepare("SELECT id FROM journal_entries WHERE company_id = ? AND reference_type = 'product_opening' AND reference_id = ?");
+            $stmt->execute([$company_id, $id]);
+            $journal_entries = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            
+            if (!empty($journal_entries)) {
+                // Delete journal lines first
+                $placeholders = implode(',', array_fill(0, count($journal_entries), '?'));
+                $stmt = $pdo->prepare("DELETE FROM journal_lines WHERE journal_id IN ($placeholders)");
+                $stmt->execute($journal_entries);
+                
+                // Delete journal entries
+                $stmt = $pdo->prepare("DELETE FROM journal_entries WHERE id IN ($placeholders)");
+                $stmt->execute($journal_entries);
+                
+                error_log("🗑️ Deleted " . count($journal_entries) . " journal entries for product ID $id");
+            }
+        } catch (Exception $e) {
+            error_log("⚠️ Failed to delete journal entries for product: " . $e->getMessage());
+            // Continue with product deletion even if journal cleanup fails
+        }
+        
         $stmt = $pdo->prepare("DELETE FROM products WHERE id = ? AND company_id = ?");
         $stmt->execute([$id, $company_id]);
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true, 'message' => 'Product and associated journal entries deleted']);
         exit;
     }
 

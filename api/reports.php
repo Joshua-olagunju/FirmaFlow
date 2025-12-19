@@ -1,6 +1,19 @@
 <?php
 // Clean Reports API - Fixed and Complete
 session_start();
+
+// CORS Headers
+header('Access-Control-Allow-Origin: http://localhost:5173');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+// Handle preflight requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/subscription_helper.php';
@@ -971,10 +984,65 @@ function getSalesReport($pdo, $company_id, $start_date, $end_date) {
     // Count customers who bought in this period
     $customers_in_period = count($unique_customers_in_period);
     
+    // Get top products sold in period
+    $top_products = [];
+    try {
+        $products_stmt = $pdo->prepare("
+            SELECT 
+                p.id,
+                p.name as product_name,
+                SUM(sil.quantity) as total_quantity,
+                SUM(sil.line_total) as total_sales,
+                COUNT(DISTINCT sil.invoice_id) as order_count
+            FROM sales_invoice_lines sil
+            JOIN sales_invoices si ON sil.invoice_id = si.id
+            JOIN products p ON sil.product_id = p.id
+            WHERE si.company_id = ?
+            AND si.invoice_date BETWEEN ? AND ?
+            AND si.status != 'cancelled'
+            GROUP BY p.id, p.name
+            ORDER BY total_sales DESC
+            LIMIT 10
+        ");
+        $products_stmt->execute([$company_id, $start_date, $end_date]);
+        $top_products = $products_stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // Table might not exist or have different structure
+        $top_products = [];
+    }
+    
+    // Get top customers in period
+    $top_customers = [];
+    try {
+        $customers_stmt = $pdo->prepare("
+            SELECT 
+                c.id,
+                c.name as customer_name,
+                COUNT(DISTINCT si.id) as transaction_count,
+                SUM(si.total) as total_spent,
+                SUM(si.amount_paid) as total_paid
+            FROM sales_invoices si
+            JOIN customers c ON si.customer_id = c.id
+            WHERE si.company_id = ?
+            AND si.invoice_date BETWEEN ? AND ?
+            AND si.status != 'cancelled'
+            GROUP BY c.id, c.name
+            ORDER BY total_spent DESC
+            LIMIT 10
+        ");
+        $customers_stmt->execute([$company_id, $start_date, $end_date]);
+        $top_customers = $customers_stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // If query fails, return empty array
+        $top_customers = [];
+    }
+    
     return [
         'title' => 'Sales Summary Report',
         'period' => "$start_date to $end_date",
         'sales' => $sales,
+        'products_sold' => $top_products,
+        'top_customers' => $top_customers,
         'summary' => [
             // Core business metrics as requested
             'total_invoices' => $total_invoices, // All recorded sales (draft, sent, paid)
@@ -1056,8 +1124,11 @@ function getPurchaseReport($pdo, $company_id, $start_date, $end_date) {
 }
 
 function getInventoryReport($pdo, $company_id) {
+    error_log("📊 INVENTORY REPORT - Fetching for Company ID: $company_id");
+    
     $stmt = $pdo->prepare("
         SELECT 
+            p.id,
             p.name,
             p.sku,
             p.stock_quantity,
@@ -1076,6 +1147,11 @@ function getInventoryReport($pdo, $company_id) {
     ");
     $stmt->execute([$company_id]);
     $inventory = $stmt->fetchAll();
+    
+    error_log("📦 Found " . count($inventory) . " inventory items for company $company_id");
+    if (count($inventory) > 0) {
+        error_log("🔍 First 3 products: " . json_encode(array_slice($inventory, 0, 3)));
+    }
     
     $total_inventory_value = array_sum(array_column($inventory, 'inventory_value'));
     $low_stock_items = array_filter($inventory, function($item) {

@@ -673,12 +673,14 @@ try {
             
             error_log("✅ Sales entry deleted for invoice {$invoice['invoice_no']}: Amount {$invoice['total']}");
             
-            // Delete related journal entries
-            $deleteJournalStmt = $pdo->prepare("DELETE FROM journal_lines WHERE journal_id IN (SELECT id FROM journal_entries WHERE reference_type = 'sales_invoice' AND reference_id = ?)");
+            // Delete related journal entries (both sales_invoice AND sales_cogs)
+            $deleteJournalStmt = $pdo->prepare("DELETE FROM journal_lines WHERE journal_id IN (SELECT id FROM journal_entries WHERE (reference_type = 'sales_invoice' OR reference_type = 'sales_cogs') AND reference_id = ?)");
             $deleteJournalStmt->execute([$id]);
             
-            $deleteJournalEntriesStmt = $pdo->prepare("DELETE FROM journal_entries WHERE reference_type = 'sales_invoice' AND reference_id = ?");
+            $deleteJournalEntriesStmt = $pdo->prepare("DELETE FROM journal_entries WHERE (reference_type = 'sales_invoice' OR reference_type = 'sales_cogs') AND reference_id = ?");
             $deleteJournalEntriesStmt->execute([$id]);
+            
+            error_log("✅ Deleted journal entries for invoice {$invoice['invoice_no']} (sales_invoice and sales_cogs)");
             
             // Delete invoice lines
             $stmt = $pdo->prepare("DELETE FROM sales_invoice_lines WHERE invoice_id = ?");

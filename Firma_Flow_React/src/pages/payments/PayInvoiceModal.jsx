@@ -170,10 +170,10 @@ const PayInvoiceModal = ({ isOpen, onClose, onSuccess, invoice }) => {
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
-        className={`${theme.bgCard} rounded-xl ${theme.shadow} max-w-lg w-full max-h-[90vh] overflow-y-auto`}
+        className={`${theme.bgCard} rounded-xl ${theme.shadow} max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col`}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] p-6 flex justify-between items-center rounded-t-xl sticky top-0 z-10">
+        <div className="bg-gradient-to-r from-[#667eea] to-[#764ba2] p-6 flex justify-between items-center rounded-t-xl flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-white/20 p-2 rounded-lg">
               <CreditCard className="text-white" size={24} />
@@ -189,7 +189,10 @@ const PayInvoiceModal = ({ isOpen, onClose, onSuccess, invoice }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 space-y-5 overflow-y-auto flex-1"
+        >
           {/* Error Message */}
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -311,12 +314,15 @@ const PayInvoiceModal = ({ isOpen, onClose, onSuccess, invoice }) => {
                 Amount <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                max={balance}
+                type="text"
+                inputMode="decimal"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+                    setAmount(value);
+                  }
+                }}
                 placeholder="Enter amount"
                 required
                 className={`w-full px-4 py-2.5 border ${theme.borderPrimary} rounded-lg ${theme.bgInput} ${theme.textPrimary} focus:ring-2 focus:ring-[#667eea] focus:border-transparent`}
