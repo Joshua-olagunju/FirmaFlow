@@ -1,5 +1,5 @@
 # Production environment variables (NEVER commit these)
-
+.env
 .env.production
 .env.staging
 .env.live
