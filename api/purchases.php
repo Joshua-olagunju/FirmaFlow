@@ -244,11 +244,14 @@ try {
                             // Use provided SKU or auto-generate
                             $sku = !empty($item['new_product_sku']) ? $item['new_product_sku'] : 'AUTO-' . uniqid();
                             
+                            // Get unit from item, default to 'Pieces' if not provided
+                            $product_unit = !empty($item['unit']) ? $item['unit'] : 'Pieces';
+                            
                             $new_product_data = [
                                 'name' => $product_name,
                                 'description' => 'Auto-created from Purchase ' . $reference,
                                 'sku' => $sku,
-                                'unit' => 'pcs',
+                                'unit' => $product_unit,
                                 'stock_quantity' => floatval($item['quantity']),
                                 'selling_price' => $selling_price,
                                 'cost_price' => floatval($item['unit_cost']),
@@ -258,15 +261,15 @@ try {
                             ];
                             
                             error_log("💰 New product selling price: $selling_price (from input: " . ($item['selling_price'] ?? 'auto-calculated') . ")");
+                            error_log("🏢 Creating product with Company ID: $company_id for company");
                             
-                            // Build dynamic insert based on available columns
-                            $stmt = $pdo->prepare("SELECT * FROM products WHERE company_id = ? LIMIT 1");
-                            $stmt->execute([$company_id]);
-                            $sample_product = $stmt->fetch();
+                            // Get table structure directly from database schema (works even if no products exist)
+                            $stmt = $pdo->query("DESCRIBE products");
+                            $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
                             
-                            if ($sample_product) {
-                                // Detect available columns
-                                $available_columns = array_keys($sample_product);
+                            if (!empty($columns)) {
+                                // Detect available columns from table structure
+                                $available_columns = $columns;
                                 
                                 // Map our data to available columns
                                 $insert_columns = [];
@@ -321,6 +324,8 @@ try {
                                 } else {
                                     error_log("⚠️ Could not create product - no compatible columns found");
                                 }
+                            } else {
+                                error_log("⚠️ Could not detect products table structure");
                             }
                         }
                     } catch (Exception $product_error) {

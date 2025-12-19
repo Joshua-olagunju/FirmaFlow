@@ -212,13 +212,16 @@ const MakeSupplierPaymentModal = ({ isOpen, onClose, bill, onSuccess }) => {
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
               />
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 name="amount"
                 value={formData.amount}
-                onChange={handleChange}
-                step="0.01"
-                min="0.01"
-                max={balance}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+                    handleChange(e);
+                  }
+                }}
                 required
                 className={`w-full pl-10 pr-4 py-2 border ${theme.borderSecondary} ${theme.bgInput} ${theme.textPrimary} rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
                 placeholder="0.00"

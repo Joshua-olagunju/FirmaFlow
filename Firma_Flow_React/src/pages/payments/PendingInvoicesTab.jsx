@@ -4,12 +4,14 @@ import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import PayInvoiceModal from "./PayInvoiceModal";
 import RefundPaymentModal from "./RefundPaymentModal";
+import ViewInvoiceModal from "../sales/ViewInvoiceModal";
 
 const PendingInvoicesTab = ({ invoices, onRefresh, searchQuery }) => {
   const { theme } = useTheme();
   const { formatCurrency, formatDate } = useSettings();
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -87,12 +89,14 @@ const PendingInvoicesTab = ({ invoices, onRefresh, searchQuery }) => {
   };
 
   const handlePay = (invoice) => {
+    console.log("handlePay called with invoice:", invoice);
     setSelectedInvoice(invoice);
     setIsPayModalOpen(true);
     setOpenDropdown(null);
   };
 
   const handleRefund = (invoice) => {
+    console.log("handleRefund called with invoice:", invoice);
     setSelectedInvoice(invoice);
     setIsRefundModalOpen(true);
     setOpenDropdown(null);
@@ -136,18 +140,20 @@ const PendingInvoicesTab = ({ invoices, onRefresh, searchQuery }) => {
   };
 
   const handleView = (invoice) => {
+    console.log("handleView called with invoice:", invoice);
+    setSelectedInvoice(invoice);
+    setIsViewModalOpen(true);
     setOpenDropdown(null);
-    // TODO: Implement view invoice functionality
-    console.log("View invoice:", invoice);
   };
 
   // Render action - always show 3-dot dropdown menu (consistent with other tables)
   const renderAction = (invoice) => {
     const status = getPaymentStatus(invoice);
     const amountPaid = parseFloat(invoice.amount_paid || 0);
+    const isDropdownOpen = openDropdown === invoice.id;
 
     return (
-      <div className="relative" ref={dropdownRef}>
+      <div className="relative">
         <button
           ref={(el) => (buttonRefs.current[invoice.id] = el)}
           onClick={() => handleToggleDropdown(invoice)}
@@ -156,8 +162,9 @@ const PendingInvoicesTab = ({ invoices, onRefresh, searchQuery }) => {
           <MoreHorizontal size={18} className={theme.textSecondary} />
         </button>
 
-        {openDropdown === invoice.id && (
+        {isDropdownOpen && (
           <div
+            ref={dropdownRef}
             className={`fixed w-48 ${theme.bgCard} rounded-lg ${theme.shadow} border ${theme.borderPrimary} py-1 z-[9999]`}
             style={{
               top: `${menuPosition.top}px`,
@@ -166,7 +173,7 @@ const PendingInvoicesTab = ({ invoices, onRefresh, searchQuery }) => {
           >
             <button
               onClick={() => handleView(invoice)}
-              className={`w-full flex items-center gap-3 px-4 py-2 text-sm ${theme.textPrimary} ${theme.bgHover} transition`}
+              className={`w-full flex items-center gap-3 px-4 py-2 text-sm ${theme.textPrimary} hover:${theme.bgHover} transition text-left`}
             >
               <Eye size={16} />
               View Invoice
@@ -176,7 +183,7 @@ const PendingInvoicesTab = ({ invoices, onRefresh, searchQuery }) => {
             {status !== "paid" && (
               <button
                 onClick={() => handlePay(invoice)}
-                className={`w-full flex items-center gap-3 px-4 py-2 text-sm ${theme.textPrimary} ${theme.bgHover} transition`}
+                className={`w-full flex items-center gap-3 px-4 py-2 text-sm ${theme.textPrimary} hover:${theme.bgHover} transition text-left`}
               >
                 <CreditCard size={16} className="text-green-600" />
                 Make Payment
@@ -193,7 +200,7 @@ const PendingInvoicesTab = ({ invoices, onRefresh, searchQuery }) => {
                     theme.mode === "light"
                       ? "hover:bg-orange-50"
                       : "hover:bg-orange-900/20"
-                  } transition`}
+                  } transition text-left`}
                 >
                   <RotateCcw size={16} />
                   Refund Payment
@@ -334,6 +341,18 @@ const PendingInvoicesTab = ({ invoices, onRefresh, searchQuery }) => {
             setSelectedInvoice(null);
           }}
           onSuccess={handleRefundSuccess}
+          invoice={selectedInvoice}
+        />
+      )}
+
+      {/* View Invoice Modal */}
+      {isViewModalOpen && selectedInvoice && (
+        <ViewInvoiceModal
+          isOpen={isViewModalOpen}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setSelectedInvoice(null);
+          }}
           invoice={selectedInvoice}
         />
       )}

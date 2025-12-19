@@ -314,6 +314,7 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess, purchase }) => {
         ...newItems[index],
         product_id: productId,
         description: selectedProduct.name,
+        unit: selectedProduct.unit || "Pieces", // Fetch unit from product
         unit_cost: parseFloat(
           selectedProduct.cost_price || selectedProduct.selling_price || 0
         ),
@@ -711,12 +712,10 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess, purchase }) => {
                     >
                       Unit
                     </label>
-                    {isEditMode &&
-                    item.item_type === "existing" &&
-                    item.product_id ? (
+                    {item.item_type === "existing" && item.product_id ? (
                       <div
                         className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgAccent} ${theme.textSecondary} text-sm font-medium`}
-                        title="Unit cannot be changed when editing existing products"
+                        title="Unit is determined by the selected product"
                       >
                         {item.unit}
                       </div>
@@ -745,17 +744,19 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess, purchase }) => {
                       Unit Cost
                     </label>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
+                      type="text"
+                      inputMode="decimal"
                       value={item.unit_cost}
-                      onChange={(e) =>
-                        updateItem(
-                          index,
-                          "unit_cost",
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+                          updateItem(
+                            index,
+                            "unit_cost",
+                            value === "" ? 0 : parseFloat(value) || 0
+                          );
+                        }
+                      }}
                       className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgCard} ${theme.textPrimary} text-sm focus:ring-2 focus:ring-[#667eea]`}
                     />
                   </div>
@@ -813,17 +814,19 @@ const RecordPurchaseModal = ({ isOpen, onClose, onSuccess, purchase }) => {
                         Selling Price
                       </label>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
                         value={item.new_product_selling_price}
-                        onChange={(e) =>
-                          updateItem(
-                            index,
-                            "new_product_selling_price",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+                            updateItem(
+                              index,
+                              "new_product_selling_price",
+                              value === "" ? 0 : parseFloat(value) || 0
+                            );
+                          }
+                        }}
                         placeholder="0.00"
                         className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgCard} ${theme.textPrimary} text-sm focus:ring-2 focus:ring-[#667eea]`}
                       />

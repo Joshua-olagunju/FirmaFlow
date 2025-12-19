@@ -34,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/journal_helpers.php';
+require_once __DIR__ . '/../includes/AccountResolver.php';
+require_once __DIR__ . '/journal_helpers.php';
 require_once __DIR__ . '/../includes/company_settings_helper.php';
 require_once __DIR__ . '/../includes/AccountResolver.php';
 
@@ -205,6 +207,43 @@ try {
                         AND notes LIKE ?
                     ");
                     $stmt->execute([$company_id, "%Invoice: {$invoice['invoice_no']}%"]);
+                }
+                
+                // CREATE JOURNAL ENTRY FOR REFUND (Reverses the payment)
+                try {
+                    $resolver = new AccountResolver($pdo, $company_id);
+                    $cash_account_id = $resolver->cash();
+                    $ar_account_id = $resolver->ar();
+                    
+                    if ($cash_account_id && $ar_account_id) {
+                        $journal_lines = [
+                            [
+                                'account_id' => $ar_account_id,
+                                'debit' => $refund_amount,  // DEBIT Accounts Receivable (increases what customer owes)
+                                'credit' => 0
+                            ],
+                            [
+                                'account_id' => $cash_account_id,
+                                'debit' => 0,
+                                'credit' => $refund_amount  // CREDIT Cash (decreases cash - money going out)
+                            ]
+                        ];
+                        
+                        createAutomaticJournalEntry(
+                            $pdo,
+                            $company_id,
+                            'payment_refund',
+                            $refund_id,
+                            "Refund for Invoice #{$invoice['invoice_no']}" . ($reason ? " - $reason" : ""),
+                            $journal_lines,
+                            date('Y-m-d')
+                        );
+                        
+                        error_log("✅ Refund journal entry created for Invoice #{$invoice['invoice_no']}, Amount: ₦$refund_amount");
+                    }
+                } catch (Exception $je) {
+                    error_log("⚠️ Failed to create journal entry for refund: " . $je->getMessage());
+                    // Don't fail the refund if journal entry fails
                 }
                 
                 $pdo->commit();
