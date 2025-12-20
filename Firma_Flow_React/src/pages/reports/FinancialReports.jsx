@@ -264,9 +264,7 @@ const FinancialReports = () => {
     <Layout onMenuClick={(fn) => (openSidebarRef.current = fn)}>
       <div className="w-full md:flex flex-col flex-1 items-center justify-center gap-8">
         {/* Page Header */}
-        <div
-          className={`w-full flex justify-between items-start rounded-b-lg align-top p-4 mt-0 ${theme.bgSecondary} border-b ${theme.border}`}
-        >
+        <div className="w-full flex justify-between items-start rounded-b-lg align-top p-4 bg-gradient-to-br from-[#667eea] to-[#764ba2] mt-0">
           {/* Left Side - Title */}
           <div className="flex-col items-center flex-1">
             <h1 className="text-white font-bold text-2xl md:text-3xl">
@@ -504,8 +502,9 @@ const FinancialReports = () => {
           <AnimatePresence>
             {!isLoading && reportData && (
               <AIInsights
-                reportData={{ insights: aiInsights }}
+                reportData={{ insights: aiInsights, ...reportData }}
                 isLoading={loadingInsights}
+                reportType={selectedReportType}
               />
             )}
           </AnimatePresence>
