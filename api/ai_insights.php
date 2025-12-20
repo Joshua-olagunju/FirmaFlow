@@ -36,14 +36,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     
-    $reportType = $input['reportType'] ?? '';
-    $reportData = $input['reportData'] ?? [];
-    
-    if (empty($reportType) || empty($reportData)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Missing report type or data']);
-        exit;
-    }
+    $action = $input['action'] ?? 'insights';
     
     try {
         // Get Groq API Key from environment variable (stored in .env)
@@ -54,18 +47,49 @@ if ($method === 'POST') {
             throw new Exception('GROQ_API_KEY not configured. Please add it to your .env file.');
         }
         
-        // Generate insights based on report type
-        $insights = generateInsights($reportType, $reportData, $groqApiKey);
-        
-        echo json_encode([
-            'success' => true,
-            'insights' => $insights
-        ]);
+        if ($action === 'chat') {
+            // Handle chat conversation
+            $message = $input['message'] ?? '';
+            $reportContext = $input['reportContext'] ?? '';
+            $conversationHistory = $input['conversationHistory'] ?? [];
+            
+            if (empty($message)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Message is required']);
+                exit;
+            }
+            
+            $response = handleChatMessage($message, $reportContext, $conversationHistory, $groqApiKey);
+            
+            echo json_encode([
+                'success' => true,
+                'response' => $response
+            ]);
+            
+        } else {
+            // Handle insights generation
+            $reportType = $input['reportType'] ?? '';
+            $reportData = $input['reportData'] ?? [];
+            
+            if (empty($reportType) || empty($reportData)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing report type or data']);
+                exit;
+            }
+            
+            // Generate insights based on report type
+            $insights = generateInsights($reportType, $reportData, $groqApiKey);
+            
+            echo json_encode([
+                'success' => true,
+                'insights' => $insights
+            ]);
+        }
         
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode([
-            'error' => 'Failed to generate insights',
+            'error' => 'Failed to process request',
             'message' => $e->getMessage()
         ]);
     }
@@ -175,3 +199,99 @@ function parseInsights($content) {
     // Limit to 5 insights
     return array_slice($insights, 0, 5);
 }
+
+function handleChatMessage($message, $reportContext, $conversationHistory, $apiKey) {
+    // Build conversation messages for API
+    $messages = [
+        [
+            'role' => 'system',
+            'content' => 'You are a helpful AI Financial Assistant. Your role is to help users understand their financial reports and provide general financial guidance. 
+
+IMPORTANT GUIDELINES:
+1. You have access to the user\'s financial report data provided in the context
+2. Answer questions about the specific numbers, trends, and metrics in their report
+3. Provide clear, actionable financial advice and recommendations
+4. Explain accounting concepts and best practices when asked
+5. Be conversational and friendly while maintaining professionalism
+6. Always remind users that you are an AI and not a certified financial advisor
+7. For critical financial decisions, recommend consulting with a professional
+8. Focus on insights related to the report data when applicable
+
+Keep responses concise (2-4 paragraphs) and easy to understand.'
+        ]
+    ];
+    
+    // Add report context if available
+    if (!empty($reportContext)) {
+        $reportContextData = json_decode($reportContext, true);
+        $reportName = $reportContextData['reportName'] ?? 'Financial Report';
+        
+        $messages[] = [
+            'role' => 'system',
+            'content' => "CONTEXT: The user has just generated a {$reportName}. Here is their report data:\n\n" . json_encode($reportContextData['data'], JSON_PRETTY_PRINT) . "\n\nUse this data to answer their questions specifically about their financial situation."
+        ];
+    }
+    
+    // Add conversation history (last 5 messages)
+    foreach (array_slice($conversationHistory, -5) as $msg) {
+        if (isset($msg['role']) && isset($msg['content'])) {
+            $messages[] = [
+                'role' => $msg['role'],
+                'content' => $msg['content']
+            ];
+        }
+    }
+    
+    // Add current user message
+    $messages[] = [
+        'role' => 'user',
+        'content' => $message
+    ];
+    
+    // Call Groq API
+    $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
+    
+    $data = [
+        'model' => 'llama-3.3-70b-versatile',
+        'messages' => $messages,
+        'temperature' => 0.8,
+        'max_tokens' => 800,
+        'top_p' => 1,
+        'stream' => false
+    ];
+    
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($data),
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $apiKey
+        ],
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false
+    ]);
+    
+    $response = curl_exec($ch);
+    $curlError = curl_error($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($response === false) {
+        throw new Exception('cURL error: ' . $curlError);
+    }
+    
+    if ($httpCode !== 200) {
+        throw new Exception('Groq API request failed (HTTP ' . $httpCode . '): ' . $response);
+    }
+    
+    $result = json_decode($response, true);
+    
+    if (isset($result['choices'][0]['message']['content'])) {
+        return $result['choices'][0]['message']['content'];
+    }
+    
+    throw new Exception('Invalid response from AI service');
+}
+

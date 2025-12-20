@@ -8,3 +8,5 @@ export { default as TrialBalanceReport } from "./components/TrialBalanceReport";
 export { default as CashFlowReport } from "./components/CashFlowReport";
 export { default as SalesSummaryReport } from "./components/SalesSummaryReport";
 export { default as InventorySummaryReport } from "./components/InventorySummaryReport";
+export { default as AIInsights } from "./components/AIInsights";
+export { default as FinancialChatModal } from "./components/FinancialChatModal";

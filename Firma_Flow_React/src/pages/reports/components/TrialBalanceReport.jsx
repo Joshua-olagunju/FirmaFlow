@@ -160,7 +160,7 @@ const TrialBalanceReport = ({ data, endDate }) => {
                       <th
                         className={`text-left p-3 ${theme.textSecondary} font-semibold text-sm`}
                       >
-                        Account Code
+                        Code
                       </th>
                       <th
                         className={`text-left p-3 ${theme.textSecondary} font-semibold text-sm`}
@@ -176,11 +176,6 @@ const TrialBalanceReport = ({ data, endDate }) => {
                         className={`text-right p-3 ${theme.textSecondary} font-semibold text-sm`}
                       >
                         Credit
-                      </th>
-                      <th
-                        className={`text-right p-3 ${theme.textSecondary} font-semibold text-sm`}
-                      >
-                        Balance
                       </th>
                     </tr>
                   </thead>
@@ -202,23 +197,14 @@ const TrialBalanceReport = ({ data, endDate }) => {
                           {account.name || account.account_name}
                         </td>
                         <td className="p-3 text-right text-blue-600 font-medium">
-                          {formatCurrency(
-                            account.total_debits || account.debit || 0
-                          )}
+                          {account.debit_balance > 0
+                            ? formatCurrency(account.debit_balance)
+                            : "-"}
                         </td>
                         <td className="p-3 text-right text-purple-600 font-medium">
-                          {formatCurrency(
-                            account.total_credits || account.credit || 0
-                          )}
-                        </td>
-                        <td
-                          className={`p-3 text-right font-bold ${
-                            (account.balance || 0) >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {formatCurrency(Math.abs(account.balance || 0))}
+                          {account.credit_balance > 0
+                            ? formatCurrency(account.credit_balance)
+                            : "-"}
                         </td>
                       </motion.tr>
                     ))}

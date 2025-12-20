@@ -140,11 +140,11 @@ function getTrialBalance($pdo, $company_id, $as_of_date) {
             a.code,
             a.name,
             a.type,
-            COALESCE(SUM(jl.debit), 0) as total_debits,
-            COALESCE(SUM(jl.credit), 0) as total_credits,
+            COALESCE(SUM(CASE WHEN je.entry_date <= ? THEN jl.debit ELSE 0 END), 0) as total_debits,
+            COALESCE(SUM(CASE WHEN je.entry_date <= ? THEN jl.credit ELSE 0 END), 0) as total_credits,
             CASE 
-                WHEN a.type IN ('asset', 'expense') THEN COALESCE(SUM(jl.debit - jl.credit), 0)
-                WHEN a.type IN ('liability', 'equity', 'income') THEN COALESCE(SUM(jl.credit - jl.debit), 0)
+                WHEN a.type IN ('asset', 'expense') THEN COALESCE(SUM(CASE WHEN je.entry_date <= ? THEN jl.debit - jl.credit ELSE 0 END), 0)
+                WHEN a.type IN ('liability', 'equity', 'income') THEN COALESCE(SUM(CASE WHEN je.entry_date <= ? THEN jl.credit - jl.debit ELSE 0 END), 0)
                 ELSE 0
             END as balance
         FROM accounts a
@@ -152,11 +152,10 @@ function getTrialBalance($pdo, $company_id, $as_of_date) {
         LEFT JOIN journal_entries je ON jl.journal_id = je.id
         WHERE a.company_id = ?
             AND a.is_active = 1
-            AND (je.entry_date IS NULL OR je.entry_date <= ?)
         GROUP BY a.id, a.code, a.name, a.type
         ORDER BY a.type, a.code
     ");
-    $stmt->execute([$company_id, $as_of_date]);
+    $stmt->execute([$as_of_date, $as_of_date, $as_of_date, $as_of_date, $company_id]);
     $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $trial_balance = [];
@@ -175,6 +174,27 @@ function getTrialBalance($pdo, $company_id, $as_of_date) {
         $account_credits = floatval($account['total_credits']);
         $account_balance = floatval($account['balance']);
         
+        // Determine debit_balance and credit_balance for display
+        // Based on account type and net balance
+        $debit_balance = 0;
+        $credit_balance = 0;
+        
+        if ($account['type'] == 'asset' || $account['type'] == 'expense') {
+            // Assets and Expenses normally have debit balances
+            if ($account_balance > 0) {
+                $debit_balance = $account_balance;
+            } elseif ($account_balance < 0) {
+                $credit_balance = abs($account_balance);
+            }
+        } else {
+            // Liabilities, Equity, Income normally have credit balances
+            if ($account_balance > 0) {
+                $credit_balance = $account_balance;
+            } elseif ($account_balance < 0) {
+                $debit_balance = abs($account_balance);
+            }
+        }
+        
         $account_data = [
             'id' => $account['id'],
             'code' => $account['code'],
@@ -182,7 +202,9 @@ function getTrialBalance($pdo, $company_id, $as_of_date) {
             'type' => $account['type'],
             'total_debits' => $account_debits,
             'total_credits' => $account_credits,
-            'balance' => $account_balance
+            'balance' => $account_balance,
+            'debit_balance' => $debit_balance,
+            'credit_balance' => $credit_balance
         ];
         
         // Add to appropriate category
@@ -207,9 +229,9 @@ function getTrialBalance($pdo, $company_id, $as_of_date) {
         // Add to main trial balance
         $trial_balance[] = $account_data;
         
-        // Calculate grand totals (sum of all debit and credit amounts)
-        $grand_total_debits += $account_debits;
-        $grand_total_credits += $account_credits;
+        // Calculate grand totals for trial balance (sum of debit and credit balances, not total debits/credits)
+        $grand_total_debits += $debit_balance;
+        $grand_total_credits += $credit_balance;
     }
     
     // Check if books are balanced (total debits should equal total credits)
