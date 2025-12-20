@@ -81,8 +81,10 @@ export default function Login() {
           text: "Login successful! Redirecting...",
           type: "success",
         });
-        // Redirect after 2s to allow user to see message
-        setTimeout(() => navigate("/dashboard"), 2000);
+        
+        // Role-based redirect: admin goes to /dashboard, user/staff goes to /user-dashboard
+        const redirectPath = data.user?.role === "admin" ? "/dashboard" : "/user-dashboard";
+        setTimeout(() => navigate(redirectPath), 2000);
       } else {
         // Show the specific error message from the server
         setMessage({

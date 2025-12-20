@@ -10,8 +10,17 @@ session_start();
 require_once __DIR__ . '/../config/env_loader.php';
 loadEnv();
 
-// CORS Headers
-header('Access-Control-Allow-Origin: http://localhost:5173');
+// CORS Headers - Allow multiple localhost ports
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174'
+];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowed_origins, true)) {
+    header("Access-Control-Allow-Origin: $origin");
+}
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');

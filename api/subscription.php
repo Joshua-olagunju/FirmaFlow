@@ -5,13 +5,22 @@ declare(strict_types=1);
 
 session_start();
 
-// Basic CORS - prefer config or env to restrict origin in production
-$allowedOrigin = getenv('ALLOWED_ORIGIN') ?: ''; // e.g. https://yourdomain.com
-if ($allowedOrigin) {
-    header('Access-Control-Allow-Origin: ' . $allowedOrigin);
+// CORS headers - support both dev ports
+$allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+if (in_array($origin, $allowedOrigins)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Credentials: true');
 } else {
-    header('Access-Control-Allow-Origin: *');
+    // Fallback for production or other origins
+    $allowedOrigin = getenv('ALLOWED_ORIGIN') ?: '';
+    if ($allowedOrigin) {
+        header('Access-Control-Allow-Origin: ' . $allowedOrigin);
+        header('Access-Control-Allow-Credentials: true');
+    }
 }
+
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
@@ -250,9 +259,107 @@ try {
         $userId = requireAuth();
         switch ($action) {
             case 'current':
-                $stmt = $pdo->prepare("SELECT subscription_plan, subscription_status, subscription_start_date, subscription_end_date, last_payment_date, payment_reference FROM users WHERE id = ?");
+                // Get user's company_id
+                $stmt = $pdo->prepare("SELECT company_id, role FROM users WHERE id = ?");
                 $stmt->execute([$userId]);
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $userInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if (!$userInfo) {
+                    json_response(['success' => false, 'message' => 'User not found'], 404);
+                }
+                
+                $companyId = $userInfo['company_id'];
+                $userRole = $userInfo['role'];
+                
+                // If user has no company (shouldn't happen), use their own subscription
+                if (!$companyId) {
+                    $stmt = $pdo->prepare("
+                        SELECT 
+                            subscription_plan, 
+                            subscription_status, 
+                            subscription_start_date, 
+                            subscription_end_date, 
+                            trial_start_date,
+                            trial_end_date,
+                            last_payment_date, 
+                            payment_reference,
+                            created_at
+                        FROM users 
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$userId]);
+                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                } else {
+                    // Get subscription from company owner (admin with same company_id)
+                    // First try to find the admin user for this company
+                    $stmt = $pdo->prepare("
+                        SELECT 
+                            subscription_plan, 
+                            subscription_status, 
+                            subscription_start_date, 
+                            subscription_end_date, 
+                            trial_start_date,
+                            trial_end_date,
+                            last_payment_date, 
+                            payment_reference,
+                            created_at
+                        FROM users 
+                        WHERE company_id = ? AND role = 'admin'
+                        ORDER BY created_at ASC
+                        LIMIT 1
+                    ");
+                    $stmt->execute([$companyId]);
+                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    // If no admin found, fallback to user's own subscription
+                    if (!$row) {
+                        $stmt = $pdo->prepare("
+                            SELECT 
+                                subscription_plan, 
+                                subscription_status, 
+                                subscription_start_date, 
+                                subscription_end_date, 
+                                trial_start_date,
+                                trial_end_date,
+                                last_payment_date, 
+                                payment_reference,
+                                created_at
+                            FROM users 
+                            WHERE id = ?
+                        ");
+                        $stmt->execute([$userId]);
+                        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                }
+                
+                // Add calculated fields for countdown
+                if ($row) {
+                    $now = new DateTime();
+                    
+                    // Determine expiration date (subscription or trial)
+                    $expirationDate = null;
+                    if ($row['subscription_end_date']) {
+                        $expirationDate = new DateTime($row['subscription_end_date']);
+                    } elseif ($row['trial_end_date']) {
+                        $expirationDate = new DateTime($row['trial_end_date']);
+                    }
+                    
+                    if ($expirationDate) {
+                        $row['expiration_timestamp'] = $expirationDate->getTimestamp();
+                        $row['seconds_remaining'] = max(0, $expirationDate->getTimestamp() - $now->getTimestamp());
+                        $diff = $now->diff($expirationDate);
+                        $row['days_remaining'] = $diff->days + 1;
+                    } else {
+                        $row['expiration_timestamp'] = 0;
+                        $row['seconds_remaining'] = 0;
+                        $row['days_remaining'] = 0;
+                    }
+                    
+                    // Add inheritance information
+                    $row['inherited_from'] = ($companyId && $userRole !== 'admin') ? 'company_admin' : 'self';
+                    $row['is_company_subscription'] = ($companyId && $userRole !== 'admin');
+                }
+                
                 json_response(['success' => true, 'data' => $row]);
                 break;
 

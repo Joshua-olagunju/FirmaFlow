@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { UserProvider } from "./contexts/UserContext.jsx";
 import { ThemeProvider } from "./contexts/ThemeContext.jsx";
 import { SettingsProvider } from "./contexts/SettingsContext.jsx";
+import { SubscriptionProvider } from "./contexts/SubscriptionContext.jsx";
 
 const rootElement = document.getElementById("root");
 if (rootElement) {
@@ -13,11 +14,13 @@ if (rootElement) {
     <StrictMode>
       <BrowserRouter>
         <UserProvider>
-          <ThemeProvider>
-            <SettingsProvider>
-              <App />
-            </SettingsProvider>
-          </ThemeProvider>
+          <SubscriptionProvider>
+            <ThemeProvider>
+              <SettingsProvider>
+                <App />
+              </SettingsProvider>
+            </ThemeProvider>
+          </SubscriptionProvider>
         </UserProvider>
       </BrowserRouter>
     </StrictMode>

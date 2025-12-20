@@ -5,7 +5,7 @@ import { useUserStore } from "../stores/useUserStore";
 import { useTheme } from "../contexts/ThemeContext";
 import ThemeToggle from "./ThemeToggle";
 import LogoutModal from "./modals/LogoutModal";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
@@ -24,6 +24,12 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
       : "User",
     company: user?.company_name || "FirmaFlow",
   };
+
+  // Filter menu items based on user role
+  const filteredPages = useMemo(() => {
+    const userRole = user?.role || "user";
+    return pageData.filter(page => page.roles?.includes(userRole));
+  }, [user?.role]);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -155,12 +161,20 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
         <div className="flex-1 flex flex-col w-full overflow-y-auto overflow-x-hidden min-h-0">
           {/* Navigation Items */}
           <div className="flex flex-col w-full mb-2">
-            {pageData.map((page, index) => {
-              const isActive = location.pathname === page.path;
+            {filteredPages.map((page, index) => {
+              // For user role, Dashboard link should point to /user-dashboard
+              const linkPath = user?.role === "user" && page.path === "/dashboard" 
+                ? "/user-dashboard" 
+                : page.path;
+              
+              // Check if this menu item is active
+              const isActive = location.pathname === linkPath || 
+                (location.pathname === "/user-dashboard" && page.path === "/dashboard");
+              
               const Icon = page.icon;
               return (
                 <Link
-                  to={page.path}
+                  to={linkPath}
                   key={index}
                   onClick={(e) => {
                     // Don't auto-expand on mobile when clicking a link
