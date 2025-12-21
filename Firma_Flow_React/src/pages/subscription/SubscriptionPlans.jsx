@@ -107,7 +107,8 @@ const SubscriptionPlans = ({
         name: user.full_name || user.username,
         phone: user.phone || "",
         planName: plan.name.toLowerCase(),
-        billingPeriod: billingPeriod === '6-months' ? 'six_months' : billingPeriod,
+        billingPeriod:
+          billingPeriod === "6-months" ? "six_months" : billingPeriod,
         onSuccess: () => {
           onPaymentSuccess();
           setIsProcessing(false);
@@ -128,10 +129,10 @@ const SubscriptionPlans = ({
   return (
     <div className="space-y-6">
       {/* Billing Period Toggle */}
-      <div className={`${theme.cardBg} rounded-lg shadow p-4 md:p-6`}>
+      <div className={`${theme.bgCard} rounded-lg shadow p-4 md:p-6`}>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h3 className={`text-lg font-semibold ${theme.text}`}>
+            <h3 className={`text-lg font-semibold ${theme.textPrimary}`}>
               Choose Your Billing Period
             </h3>
             <p className={`text-sm ${theme.textSecondary} mt-1`}>
@@ -147,7 +148,7 @@ const SubscriptionPlans = ({
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition relative ${
                   billingPeriod === period.value
                     ? "bg-[#667eea] text-white"
-                    : `${theme.cardBg} border ${theme.border} ${theme.text} hover:border-[#667eea]`
+                    : `${theme.bgCard} border ${theme.borderPrimary} ${theme.textPrimary} hover:border-[#667eea]`
                 }`}
               >
                 {period.label}
@@ -172,7 +173,7 @@ const SubscriptionPlans = ({
           return (
             <div
               key={plan.id}
-              className={`${theme.cardBg} rounded-lg shadow relative ${
+              className={`${theme.bgCard} rounded-lg shadow relative ${
                 plan.recommended
                   ? "ring-2 ring-[#667eea] transform scale-105"
                   : ""
@@ -189,14 +190,14 @@ const SubscriptionPlans = ({
 
               <div className="p-6">
                 {/* Plan Name */}
-                <h3 className={`text-2xl font-bold ${theme.text} mb-2`}>
+                <h3 className={`text-2xl font-bold ${theme.textPrimary} mb-2`}>
                   {plan.name}
                 </h3>
 
                 {/* Price */}
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
-                    <span className={`text-3xl font-bold ${theme.text}`}>
+                    <span className={`text-3xl font-bold ${theme.textPrimary}`}>
                       {formatCurrency(pricing.total)}
                     </span>
                     <span className={`text-sm ${theme.textSecondary}`}>
@@ -206,7 +207,9 @@ const SubscriptionPlans = ({
 
                   {pricing.discount > 0 && (
                     <div className="mt-1">
-                      <span className={`text-sm ${theme.textSecondary} line-through`}>
+                      <span
+                        className={`text-sm ${theme.textSecondary} line-through`}
+                      >
                         {formatCurrency(pricing.original)}
                       </span>
                       <span className="text-sm text-green-500 ml-2 font-medium">
@@ -224,7 +227,7 @@ const SubscriptionPlans = ({
                         className="flex-shrink-0 text-green-500 mt-0.5"
                         size={18}
                       />
-                      <span className={`text-sm ${theme.text}`}>
+                      <span className={`text-sm ${theme.textPrimary}`}>
                         {feature}
                       </span>
                     </li>
@@ -237,7 +240,7 @@ const SubscriptionPlans = ({
                   disabled={isCurrentPlan || isProcessing}
                   className={`w-full py-3 rounded-lg font-medium transition ${
                     isCurrentPlan
-                      ? `${theme.cardBg} border ${theme.border} ${theme.textSecondary} cursor-not-allowed`
+                      ? `${theme.bgCard} border ${theme.borderPrimary} ${theme.textSecondary} cursor-not-allowed`
                       : plan.recommended
                       ? "bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white hover:shadow-lg"
                       : `bg-[#667eea] text-white hover:bg-[#5568d3]`

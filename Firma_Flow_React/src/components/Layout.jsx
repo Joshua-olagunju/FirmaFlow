@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { useTheme } from "../contexts/ThemeContext";
 import { motion } from "framer-motion";
+import FloatingAIBubble from "./AIAssistant/FloatingAIBubble";
+import AIAssistantChat from "./AIAssistant/AIAssistantChat";
 
 const Layout = ({ children, onMenuClick }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -10,6 +12,7 @@ const Layout = ({ children, onMenuClick }) => {
     const saved = localStorage.getItem("sidebar-collapsed");
     return saved === "true";
   });
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const { theme } = useTheme();
 
   // Persist collapse state to localStorage
@@ -33,6 +36,15 @@ const Layout = ({ children, onMenuClick }) => {
           onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
         />
       </div>
+
+      {/* AI Assistant Bubble */}
+      <FloatingAIBubble onOpenChat={() => setIsAIChatOpen(true)} />
+
+      {/* AI Assistant Chat */}
+      <AIAssistantChat
+        isOpen={isAIChatOpen}
+        onClose={() => setIsAIChatOpen(false)}
+      />
 
       {/* Main Content - Scrollable - Expands when sidebar collapses */}
       <motion.div
