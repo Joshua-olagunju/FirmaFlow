@@ -1,4 +1,10 @@
-import { CheckCircle, AlertCircle, Calendar, Clock, XCircle } from "lucide-react";
+import {
+  CheckCircle,
+  AlertCircle,
+  Calendar,
+  Clock,
+  XCircle,
+} from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
 import CancelSubscriptionModal from "./CancelSubscriptionModal";
 import { useState } from "react";
@@ -7,12 +13,16 @@ const CurrentPlanCard = ({ subscriptionData, formatCurrency, onRefresh }) => {
   const { theme } = useTheme();
   const [showCancelModal, setShowCancelModal] = useState(false);
 
-  if (!subscriptionData || !subscriptionData.data || !subscriptionData.data.subscription_plan) {
+  if (
+    !subscriptionData ||
+    !subscriptionData.data ||
+    !subscriptionData.data.subscription_plan
+  ) {
     return (
-      <div className={`${theme.cardBg} rounded-lg shadow p-6`}>
+      <div className={`${theme.bgCard} rounded-lg shadow p-6`}>
         <div className="text-center py-8">
           <AlertCircle className="mx-auto mb-4 text-yellow-500" size={48} />
-          <h3 className={`text-xl font-semibold mb-2 ${theme.text}`}>
+          <h3 className={`text-xl font-semibold mb-2 ${theme.textPrimary}`}>
             No Active Subscription
           </h3>
           <p className={`${theme.textSecondary} mb-4`}>
@@ -26,12 +36,12 @@ const CurrentPlanCard = ({ subscriptionData, formatCurrency, onRefresh }) => {
   const subscription = {
     id: subscriptionData.data.id,
     plan_name: subscriptionData.data.subscription_plan,
-    status: subscriptionData.data.subscription_status || 'inactive',
+    status: subscriptionData.data.subscription_status || "inactive",
     start_date: subscriptionData.data.subscription_start_date,
     end_date: subscriptionData.data.subscription_end_date,
     trial_ends_at: subscriptionData.data.trial_ends_at,
     amount: subscriptionData.data.amount || 0,
-    billing_period: subscriptionData.data.billing_type || 'monthly'
+    billing_period: subscriptionData.data.billing_type || "monthly",
   };
   const isActive = subscription.status === "active";
   const isTrial = subscription.status === "trial";
@@ -59,11 +69,11 @@ const CurrentPlanCard = ({ subscriptionData, formatCurrency, onRefresh }) => {
 
   return (
     <>
-      <div className={`${theme.cardBg} rounded-lg shadow p-4 md:p-6`}>
+      <div className={`${theme.bgCard} rounded-lg shadow p-4 md:p-6`}>
         {/* Status Badge */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
           <div>
-            <h3 className={`text-xl font-semibold ${theme.text}`}>
+            <h3 className={`text-xl font-semibold ${theme.textPrimary}`}>
               Current Subscription
             </h3>
           </div>
@@ -113,7 +123,7 @@ const CurrentPlanCard = ({ subscriptionData, formatCurrency, onRefresh }) => {
           {/* Plan Name */}
           <div>
             <p className={`text-sm ${theme.textSecondary} mb-1`}>Plan</p>
-            <p className={`text-lg font-semibold ${theme.text}`}>
+            <p className={`text-lg font-semibold ${theme.textPrimary}`}>
               {subscription.plan_name || "N/A"}
             </p>
           </div>
@@ -121,7 +131,7 @@ const CurrentPlanCard = ({ subscriptionData, formatCurrency, onRefresh }) => {
           {/* Price */}
           <div>
             <p className={`text-sm ${theme.textSecondary} mb-1`}>Price</p>
-            <p className={`text-lg font-semibold ${theme.text}`}>
+            <p className={`text-lg font-semibold ${theme.textPrimary}`}>
               {formatCurrency(subscription.amount || 0)}/
               {subscription.billing_period || "month"}
             </p>
@@ -133,7 +143,7 @@ const CurrentPlanCard = ({ subscriptionData, formatCurrency, onRefresh }) => {
               <Calendar className="inline mr-1" size={14} />
               Start Date
             </p>
-            <p className={`text-base ${theme.text}`}>
+            <p className={`text-base ${theme.textPrimary}`}>
               {formatDate(subscription.start_date)}
             </p>
           </div>
@@ -144,7 +154,7 @@ const CurrentPlanCard = ({ subscriptionData, formatCurrency, onRefresh }) => {
               <Calendar className="inline mr-1" size={14} />
               {isTrial ? "Trial Ends" : "Next Billing"}
             </p>
-            <p className={`text-base ${theme.text}`}>
+            <p className={`text-base ${theme.textPrimary}`}>
               {formatDate(
                 isTrial ? subscription.trial_ends_at : subscription.end_date
               )}

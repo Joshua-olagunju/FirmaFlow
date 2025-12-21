@@ -1,6 +1,13 @@
 import { useState, useRef } from "react";
 import Layout from "../../components/Layout";
-import { Menu, Crown, Check, Sparkles, TrendingUp, History } from "lucide-react";
+import {
+  Menu,
+  Crown,
+  Check,
+  Sparkles,
+  TrendingUp,
+  History,
+} from "lucide-react";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useUser } from "../../contexts/UserContext";
@@ -12,9 +19,9 @@ const Subscription = () => {
   const { theme } = useTheme();
   const { formatCurrency } = useSettings();
   const { user } = useUser();
-  const { 
-    subscriptionStatus, 
-    refreshSubscription, 
+  const {
+    subscriptionStatus,
+    refreshSubscription,
     isLoading: subscriptionLoading,
     isInherited,
     inheritedFrom,
@@ -136,15 +143,15 @@ const Subscription = () => {
 
   return (
     <Layout onMenuClick={(fn) => (openSidebarRef.current = fn)}>
-      <div className="w-full flex flex-col flex-1 gap-6 px-2 md:px-4 pb-8">
+      <div className="w-full flex flex-col flex-1 gap-6  pb-8">
         {/* Header */}
-        <div className="w-full flex justify-between items-start rounded-b-lg align-top p-4 md:p-6 bg-gradient-to-br from-[#667eea] to-[#764ba2] mt-0">
+        <div className="w-full flex justify-between items-start rounded-b-lg align-top p-4 bg-gradient-to-br from-[#667eea] to-[#764ba2] mt-0">
           <div className="flex-col items-center pb-2 md:pb-4 flex-1">
-            <h2 className="text-white font-bold text-xl md:text-3xl flex items-center gap-2">
+            <h1 className="text-white font-bold text-2xl md:text-3xl flex items-center gap-2">
               <Crown size={32} />
               Subscription Plans
-            </h2>
-            <p className="m-0 text-xs md:text-base font-medium text-slate-200 mt-1">
+            </h1>
+            <p className="m-0 text-sm md:text-normal font-500 text-slate-200 mt-1">
               Choose the perfect plan for your business needs
             </p>
           </div>
@@ -163,16 +170,23 @@ const Subscription = () => {
         ) : (
           <>
             {/* Current Plan Banner */}
-            {subscriptionStatus && currentPlan && currentPlan !== 'free' && (
-              <div className={`${theme.cardBg} rounded-xl shadow-lg p-6 border-2 border-green-500`}>
+            {subscriptionStatus && currentPlan && currentPlan !== "free" && (
+              <div
+                className={`${theme.bgCard} rounded-xl shadow-lg p-6 border border-green-500`}
+              >
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                      <Check className="text-green-600 dark:text-green-400" size={24} />
+                      <Check
+                        className="text-green-600 dark:text-green-400"
+                        size={24}
+                      />
                     </div>
                     <div>
-                      <h3 className={`text-lg font-bold ${theme.text}`}>
-                        Current Plan: {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
+                      <h3 className={`text-lg font-bold ${theme.textPrimary}`}>
+                        Current Plan:{" "}
+                        {currentPlan.charAt(0).toUpperCase() +
+                          currentPlan.slice(1)}
                       </h3>
                       <p className={`text-sm ${theme.textSecondary}`}>
                         Status: {subscriptionStatus.subscription_status}
@@ -190,10 +204,13 @@ const Subscription = () => {
                   </div>
                 </div>
                 {isInherited && (
-                  <div className={`mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800`}>
-                    <p className={`text-sm ${theme.text}`}>
-                      <strong>Note:</strong> This subscription is managed by your company administrator. 
-                      Contact your admin to change or upgrade the subscription plan.
+                  <div
+                    className={`mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border ${theme.borderPrimary}`}
+                  >
+                    <p className={`text-sm ${theme.textSecondary}`}>
+                      <strong>Note:</strong> This subscription is managed by
+                      your company administrator. Contact your admin to change
+                      or upgrade the subscription plan.
                     </p>
                   </div>
                 )}
@@ -201,10 +218,12 @@ const Subscription = () => {
             )}
 
             {/* Billing Period Selector */}
-            <div className={`${theme.cardBg} rounded-xl shadow-lg p-6`}>
+            <div className={`${theme.bgCard} rounded-xl shadow-lg p-6`}>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                  <h3 className={`text-lg font-bold ${theme.text} mb-1`}>Choose Your Billing Period</h3>
+                  <h3 className={`text-lg font-bold ${theme.textPrimary} mb-1`}>
+                    Choose Your Billing Period
+                  </h3>
                   <p className={`text-sm ${theme.textSecondary}`}>
                     Save more with longer billing periods
                   </p>
@@ -217,7 +236,7 @@ const Subscription = () => {
                       className={`relative px-6 py-3 rounded-xl font-medium transition-all ${
                         billingPeriod === period.value
                           ? "bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white shadow-lg scale-105"
-                          : `${theme.cardBg} border-2 ${theme.border} ${theme.text} hover:border-[#667eea]`
+                          : `${theme.bgCard} border ${theme.borderPrimary} ${theme.textPrimary} hover:border-[#667eea]`
                       }`}
                     >
                       {period.label}
@@ -236,15 +255,18 @@ const Subscription = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {plans.map((plan) => {
                 const pricing = calculatePrice(plan.basePrice);
-                const isCurrentPlan = currentPlan?.toLowerCase() === plan.name.toLowerCase();
+                const isCurrentPlan =
+                  currentPlan?.toLowerCase() === plan.name.toLowerCase();
 
                 return (
                   <div
                     key={plan.id}
-                    className={`${theme.cardBg} rounded-2xl shadow-xl relative transition-all hover:scale-105 hover:shadow-2xl flex flex-col ${
+                    className={`${
+                      theme.bgCard
+                    } rounded-2xl shadow-xl relative transition-all hover:scale-105 hover:shadow-2xl flex flex-col ${
                       plan.recommended
-                        ? "ring-4 ring-[#667eea] ring-opacity-50"
-                        : "border-2 border-gray-200 dark:border-gray-700"
+                        ? "ring-2 ring-[#667eea] ring-opacity-50"
+                        : `border ${theme.borderPrimary}`
                     }`}
                   >
                     {plan.recommended && (
@@ -258,7 +280,9 @@ const Subscription = () => {
 
                     <div className="p-5 md:p-6 flex flex-col flex-1">
                       {/* Plan Name */}
-                      <h3 className={`text-xl md:text-2xl font-bold ${theme.text} mb-3`}>
+                      <h3
+                        className={`text-xl md:text-2xl font-bold ${theme.textPrimary} mb-3`}
+                      >
                         {plan.name}
                       </h3>
 
@@ -268,14 +292,18 @@ const Subscription = () => {
                           <span className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
                             {formatCurrency(pricing.total)}
                           </span>
-                          <span className={`text-xs md:text-sm ${theme.textSecondary}`}>
+                          <span
+                            className={`text-xs md:text-sm ${theme.textSecondary}`}
+                          >
                             /{billingPeriod}
                           </span>
                         </div>
-                        
+
                         {pricing.discount > 0 && (
                           <div className="mt-2 flex items-center gap-2 flex-wrap">
-                            <span className={`text-sm ${theme.textSecondary} line-through`}>
+                            <span
+                              className={`text-sm ${theme.textSecondary} line-through`}
+                            >
                               {formatCurrency(pricing.original)}
                             </span>
                             <span className="text-sm text-green-600 dark:text-green-400 font-semibold">
@@ -293,7 +321,9 @@ const Subscription = () => {
                               className="flex-shrink-0 text-green-500 mt-0.5"
                               size={18}
                             />
-                            <span className={`text-xs md:text-sm ${theme.text} leading-relaxed`}>
+                            <span
+                              className={`text-xs md:text-sm ${theme.textPrimary} leading-relaxed`}
+                            >
                               {feature}
                             </span>
                           </li>
@@ -306,7 +336,7 @@ const Subscription = () => {
                         disabled={isCurrentPlan || isProcessing || isInherited}
                         className={`w-full py-3 md:py-3.5 rounded-xl font-bold text-sm md:text-base transition-all ${
                           isCurrentPlan || isInherited
-                            ? `${theme.cardBg} border-2 ${theme.border} ${theme.textSecondary} cursor-not-allowed`
+                            ? `${theme.bgCard} border ${theme.borderPrimary} ${theme.textSecondary} cursor-not-allowed`
                             : plan.recommended
                             ? "bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white hover:shadow-2xl hover:scale-105"
                             : `bg-[#667eea] text-white hover:bg-[#5568d3] hover:shadow-xl`
@@ -333,7 +363,9 @@ const Subscription = () => {
                   <History className="text-white" size={24} />
                 </div>
                 <div>
-                  <h3 className={`text-xl md:text-2xl font-bold ${theme.text}`}>
+                  <h3
+                    className={`text-xl md:text-2xl font-bold ${theme.textPrimary}`}
+                  >
                     Billing History
                   </h3>
                   <p className={`text-sm ${theme.textSecondary}`}>

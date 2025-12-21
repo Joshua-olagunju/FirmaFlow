@@ -52,15 +52,18 @@ const CancelSubscriptionModal = ({ subscription, onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div
-        className={`${theme.cardBg} rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto`}
+        className={`${theme.bgCard} rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-              <AlertTriangle className="text-red-600 dark:text-red-400" size={24} />
+              <AlertTriangle
+                className="text-red-600 dark:text-red-400"
+                size={24}
+              />
             </div>
-            <h2 className={`text-xl font-semibold ${theme.text}`}>
+            <h2 className={`text-xl font-semibold ${theme.textPrimary}`}>
               Cancel Subscription
             </h2>
           </div>
@@ -76,7 +79,7 @@ const CancelSubscriptionModal = ({ subscription, onClose, onSuccess }) => {
         <div className="p-4 md:p-6">
           {/* Warning Message */}
           <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <p className={`text-sm ${theme.text}`}>
+            <p className={`text-sm ${theme.textPrimary}`}>
               Are you sure you want to cancel your subscription? You will lose
               access to:
             </p>
@@ -90,7 +93,9 @@ const CancelSubscriptionModal = ({ subscription, onClose, onSuccess }) => {
 
           {/* Reason Input */}
           <div className="mb-4">
-            <label className={`block text-sm font-medium ${theme.text} mb-2`}>
+            <label
+              className={`block text-sm font-medium ${theme.textPrimary} mb-2`}
+            >
               Reason for Cancellation <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -98,7 +103,7 @@ const CancelSubscriptionModal = ({ subscription, onClose, onSuccess }) => {
               onChange={(e) => setReason(e.target.value)}
               placeholder="Please let us know why you're cancelling..."
               rows={4}
-              className={`w-full px-3 py-2 border ${theme.border} rounded-lg focus:ring-2 focus:ring-[#667eea] focus:border-transparent ${theme.text} ${theme.cardBg}`}
+              className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg focus:ring-2 focus:ring-[#667eea] focus:border-transparent ${theme.textPrimary} ${theme.bgCard}`}
             />
           </div>
 
@@ -114,7 +119,7 @@ const CancelSubscriptionModal = ({ subscription, onClose, onSuccess }) => {
             <button
               onClick={onClose}
               disabled={isSubmitting}
-              className={`flex-1 px-4 py-2 border ${theme.border} ${theme.text} rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium`}
+              className={`flex-1 px-4 py-2 border ${theme.borderPrimary} ${theme.textPrimary} rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition font-medium`}
             >
               Keep Subscription
             </button>

@@ -66,7 +66,7 @@ const BillingHistory = ({ formatCurrency }) => {
 
   if (isLoading) {
     return (
-      <div className={`${theme.cardBg} rounded-lg shadow p-6`}>
+      <div className={`${theme.bgCard} rounded-lg shadow p-6`}>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#667eea]"></div>
         </div>
@@ -76,10 +76,10 @@ const BillingHistory = ({ formatCurrency }) => {
 
   if (error) {
     return (
-      <div className={`${theme.cardBg} rounded-lg shadow p-6`}>
+      <div className={`${theme.bgCard} rounded-lg shadow p-6`}>
         <div className="text-center py-8">
           <FileText className="mx-auto mb-4 text-red-500" size={48} />
-          <p className={`${theme.text}`}>{error}</p>
+          <p className={`${theme.textPrimary}`}>{error}</p>
         </div>
       </div>
     );
@@ -87,13 +87,15 @@ const BillingHistory = ({ formatCurrency }) => {
 
   if (billingHistory.length === 0) {
     return (
-      <div className={`${theme.cardBg} rounded-xl shadow-lg p-6 md:p-8`}>
+      <div className={`${theme.bgCard} rounded-xl shadow-lg p-6 md:p-8`}>
         <div className="text-center py-8 md:py-12">
           <FileText
             className={`mx-auto mb-4 ${theme.textSecondary}`}
             size={56}
           />
-          <h3 className={`text-lg md:text-xl font-semibold mb-2 ${theme.text}`}>
+          <h3
+            className={`text-lg md:text-xl font-semibold mb-2 ${theme.textPrimary}`}
+          >
             No Billing History
           </h3>
           <p className={`text-sm md:text-base ${theme.textSecondary}`}>
@@ -105,26 +107,26 @@ const BillingHistory = ({ formatCurrency }) => {
   }
 
   return (
-    <div className={`${theme.cardBg} rounded-xl shadow-lg overflow-hidden`}>
+    <div className={`${theme.bgCard} rounded-xl shadow-lg overflow-hidden`}>
       {/* Desktop Table */}
       <div className="hidden lg:block overflow-x-auto">
         <table className="w-full">
           <thead className={`bg-gray-50 dark:bg-gray-800`}>
             <tr>
               <th className="px-4 xl:px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                <div className={theme.text}>Date</div>
+                <div className={theme.textPrimary}>Date</div>
               </th>
               <th className="px-4 xl:px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                <div className={theme.text}>Plan & Billing</div>
+                <div className={theme.textPrimary}>Plan & Billing</div>
               </th>
               <th className="px-4 xl:px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                <div className={theme.text}>Amount</div>
+                <div className={theme.textPrimary}>Amount</div>
               </th>
               <th className="px-4 xl:px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                <div className={theme.text}>Status</div>
+                <div className={theme.textPrimary}>Status</div>
               </th>
               <th className="px-4 xl:px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider">
-                <div className={theme.text}>Actions</div>
+                <div className={theme.textPrimary}>Actions</div>
               </th>
             </tr>
           </thead>
@@ -137,23 +139,29 @@ const BillingHistory = ({ formatCurrency }) => {
                 <td className={`px-4 xl:px-6 py-4 whitespace-nowrap`}>
                   <div className="flex items-center gap-2">
                     <Calendar className={theme.textSecondary} size={16} />
-                    <span className={`text-sm font-medium ${theme.text}`}>
+                    <span
+                      className={`text-sm font-medium ${theme.textPrimary}`}
+                    >
                       {formatDate(transaction.created_at)}
                     </span>
                   </div>
                 </td>
                 <td className={`px-4 xl:px-6 py-4`}>
                   <div>
-                    <div className={`text-sm font-semibold ${theme.text} capitalize`}>
-                      {transaction.plan_type || 'Unknown'}
+                    <div
+                      className={`text-sm font-semibold ${theme.textPrimary} capitalize`}
+                    >
+                      {transaction.plan_type || "Unknown"}
                     </div>
-                    <div className={`text-xs ${theme.textSecondary} mt-0.5 capitalize`}>
-                      {transaction.billing_type?.replace('_', ' ') || 'monthly'}
+                    <div
+                      className={`text-xs ${theme.textSecondary} mt-0.5 capitalize`}
+                    >
+                      {transaction.billing_type?.replace("_", " ") || "monthly"}
                     </div>
                   </div>
                 </td>
                 <td className={`px-4 xl:px-6 py-4 whitespace-nowrap`}>
-                  <span className={`text-base font-bold ${theme.text}`}>
+                  <span className={`text-base font-bold ${theme.textPrimary}`}>
                     {formatCurrency(transaction.amount)}
                   </span>
                 </td>
@@ -184,31 +192,38 @@ const BillingHistory = ({ formatCurrency }) => {
           <thead className={`bg-gray-50 dark:bg-gray-800`}>
             <tr>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase">
-                <div className={theme.text}>Date</div>
+                <div className={theme.textPrimary}>Date</div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase">
-                <div className={theme.text}>Plan</div>
+                <div className={theme.textPrimary}>Plan</div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase">
-                <div className={theme.text}>Amount</div>
+                <div className={theme.textPrimary}>Amount</div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase">
-                <div className={theme.text}>Status</div>
+                <div className={theme.textPrimary}>Status</div>
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {billingHistory.map((transaction) => (
-              <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                <td className={`px-4 py-3 text-sm ${theme.text}`}>
+              <tr
+                key={transaction.id}
+                className="hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              >
+                <td className={`px-4 py-3 text-sm ${theme.textPrimary}`}>
                   {formatDate(transaction.created_at)}
                 </td>
                 <td className={`px-4 py-3`}>
-                  <div className={`text-sm font-medium ${theme.text} capitalize`}>
+                  <div
+                    className={`text-sm font-medium ${theme.textPrimary} capitalize`}
+                  >
                     {transaction.plan_type}
                   </div>
                 </td>
-                <td className={`px-4 py-3 text-sm font-bold ${theme.text}`}>
+                <td
+                  className={`px-4 py-3 text-sm font-bold ${theme.textPrimary}`}
+                >
                   {formatCurrency(transaction.amount)}
                 </td>
                 <td className="px-4 py-3">
@@ -229,14 +244,19 @@ const BillingHistory = ({ formatCurrency }) => {
       {/* Mobile Cards */}
       <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
         {billingHistory.map((transaction) => (
-          <div key={transaction.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+          <div
+            key={transaction.id}
+            className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+          >
             <div className="flex justify-between items-start mb-3">
               <div className="flex-1 min-w-0">
-                <p className={`text-base font-bold ${theme.text} capitalize truncate`}>
-                  {transaction.plan_type || 'Unknown'}
+                <p
+                  className={`text-base font-bold ${theme.textPrimary} capitalize truncate`}
+                >
+                  {transaction.plan_type || "Unknown"}
                 </p>
                 <p className={`text-xs ${theme.textSecondary} mt-1 capitalize`}>
-                  {transaction.billing_type?.replace('_', ' ') || 'monthly'}
+                  {transaction.billing_type?.replace("_", " ") || "monthly"}
                 </p>
               </div>
               <span
@@ -250,11 +270,13 @@ const BillingHistory = ({ formatCurrency }) => {
 
             <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
               <div>
-                <p className={`text-xs ${theme.textSecondary} mb-1 flex items-center gap-1`}>
+                <p
+                  className={`text-xs ${theme.textSecondary} mb-1 flex items-center gap-1`}
+                >
                   <Calendar size={12} />
                   {formatDate(transaction.created_at)}
                 </p>
-                <p className={`text-xl font-extrabold ${theme.text}`}>
+                <p className={`text-xl font-extrabold ${theme.textPrimary}`}>
                   {formatCurrency(transaction.amount)}
                 </p>
               </div>
