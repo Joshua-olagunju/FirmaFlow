@@ -15,7 +15,14 @@ import Expenses from "./pages/expenses/Expenses";
 import Settings from "./pages/Settings/Settings";
 import FinancialReports from "./pages/reports/FinancialReports";
 import Subscription from "./pages/subscription/Subscription";
+import SuperAdminDashboard from "./pages/superadmin/dashboard/SuperAdminDashboard";
+import SuperAdminTickets from "./pages/superadmin/tickets/Tickets";
+import SuperAdminUsers from "./pages/superadmin/users/Users";
+import SuperAdminCompanies from "./pages/superadmin/companies/Companies";
+import SuperAdminSubscriptions from "./pages/superadmin/subscriptions/Subscriptions";
+import SuperAdminSettings from "./pages/superadmin/settings/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SuperAdminProtectedRoute from "./components/SuperAdminProtectedRoute";
 import SubscriptionBanner from "./components/SubscriptionBanner";
 import { useUser } from "./contexts/UserContext";
 
@@ -32,6 +39,56 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/email-verification" element={<EmailVerification />} />
         <Route path="/login" element={<Login />} />
+        
+        {/* SuperAdmin Routes */}
+        <Route
+          path="/superadmin/dashboard"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdminDashboard />
+            </SuperAdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/superadmin/tickets"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdminTickets />
+            </SuperAdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/superadmin/users"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdminUsers />
+            </SuperAdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/superadmin/companies"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdminCompanies />
+            </SuperAdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/superadmin/subscriptions"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdminSubscriptions />
+            </SuperAdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/superadmin/settings"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdminSettings />
+            </SuperAdminProtectedRoute>
+          }
+        />
         
         {/* Dashboard - role-based routing */}
         <Route

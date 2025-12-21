@@ -15,10 +15,12 @@ import {
 } from "lucide-react";
 import { buildApiUrl } from "../../config/api.config";
 import { useUserStore } from "../../stores/useUserStore";
+import { useSuperAdmin } from "../../contexts/SuperAdminContext";
 
 export default function Login() {
   const navigate = useNavigate();
   const login = useUserStore((state) => state.login);
+  const { login: superAdminLogin } = useSuperAdmin();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
@@ -51,6 +53,20 @@ export default function Login() {
     setMessage({ text: "", type: "" }); // Clear previous messages
 
     try {
+      // First, try SuperAdmin login
+      const superAdminResult = await superAdminLogin(formData.email, formData.password, formData.rememberMe);
+      
+      if (superAdminResult.success) {
+        setMessage({
+          text: "SuperAdmin login successful! Redirecting...",
+          type: "success",
+        });
+        setTimeout(() => navigate("/superadmin/dashboard"), 2000);
+        setIsLoading(false);
+        return;
+      }
+
+      // If SuperAdmin login fails, try regular user login
       const response = await fetch(buildApiUrl("api/auth.php"), {
         method: "POST",
         credentials: "include", // allow cookies (session) to be set by PHP
