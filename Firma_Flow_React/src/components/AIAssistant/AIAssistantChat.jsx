@@ -3,6 +3,164 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../contexts/ThemeContext";
 import { buildApiUrl } from "../../config/api.config";
 
+// Editable Form Component for Create/Edit Customer
+const EditableFormMessage = ({ message, theme, onConfirmTask }) => {
+  const [formData, setFormData] = useState(message.fields || {});
+  const [errors, setErrors] = useState({});
+
+  const handleFieldChange = (fieldName, value) => {
+    setFormData((prev) => ({ ...prev, [fieldName]: value }));
+    // Clear error when user edits
+    if (errors[fieldName]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    const fieldConfig = message.fieldConfig || {};
+
+    Object.entries(fieldConfig).forEach(([fieldName, config]) => {
+      if (config.required && !formData[fieldName]?.toString().trim()) {
+        newErrors[fieldName] = `${config.label} is required`;
+      }
+
+      // Email validation
+      if (
+        fieldName === "email" &&
+        formData[fieldName] &&
+        !/\S+@\S+\.\S+/.test(formData[fieldName])
+      ) {
+        newErrors[fieldName] = "Invalid email format";
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = () => {
+    if (validateForm()) {
+      // Merge form data with all original message fields (including customer_id, action, etc.)
+      const completeData = { ...message.fields, ...formData };
+      onConfirmTask(true, completeData);
+    }
+  };
+
+  const fieldConfig = message.fieldConfig || {};
+
+  return (
+    <div
+      className={`max-w-[90%] ${theme.bgPrimary} p-4 rounded-lg shadow border-2 border-purple-500`}
+    >
+      <p className={`text-sm mb-4 ${theme.textPrimary} font-semibold`}>
+        {message.content}
+      </p>
+
+      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+        {Object.entries(fieldConfig).map(([fieldName, config]) => (
+          <div key={fieldName}>
+            <label
+              className={`block text-xs font-medium ${theme.textPrimary} mb-1`}
+            >
+              {config.label}
+              {config.required && <span className="text-red-500 ml-1">*</span>}
+              {!config.required && (
+                <span className={`text-xs ${theme.textSecondary} ml-1`}>
+                  (optional)
+                </span>
+              )}
+            </label>
+
+            {config.type === "select" ? (
+              <select
+                value={formData[fieldName] || config.default || ""}
+                onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                  theme.bgInput
+                } ${theme.textPrimary} ${
+                  errors[fieldName] ? "border-red-500" : theme.borderSecondary
+                }`}
+              >
+                {config.options?.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            ) : config.type === "textarea" ? (
+              <textarea
+                value={formData[fieldName] || ""}
+                onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+                rows={3}
+                placeholder={config.placeholder}
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                  theme.bgInput
+                } ${theme.textPrimary} ${
+                  errors[fieldName] ? "border-red-500" : theme.borderSecondary
+                }`}
+              />
+            ) : config.type === "checkbox" ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={
+                    formData[fieldName] === true ||
+                    formData[fieldName] === "1" ||
+                    formData[fieldName] === 1
+                  }
+                  onChange={(e) =>
+                    handleFieldChange(fieldName, e.target.checked)
+                  }
+                  className="w-4 h-4 text-purple-600 focus:ring-2 focus:ring-purple-500 rounded"
+                />
+                <span className={`text-sm ${theme.textSecondary}`}>
+                  {config.placeholder}
+                </span>
+              </div>
+            ) : (
+              <input
+                type={config.type || "text"}
+                value={formData[fieldName] || ""}
+                onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+                placeholder={config.placeholder}
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                  theme.bgInput
+                } ${theme.textPrimary} ${
+                  errors[fieldName] ? "border-red-500" : theme.borderSecondary
+                }`}
+              />
+            )}
+
+            {errors[fieldName] && (
+              <p className="text-red-500 text-xs mt-1">{errors[fieldName]}</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2 mt-4">
+        <button
+          onClick={handleSubmit}
+          className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-2 px-4 rounded-lg transition-all font-medium"
+        >
+          ✓ Confirm
+        </button>
+        <button
+          onClick={() => onConfirmTask(false)}
+          className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-2 px-4 rounded-lg transition-all font-medium"
+        >
+          ✗ Cancel
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const AIAssistantChat = ({ isOpen, onClose }) => {
   const { theme } = useTheme();
   const [messages, setMessages] = useState([]);
@@ -11,6 +169,24 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
   const [capabilities, setCapabilities] = useState([]);
   const [pendingTask, setPendingTask] = useState(null);
   const messagesEndRef = useRef(null);
+  const abortControllerRef = useRef(null);
+
+  // Cancel ongoing request
+  const handleCancelRequest = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsLoading(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "assistant",
+          content: "⏹️ Request cancelled.",
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -35,6 +211,10 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
         body: JSON.stringify({ action: "get_capabilities" }),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       if (data.success) {
         setCapabilities(data.capabilities);
@@ -53,6 +233,8 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
             collapsed: true, // Make it collapsible/less prominent
           },
         ]);
+      } else {
+        throw new Error(data.error || "Failed to load capabilities");
       }
     } catch (error) {
       console.error("Failed to load capabilities:", error);
@@ -60,18 +242,21 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
         {
           type: "assistant",
           content:
-            "⚠️ Failed to initialize AI Assistant. Please try again later.",
+            "⚠️ Failed to initialize AI Assistant. Please refresh and try again.",
           timestamp: new Date(),
         },
       ]);
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+  const handleSendMessage = async (directMessage = null) => {
+    const messageToSend = directMessage || inputValue.trim();
+    if (!messageToSend || isLoading) return;
 
-    const userMessage = inputValue.trim();
-    setInputValue("");
+    const userMessage = messageToSend;
+    if (!directMessage) {
+      setInputValue("");
+    }
 
     // Add user message
     setMessages((prev) => [
@@ -84,6 +269,10 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
     ]);
 
     setIsLoading(true);
+
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
 
     try {
       // Build conversation history for context
@@ -104,7 +293,12 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
           prompt: userMessage,
           conversationHistory: conversationHistory,
         }),
+        signal,
       });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
 
       const data = await response.json();
 
@@ -112,7 +306,124 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
         throw new Error(data.error || "Failed to process request");
       }
 
-      const parsed = data.parsed;
+      // Handle v3 direct responses (greeting, help, unknown, success, cancelled, error)
+      if (
+        data.type &&
+        [
+          "greeting",
+          "help",
+          "unknown",
+          "success",
+          "cancelled",
+          "complete",
+          "error",
+          "assistant", // Add assistant type for conversational responses
+        ].includes(data.type)
+      ) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: data.type === "error" ? "error" : "assistant",
+            content: data.message,
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle capability offer (e.g., "Can I delete a customer?" -> "Yes! Would you like to?")
+      if (data.type === "capability_offer" && data.data) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "capability_offer",
+            content: data.message,
+            options: data.data?.options || ["Yes, please", "No, thanks"],
+            pendingAction: data.data?.pendingAction,
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle v3 confirmation request
+      if (data.type === "confirmation" && data.data) {
+        setPendingTask({
+          task_type: data.parsed?.task_type || data.data?.action,
+          data: data.data?.data || data.parsed?.extracted_data || {},
+        });
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "confirmation",
+            content: data.message || "Please confirm this action:",
+            task_type: data.parsed?.task_type,
+            data: data.data?.data || data.parsed?.extracted_data || {},
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle v3 clarification request
+      if (data.type === "clarification") {
+        const messageType = data.data?.options ? "selection" : "assistant";
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: messageType,
+            content: data.message,
+            missing_fields:
+              messageType === "assistant" ? data.data?.missing || [] : [],
+            options: data.data?.options || null,
+            selectType: data.data?.selectType || null,
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle v3 form request (editable form for create/edit customer)
+      if (data.type === "form" && data.data) {
+        setPendingTask({
+          task_type: data.data?.action || "create_customer",
+          data: data.data?.fields || {},
+        });
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "form",
+            content: data.message || "Review and edit the details below:",
+            fields: data.data?.fields || {},
+            fieldConfig: data.data?.fieldConfig || {},
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      const parsed = data.parsed || {};
+
+      // Safety check for missing parsed data
+      if (!parsed || typeof parsed !== "object") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "assistant",
+            content: data.message || "I received your request. How can I help?",
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
 
       // Handle template/example requests
       if (parsed.task_type === "template_request") {
@@ -187,7 +498,10 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
       }
 
       // Handle conversational/off-topic queries
-      if (parsed.task_type === "conversational") {
+      if (
+        parsed.task_type === "conversational" ||
+        parsed.task_type === "general_chat"
+      ) {
         const response =
           parsed.conversational_response ||
           "👋 I'm your FirmaFlow AI Assistant! I'm here to help you manage your business - create customers, add products, track invoices, and answer questions about your data. How can I assist you today?";
@@ -236,7 +550,63 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
         return;
       }
 
-      // Handle informational queries directly (no confirmation needed)
+      // Handle query intents that don't require confirmation
+      if (!parsed.requires_confirmation || parsed.risk_level === "low") {
+        setIsLoading(true);
+
+        try {
+          const response = await fetch(buildApiUrl("api/ai_assistant.php"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              action: "execute_task",
+              taskType: parsed.task_type,
+              taskData: parsed.extracted_data,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (data.success) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "assistant",
+                content: data.message || data.answer || "✅ Done!",
+                result: data,
+                timestamp: new Date(),
+              },
+            ]);
+          } else {
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "error",
+                content: `❌ ${data.error || "Failed to execute"}`,
+                timestamp: new Date(),
+              },
+            ]);
+          }
+        } catch (error) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "error",
+              content: `❌ Error: ${error.message}`,
+              timestamp: new Date(),
+            },
+          ]);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle informational queries directly (no confirmation needed) - LEGACY
       if (parsed.task_type === "query_information") {
         try {
           const queryResponse = await fetch(
@@ -306,6 +676,10 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
         },
       ]);
     } catch (error) {
+      // Don't show error message if request was cancelled by user
+      if (error.name === "AbortError") {
+        return;
+      }
       console.error("Error processing prompt:", error);
       setMessages((prev) => [
         ...prev,
@@ -316,11 +690,12 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
         },
       ]);
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
     }
   };
 
-  const handleConfirmTask = async (confirmed) => {
+  const handleConfirmTask = async (confirmed, formData = null) => {
     if (!confirmed || !pendingTask) {
       setMessages((prev) => [
         ...prev,
@@ -331,12 +706,18 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
         },
       ]);
       setPendingTask(null);
+      setIsLoading(false); // Clear loading state on cancel
       return;
     }
 
     setIsLoading(true);
 
     try {
+      // If formData is provided, merge it with pending task data
+      const taskData = formData
+        ? { ...pendingTask.data, ...formData }
+        : pendingTask.data;
+
       const response = await fetch(buildApiUrl("api/ai_assistant.php"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -344,7 +725,7 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
         body: JSON.stringify({
           action: "execute_task",
           taskType: pendingTask.task_type,
-          taskData: pendingTask.data,
+          taskData: taskData,
         }),
       });
 
@@ -393,6 +774,150 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
       setIsLoading(false);
       setPendingTask(null);
     }
+  };
+
+  const handleOptionSelect = (option) => {
+    // Send the selected option ID (for customers, this will be customer_id)
+    // We'll send it as "id X" so the backend can parse it
+    const selectionMessage = `id ${option.value}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        type: "user",
+        content: option.label, // Show the name to the user
+        timestamp: new Date(),
+      },
+    ]);
+
+    // Actually send the ID to backend
+    setInputValue(selectionMessage);
+    setTimeout(() => {
+      const userMessage = selectionMessage.trim();
+      setInputValue("");
+
+      setIsLoading(true);
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      fetch(buildApiUrl("api/ai_assistant.php"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "parse_prompt",
+          prompt: userMessage,
+          conversationHistory: messages
+            .filter((msg) => msg.type === "user" || msg.type === "assistant")
+            .map((msg) => ({
+              role: msg.type === "user" ? "user" : "assistant",
+              content: msg.content,
+            })),
+        }),
+        signal: abortController.signal,
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("Option select response:", data); // Debug log
+
+          if (!data.success) {
+            // Handle error response
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "error",
+                content: `❌ ${
+                  data.error || data.message || "Failed to process selection"
+                }`,
+                timestamp: new Date(),
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+
+          // Handle form response (for create/edit customer)
+          if (data.type === "form" && data.data) {
+            setPendingTask({
+              task_type: data.data?.action || "update_customer",
+              data: data.data?.fields || {},
+            });
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "form",
+                content: data.message || "Review and edit the details below:",
+                fields: data.data?.fields || {},
+                fieldConfig: data.data?.fieldConfig || {},
+                timestamp: new Date(),
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+
+          // Handle confirmation
+          if (data.type === "confirmation" && data.data) {
+            setPendingTask({
+              task_type: data.parsed?.task_type || data.data?.action,
+              data: data.data?.data || data.parsed?.extracted_data || {},
+            });
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "confirmation",
+                content: data.message || "Please confirm this action:",
+                task_type: data.parsed?.task_type,
+                data: data.data?.data || data.parsed?.extracted_data || {},
+                timestamp: new Date(),
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+
+          // Handle selection response (show another list)
+          if (data.type === "clarification" && data.data?.options) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "selection",
+                content: data.message,
+                options: data.data?.options || [],
+                selectType: data.data?.selectType || null,
+                timestamp: new Date(),
+              },
+            ]);
+            setIsLoading(false);
+            return;
+          }
+
+          // Default message handling
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: data.type === "error" ? "error" : "assistant",
+              content: data.message,
+              timestamp: new Date(),
+            },
+          ]);
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          if (error.name !== "AbortError") {
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: "error",
+                content: `❌ Error: ${error.message}`,
+                timestamp: new Date(),
+              },
+            ]);
+          }
+          setIsLoading(false);
+        });
+    }, 100);
   };
 
   const handleCapabilityClick = (capability) => {
@@ -513,6 +1038,8 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
                   theme={theme}
                   onCapabilityClick={handleCapabilityClick}
                   onConfirmTask={handleConfirmTask}
+                  onOptionSelect={handleOptionSelect}
+                  onSendMessage={handleSendMessage}
                   pendingTask={pendingTask}
                 />
               ))}
@@ -554,25 +1081,50 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
                   className={`flex-1 px-4 py-3 rounded-lg ${theme.bgPrimary} ${theme.textPrimary} ${theme.border} border focus:outline-none focus:ring-2 focus:ring-purple-500`}
                   disabled={isLoading}
                 />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={isLoading || !inputValue.trim()}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {isLoading ? (
+                  /* Stop Button - ChatGPT Style */
+                  <button
+                    onClick={handleCancelRequest}
+                    className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all relative"
+                    title="Stop generating"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                    />
-                  </svg>
-                </button>
+                    <div className="relative">
+                      {/* Spinning border */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      </div>
+                      {/* Stop square */}
+                      <svg
+                        className="w-5 h-5 relative z-10"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <rect x="6" y="6" width="12" height="12" rx="1" />
+                      </svg>
+                    </div>
+                  </button>
+                ) : (
+                  /* Send Button */
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!inputValue.trim()}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                      />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>
@@ -587,6 +1139,8 @@ const MessageBubble = ({
   theme,
   onCapabilityClick,
   onConfirmTask,
+  onOptionSelect,
+  onSendMessage, // Add this prop for capability offers
   pendingTask,
 }) => {
   if (message.type === "user") {
@@ -599,12 +1153,45 @@ const MessageBubble = ({
     );
   }
 
+  // Capability offer - conversational response with yes/no options
+  if (message.type === "capability_offer") {
+    return (
+      <div
+        className={`max-w-[90%] ${theme.bgPrimary} p-4 rounded-lg shadow border-l-4 border-purple-500`}
+      >
+        <p className={`text-sm mb-4 ${theme.textPrimary} whitespace-pre-line`}>
+          {message.content}
+        </p>
+        <div className="flex gap-2">
+          {message.options?.map((option, idx) => (
+            <button
+              key={idx}
+              onClick={() => onSendMessage(option)}
+              className={`flex-1 py-2 px-4 rounded-lg transition-all text-sm font-medium ${
+                idx === 0
+                  ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+                  : "bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white"
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (message.type === "capabilities") {
+    // Ensure capabilities is an array
+    const capabilitiesArray = Array.isArray(message.capabilities)
+      ? message.capabilities
+      : [];
+
     return (
       <div className={`max-w-[90%] ${theme.bgPrimary} p-4 rounded-lg shadow`}>
         <p className={`text-sm mb-3 ${theme.textPrimary}`}>{message.content}</p>
         <div className="space-y-2">
-          {message.capabilities.map((cap) => (
+          {capabilitiesArray.map((cap) => (
             <button
               key={cap.id}
               onClick={() => onCapabilityClick(cap)}
@@ -625,6 +1212,44 @@ const MessageBubble = ({
           ))}
         </div>
       </div>
+    );
+  }
+
+  if (message.type === "selection") {
+    return (
+      <div className={`max-w-[90%] ${theme.bgPrimary} p-4 rounded-lg shadow`}>
+        <p className={`text-sm mb-3 ${theme.textPrimary} font-semibold`}>
+          {message.content}
+        </p>
+        <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto">
+          {message.options?.map((option) => (
+            <button
+              key={option.id}
+              onClick={() => onOptionSelect(option)}
+              className={`${theme.bgAccent} hover:bg-purple-500 hover:text-white p-3 rounded-lg text-left transition-all border border-transparent hover:border-purple-500`}
+            >
+              <div className={`font-medium ${theme.textPrimary}`}>
+                {option.label}
+              </div>
+              {option.sublabel && (
+                <div className={`text-xs ${theme.textSecondary} mt-1`}>
+                  {option.sublabel}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (message.type === "form") {
+    return (
+      <EditableFormMessage
+        message={message}
+        theme={theme}
+        onConfirmTask={onConfirmTask}
+      />
     );
   }
 
@@ -705,9 +1330,6 @@ const MessageBubble = ({
                   ))}
               </div>
             )}
-            <p className={`text-xs ${theme.textSecondary} mt-2 italic`}>
-              ✨ You can now go to the respective page to see the changes.
-            </p>
           </div>
         </div>
       </div>
