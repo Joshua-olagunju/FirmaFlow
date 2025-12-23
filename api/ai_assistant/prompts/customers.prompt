@@ -1,0 +1,140 @@
+═══════════════════════════════════════════════════════════════════
+MODULE: CUSTOMERS
+═══════════════════════════════════════════════════════════════════
+
+Extract data for CUSTOMER operations ONLY.
+
+═══════════════════════════════════════════════════════════════════
+ALLOWED ACTIONS
+═══════════════════════════════════════════════════════════════════
+
+• create_customer - Add new customer (name required)
+• update_customer - Modify customer details
+• delete_customer - Remove customer
+• view_customer - Get specific customer info
+• customer_summary - List all / count customers
+• customer_details - Get detailed customer profile with spending history
+• top_customers - Top by revenue/orders
+• customer_transactions - View purchase/invoice history
+• customer_balance - Check outstanding amount
+• change_customer_type - Switch individual <-> business
+• activate_customer - Enable customer
+• deactivate_customer - Disable customer
+
+═══════════════════════════════════════════════════════════════════
+FIELD SCHEMAS (Concise)
+═══════════════════════════════════════════════════════════════════
+
+CREATE_CUSTOMER:
+  Required: name
+  Optional: email, phone, address, customer_type (individual|business), payment_terms, credit_limit
+
+UPDATE_CUSTOMER:
+  Required: customer_id OR customer_name (identifier)
+  Optional: name, email, phone, address, credit_limit, payment_terms
+
+DELETE_CUSTOMER:
+  Required: customer_id OR customer_name
+
+VIEW_CUSTOMER / CUSTOMER_BALANCE / CUSTOMER_TRANSACTIONS / CUSTOMER_DETAILS:
+  Required: customer_id OR customer_name OR customer_email
+
+CHANGE_CUSTOMER_TYPE:
+  Required: customer_id OR customer_name
+  Optional: customer_type (if not given, will toggle)
+
+ACTIVATE/DEACTIVATE_CUSTOMER:
+  Required: customer_id OR customer_name
+
+CUSTOMER_SUMMARY:
+  Optional: limit, sort_by (name|balance|created_at)
+
+TOP_CUSTOMERS:
+  Optional: limit, metric (revenue|orders|balance), date_range
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLES
+═══════════════════════════════════════════════════════════════════
+
+Input: "Create customer John Doe with email john@example.com"
+{
+    "extracted_data": {"name": "John Doe", "email": "john@example.com"},
+    "confidence": 1.0,
+    "missing_required": []
+}
+
+Input: "Show John's transaction history"
+{
+    "extracted_data": {"customer_name": "John"},
+    "confidence": 0.9,
+    "missing_required": []
+}
+
+Input: "Tell me about Temitope Timothy Rotimi my customer"
+{
+    "extracted_data": {"customer_name": "Temitope Timothy Rotimi"},
+    "confidence": 1.0,
+    "missing_required": []
+}
+
+Input: "Info about ABC Corp"
+{
+    "extracted_data": {"customer_name": "ABC Corp"},
+    "confidence": 0.9,
+    "missing_required": []
+}
+
+Input: "What's the profile of customer John Doe?"
+{
+    "extracted_data": {"customer_name": "John Doe"},
+    "confidence": 0.9,
+    "missing_required": []
+}
+
+Input: "How much does ABC Corp owe?"
+{
+    "extracted_data": {"customer_name": "ABC Corp"},
+    "confidence": 1.0,
+    "missing_required": []
+}
+
+Input: "Make John Doe a business customer"
+{
+    "extracted_data": {"customer_name": "John Doe", "customer_type": "business"},
+    "confidence": 1.0,
+    "missing_required": []
+}
+
+Input: "Deactivate customer Sarah"
+{
+    "extracted_data": {"customer_name": "Sarah"},
+    "confidence": 0.9,
+    "missing_required": []
+}
+
+Input: "Delete John"
+{
+    "extracted_data": {"customer_name": "John"},
+    "confidence": 0.8,
+    "missing_required": []
+}
+
+Input: "Add a new customer"
+{
+    "extracted_data": {},
+    "confidence": 0.3,
+    "missing_required": ["name"],
+    "clarification_needed": "What is the customer's name?"
+}
+
+═══════════════════════════════════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════════════════════════════════
+
+{
+    "extracted_data": { /* fields */ },
+    "confidence": 0.0-1.0,
+    "missing_required": [],
+    "clarification_needed": null | "question",
+    "validation_errors": []
+}
