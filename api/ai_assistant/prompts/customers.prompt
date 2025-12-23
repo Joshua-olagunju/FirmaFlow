@@ -53,7 +53,7 @@ TOP_CUSTOMERS:
   Optional: limit, metric (revenue|orders|balance), date_range
 
 ═══════════════════════════════════════════════════════════════════
-EXAMPLES
+EXAMPLES (Natural Language Patterns)
 ═══════════════════════════════════════════════════════════════════
 
 Input: "Create customer John Doe with email john@example.com"
@@ -63,9 +63,30 @@ Input: "Create customer John Doe with email john@example.com"
     "missing_required": []
 }
 
+Input: "add customer alice, email alice@mail.com, phone 08012345678"
+{
+    "extracted_data": {"name": "Alice", "email": "alice@mail.com", "phone": "08012345678"},
+    "confidence": 1.0,
+    "missing_required": []
+}
+
+Input: "register john doe as business customer"
+{
+    "extracted_data": {"name": "John Doe", "customer_type": "business"},
+    "confidence": 0.9,
+    "missing_required": []
+}
+
 Input: "Show John's transaction history"
 {
     "extracted_data": {"customer_name": "John"},
+    "confidence": 0.9,
+    "missing_required": []
+}
+
+Input: "what has alice bought"
+{
+    "extracted_data": {"customer_name": "Alice"},
     "confidence": 0.9,
     "missing_required": []
 }
@@ -116,6 +137,34 @@ Input: "Delete John"
 {
     "extracted_data": {"customer_name": "John"},
     "confidence": 0.8,
+    "missing_required": []
+}
+
+Input: "how much does john owe me"
+{
+    "extracted_data": {"customer_name": "John"},
+    "confidence": 1.0,
+    "missing_required": []
+}
+
+Input: "delete bob"
+{
+    "extracted_data": {"customer_name": "Bob"},
+    "confidence": 0.8,
+    "missing_required": []
+}
+
+Input: "update alice's phone to 08099887766"
+{
+    "extracted_data": {"customer_name": "Alice", "phone": "08099887766"},
+    "confidence": 1.0,
+    "missing_required": []
+}
+
+Input: "who is sarah" (or "tell me about sarah")
+{
+    "extracted_data": {"customer_name": "Sarah"},
+    "confidence": 0.9,
     "missing_required": []
 }
 

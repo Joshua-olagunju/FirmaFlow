@@ -222,7 +222,7 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
           {
             type: "assistant",
             content:
-              '👋 Hello! I\'m your AI Assistant. I can help you with various tasks in FirmaFlow.\n\n💬 Just tell me what you want to do in your own words! For example:\n• "Create a customer named John Doe with email john@example.com, phone 1234567890, and address 123 Main St"\n• "Add a product called Laptop, price 50000, quantity 10"\n• "What customers do I have?"\n• "Show me my recent invoices"\n\nI\'ll understand your request and help you complete it!',
+              '👋 Hello! I\'m your AI Assistant. I understand natural language - just talk to me normally!\n\n💬 **Try these examples:**\n• "Add customer John Doe with email john@example.com"\n• "Create Alice, phone 08012345678"\n• "Who is Bob?"\n• "Tell me about Sarah"\n• "How much does John owe?"\n• "Show my customers"\n• "Delete Alice"\n• "Update Bob\'s phone to 08099887766"\n\n📦 **I can also help with:**\n• Products & Inventory\n• Sales & Invoices\n• Payments & Expenses\n• Reports & Analytics\n\n💡 **Tip:** You don\'t need perfect grammar - I\'ll understand!',
             timestamp: new Date(),
           },
           {
@@ -250,11 +250,13 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
   };
 
   const handleSendMessage = async (directMessage = null) => {
-    const messageToSend = directMessage || inputValue.trim();
+    // Guard against event objects being passed (happens when used as onClick handler)
+    const messageToSend =
+      typeof directMessage === "string" ? directMessage : inputValue.trim();
     if (!messageToSend || isLoading) return;
 
     const userMessage = messageToSend;
-    if (!directMessage) {
+    if (typeof directMessage !== "string") {
       setInputValue("");
     }
 
@@ -306,7 +308,7 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
         throw new Error(data.error || "Failed to process request");
       }
 
-      // Handle v3 direct responses (greeting, help, unknown, success, cancelled, error)
+      // Handle v3 direct responses (greeting, help, unknown, success, cancelled, error, task_complete)
       if (
         data.type &&
         [
@@ -314,6 +316,7 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
           "help",
           "unknown",
           "success",
+          "task_complete", // Treat as success - don't show debug data
           "cancelled",
           "complete",
           "error",
@@ -323,7 +326,12 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
         setMessages((prev) => [
           ...prev,
           {
-            type: data.type === "error" ? "error" : "assistant",
+            type:
+              data.type === "error"
+                ? "error"
+                : data.type === "task_complete" || data.type === "success"
+                ? "success"
+                : "assistant",
             content: data.message,
             timestamp: new Date(),
           },
@@ -455,22 +463,41 @@ Add product [Name], cost [Cost], selling [Selling], [Number] [units like pieces/
 
 Just replace the [brackets] with your actual values and send!`,
 
-          customer: `📝 **Example Customer Creation Prompts:**
+          customer: `📝 **Customer Management - Just Talk Naturally!**
 
-1️⃣ **Basic:**
-Create customer [Name], email [email], phone [phone]
+You can use casual language - I'll understand! Try:
 
-2️⃣ **With Address:**
-Add customer [Name], email [email], phone [phone], address [full address]
+**Create Customers:**
+• "Add customer John Doe, email john@mail.com, phone 08012345678"
+• "Create Alice with email alice@example.com"
+• "Register Bob as business customer"
+• "New customer Sarah Johnson"
 
-3️⃣ **Business Customer:**
-Create customer [Company Name], business type, email [email], phone [phone], Net [30/60] terms
+**View Customers:**
+• "Show my customers"
+• "List all customers"
+• "Who are my customers?"
+• "How many customers do I have?"
 
-**Real Examples:**
+**Customer Info:**
+• "Tell me about John"
+• "Who is Alice?"
+• "What has Bob bought?"
+• "Info about Sarah"
+• "Show John's transactions"
 
-• Create customer John Doe, email john@example.com, phone 08012345678
+**Update & Delete:**
+• "Update Alice's phone to 08099887766"
+• "Edit John Doe"
+• "Delete Bob"
+• "Change Sarah to business type"
 
-• Add customer ABC Corp, business type, email info@abc.com, phone 08099887766, Net 30 terms, credit limit 100000`,
+**Check Balances:**
+• "How much does John owe?"
+• "What's Alice's balance?"
+• "John's outstanding amount"
+
+💡 **Tip:** Just mention the name - no need to say "customer" every time!`,
 
           invoice: `📝 **Example Invoice Creation Prompts:**
 
@@ -697,35 +724,80 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
 
   const handleConfirmTask = async (confirmed, formData = null) => {
     if (!confirmed || !pendingTask) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          type: "assistant",
-          content: "❌ Task cancelled. How else can I help you?",
-          timestamp: new Date(),
-        },
-      ]);
+      // User cancelled - send "cancel" message to backend
       setPendingTask(null);
-      setIsLoading(false); // Clear loading state on cancel
+      setIsLoading(true);
+
+      try {
+        const response = await fetch(buildApiUrl("api/ai_assistant.php"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            action: "process",
+            message: "cancel",
+            conversationHistory: messages
+              .filter((msg) => msg.type === "user" || msg.type === "assistant")
+              .map((msg) => ({
+                role: msg.type === "user" ? "user" : "assistant",
+                content: msg.content,
+              })),
+          }),
+        });
+
+        const data = await response.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "assistant",
+            content:
+              data.message || "❌ Task cancelled. How else can I help you?",
+            timestamp: new Date(),
+          },
+        ]);
+      } catch (error) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "assistant",
+            content: "❌ Task cancelled. How else can I help you?",
+            timestamp: new Date(),
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
       return;
     }
 
+    // User confirmed - send "confirm" message with optional form data
     setIsLoading(true);
+    setPendingTask(null);
 
     try {
-      // If formData is provided, merge it with pending task data
-      const taskData = formData
-        ? { ...pendingTask.data, ...formData }
-        : pendingTask.data;
+      // If formData provided, we need to update the context first
+      let confirmMessage = "confirm";
+      if (formData) {
+        // For form submissions, send the form data as a structured message
+        // The backend will merge it with pending task data
+        confirmMessage = JSON.stringify(formData);
+      }
 
       const response = await fetch(buildApiUrl("api/ai_assistant.php"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          action: "execute_task",
-          taskType: pendingTask.task_type,
-          taskData: taskData,
+          action: "confirm",
+          response: "confirm",
+          message: confirmMessage,
+          formData: formData,
+          conversationHistory: messages
+            .filter((msg) => msg.type === "user" || msg.type === "assistant")
+            .map((msg) => ({
+              role: msg.type === "user" ? "user" : "assistant",
+              content: msg.content,
+            })),
         }),
       });
 
@@ -740,22 +812,33 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
 
       const data = await response.json();
 
-      if (data.success) {
+      // Handle different response types
+      if (data.type === "success" || data.success) {
         setMessages((prev) => [
           ...prev,
           {
             type: "success",
-            content: `✅ ${data.message}`,
+            content: data.message || "✅ Action completed successfully!",
             result: data,
             timestamp: new Date(),
           },
         ]);
-      } else {
+      } else if (data.type === "error" || !data.success) {
         setMessages((prev) => [
           ...prev,
           {
             type: "error",
-            content: `❌ ${data.error}`,
+            content: data.message || data.error || "❌ Failed to execute",
+            timestamp: new Date(),
+          },
+        ]);
+      } else {
+        // Handle other response types (clarification, etc.)
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "assistant",
+            content: data.message,
             timestamp: new Date(),
           },
         ]);
@@ -772,12 +855,11 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
       ]);
     } finally {
       setIsLoading(false);
-      setPendingTask(null);
     }
   };
 
   const handleOptionSelect = (option) => {
-    // Send the selected option ID (for customers, this will be customer_id)
+    // Send the selected option ID (for customers/suppliers, this will be the entity ID)
     // We'll send it as "id X" so the backend can parse it
     const selectionMessage = `id ${option.value}`;
     setMessages((prev) => [
@@ -789,135 +871,146 @@ Create customer [Company Name], business type, email [email], phone [phone], Net
       },
     ]);
 
-    // Actually send the ID to backend
-    setInputValue(selectionMessage);
-    setTimeout(() => {
-      const userMessage = selectionMessage.trim();
-      setInputValue("");
+    setIsLoading(true);
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
-      setIsLoading(true);
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
+    // CRITICAL: Use 'process' action instead of 'parse_prompt'
+    // This ensures the FSM state (AWAITING_CONFIRMATION) is maintained
+    // and the 'id X' message is handled by the correct state handler
+    fetch(buildApiUrl("api/ai_assistant.php"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        action: "process",
+        message: selectionMessage,
+        conversationHistory: messages
+          .filter((msg) => msg.type === "user" || msg.type === "assistant")
+          .map((msg) => ({
+            role: msg.type === "user" ? "user" : "assistant",
+            content: msg.content,
+          })),
+      }),
+      signal: abortController.signal,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Option select response:", data); // Debug log
 
-      fetch(buildApiUrl("api/ai_assistant.php"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "parse_prompt",
-          prompt: userMessage,
-          conversationHistory: messages
-            .filter((msg) => msg.type === "user" || msg.type === "assistant")
-            .map((msg) => ({
-              role: msg.type === "user" ? "user" : "assistant",
-              content: msg.content,
-            })),
-        }),
-        signal: abortController.signal,
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          console.log("Option select response:", data); // Debug log
-
-          if (!data.success) {
-            // Handle error response
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "error",
-                content: `❌ ${
-                  data.error || data.message || "Failed to process selection"
-                }`,
-                timestamp: new Date(),
-              },
-            ]);
-            setIsLoading(false);
-            return;
-          }
-
-          // Handle form response (for create/edit customer)
-          if (data.type === "form" && data.data) {
-            setPendingTask({
-              task_type: data.data?.action || "update_customer",
-              data: data.data?.fields || {},
-            });
-
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "form",
-                content: data.message || "Review and edit the details below:",
-                fields: data.data?.fields || {},
-                fieldConfig: data.data?.fieldConfig || {},
-                timestamp: new Date(),
-              },
-            ]);
-            setIsLoading(false);
-            return;
-          }
-
-          // Handle confirmation
-          if (data.type === "confirmation" && data.data) {
-            setPendingTask({
-              task_type: data.parsed?.task_type || data.data?.action,
-              data: data.data?.data || data.parsed?.extracted_data || {},
-            });
-
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "confirmation",
-                content: data.message || "Please confirm this action:",
-                task_type: data.parsed?.task_type,
-                data: data.data?.data || data.parsed?.extracted_data || {},
-                timestamp: new Date(),
-              },
-            ]);
-            setIsLoading(false);
-            return;
-          }
-
-          // Handle selection response (show another list)
-          if (data.type === "clarification" && data.data?.options) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "selection",
-                content: data.message,
-                options: data.data?.options || [],
-                selectType: data.data?.selectType || null,
-                timestamp: new Date(),
-              },
-            ]);
-            setIsLoading(false);
-            return;
-          }
-
-          // Default message handling
+        if (!data.success) {
+          // Handle error response
           setMessages((prev) => [
             ...prev,
             {
-              type: data.type === "error" ? "error" : "assistant",
-              content: data.message,
+              type: "error",
+              content: `❌ ${
+                data.error || data.message || "Failed to process selection"
+              }`,
               timestamp: new Date(),
             },
           ]);
           setIsLoading(false);
-        })
-        .catch((error) => {
-          if (error.name !== "AbortError") {
-            setMessages((prev) => [
-              ...prev,
-              {
-                type: "error",
-                content: `❌ Error: ${error.message}`,
-                timestamp: new Date(),
-              },
-            ]);
-          }
+          return;
+        }
+
+        // Handle form response (for create/edit customer/supplier)
+        if (data.type === "form" && data.data) {
+          setPendingTask({
+            task_type: data.data?.action || "update_customer",
+            data: data.data?.fields || {},
+          });
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "form",
+              content: data.message || "Review and edit the details below:",
+              fields: data.data?.fields || {},
+              fieldConfig: data.data?.fieldConfig || {},
+              timestamp: new Date(),
+            },
+          ]);
           setIsLoading(false);
-        });
-    }, 100);
+          return;
+        }
+
+        // Handle confirmation
+        if (data.type === "confirmation" && data.data) {
+          setPendingTask({
+            task_type: data.parsed?.task_type || data.data?.action,
+            data: data.data?.data || data.parsed?.extracted_data || {},
+          });
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "confirmation",
+              content: data.message || "Please confirm this action:",
+              task_type: data.parsed?.task_type,
+              data: data.data?.data || data.parsed?.extracted_data || {},
+              timestamp: new Date(),
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Handle selection response (show another list)
+        if (data.type === "clarification" && data.data?.options) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "selection",
+              content: data.message,
+              options: data.data?.options || [],
+              selectType: data.data?.selectType || null,
+              timestamp: new Date(),
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Handle success response (for delete/update operations)
+        if (data.type === "success" || data.status === "success") {
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "success",
+              content: data.message || "✅ Action completed successfully!",
+              result: data,
+              timestamp: new Date(),
+            },
+          ]);
+          setIsLoading(false);
+          return;
+        }
+
+        // Default message handling
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: data.type === "error" ? "error" : "assistant",
+            content: data.message,
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "error",
+              content: `❌ Error: ${error.message}`,
+              timestamp: new Date(),
+            },
+          ]);
+        }
+        setIsLoading(false);
+      });
   };
 
   const handleCapabilityClick = (capability) => {
@@ -1144,10 +1237,14 @@ const MessageBubble = ({
   pendingTask,
 }) => {
   if (message.type === "user") {
+    const userContent =
+      typeof message.content === "string"
+        ? message.content
+        : String(message.content || "");
     return (
       <div className="flex justify-end">
         <div className="max-w-[80%] bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-lg shadow">
-          <p className="text-sm">{message.content}</p>
+          <p className="text-sm">{userContent}</p>
         </div>
       </div>
     );
@@ -1294,11 +1391,11 @@ const MessageBubble = ({
   if (message.type === "success") {
     return (
       <div
-        className={`max-w-[90%] ${theme.bgPrimary} p-4 rounded-lg shadow border-2 border-green-500`}
+        className={`max-w-[90%] ${theme.bgPrimary} p-4 rounded-lg shadow-md border-l-4 border-green-500`}
       >
-        <div className="flex items-start gap-2 mb-2">
+        <div className="flex items-start gap-3">
           <svg
-            className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
+            className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -1309,27 +1406,11 @@ const MessageBubble = ({
             />
           </svg>
           <div className="flex-1">
-            <p className={`text-sm ${theme.textPrimary} font-semibold`}>
+            <p
+              className={`text-sm ${theme.textPrimary} whitespace-pre-line leading-relaxed`}
+            >
               {message.content}
             </p>
-            {message.result && (
-              <div
-                className={`mt-3 text-sm ${theme.textSecondary} space-y-1 ${theme.bgAccent} p-3 rounded`}
-              >
-                {Object.entries(message.result)
-                  .filter(
-                    ([key]) => !["success", "message", "data"].includes(key)
-                  )
-                  .map(([key, value]) => (
-                    <div key={key} className="flex justify-between">
-                      <span className="capitalize font-medium">
-                        {key.replace(/_/g, " ")}:
-                      </span>{" "}
-                      <span className={theme.textPrimary}>{value}</span>
-                    </div>
-                  ))}
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -1337,20 +1418,31 @@ const MessageBubble = ({
   }
 
   if (message.type === "error") {
+    const errorContent =
+      typeof message.content === "string"
+        ? message.content
+        : JSON.stringify(message.content);
     return (
       <div
         className={`max-w-[90%] ${theme.bgPrimary} p-4 rounded-lg shadow border-2 border-red-500`}
       >
-        <p className={`text-sm ${theme.textPrimary}`}>{message.content}</p>
+        <p className={`text-sm ${theme.textPrimary}`}>{errorContent}</p>
       </div>
     );
   }
 
   // Default assistant message
+  const contentToRender =
+    typeof message.content === "string"
+      ? message.content
+      : typeof message.content === "object"
+      ? JSON.stringify(message.content)
+      : String(message.content || "");
+
   return (
     <div className={`max-w-[80%] ${theme.bgPrimary} p-4 rounded-lg shadow`}>
       <p className={`text-sm ${theme.textPrimary} whitespace-pre-line`}>
-        {message.content}
+        {contentToRender}
       </p>
       {message.missing_fields && message.missing_fields.length > 0 && (
         <div className="mt-2">
