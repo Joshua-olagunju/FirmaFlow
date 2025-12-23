@@ -44,15 +44,18 @@ class TaskQueue {
     /**
      * Build task queue from detected intents
      * 
-     * @param array $intents Array of {intent, module, data}
+     * @param array $intents Array of {intent, module, data, priority}
      * @return array Ordered task queue
      */
     public static function buildQueue(array $intents): array {
         $queue = [];
         
-        // Sort by priority (queries first, then actions)
+        // Sort by the Router's priority values (LOWER priority number = execute FIRST)
+        // DO NOT use getActionPriority - respect Router's intent detection!
         usort($intents, function($a, $b) {
-            return self::getActionPriority($a['action']) - self::getActionPriority($b['action']);
+            $priorityA = $a['priority'] ?? 99;
+            $priorityB = $b['priority'] ?? 99;
+            return $priorityA - $priorityB;
         });
         
         foreach ($intents as $index => $intent) {
@@ -60,7 +63,7 @@ class TaskQueue {
                 $intent['module'],
                 $intent['action'],
                 $intent['data'] ?? [],
-                $index
+                $intent['priority'] ?? $index
             );
         }
         

@@ -441,7 +441,7 @@ class FSM {
             'purchases' => ['create_purchase_order', 'receive_goods'],
             'sales' => ['create_invoice', 'update_invoice', 'record_payment'],
             'customers' => ['create_customer', 'update_customer', 'delete_customer'],
-            'suppliers' => ['create_supplier', 'update_supplier'],
+            'suppliers' => ['create_supplier', 'update_supplier', 'delete_supplier', 'activate_supplier', 'deactivate_supplier'],
             'expenses' => ['add_expense', 'update_expense'],
             'settings' => ['create_tax', 'update_tax', 'update_settings']
         ];

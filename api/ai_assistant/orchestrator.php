@@ -33,16 +33,21 @@ class Orchestrator {
     private $userId;
     private $apiKey;
     private $fsm;
+    private $conversationHistory; // Store conversation context
     
     // Confidence thresholds
     const MIN_CONFIDENCE_TO_PROCEED = 0.7;
     const MIN_CONFIDENCE_FOR_AUTO_EXECUTE = 0.9;
     
-    public function __construct($pdo, $companyId, $userId, $apiKey) {
+    // Maximum messages to include in context (to avoid token limits)
+    const MAX_CONTEXT_MESSAGES = 4;
+    
+    public function __construct($pdo, $companyId, $userId, $apiKey, $conversationHistory = []) {
         $this->pdo = $pdo;
         $this->companyId = $companyId;
         $this->userId = $userId;
         $this->apiKey = $apiKey;
+        $this->conversationHistory = $conversationHistory;
         $this->fsm = new FSM($pdo, $companyId, $userId);
     }
     
@@ -394,12 +399,128 @@ class Orchestrator {
         $currentTask = $this->fsm->getCurrentTask();
         $extractedData = $state['contextData']['extractedData'] ?? [];
         
+        // Check if message contains form data (JSON from frontend)
+        $decodedData = json_decode($message, true);
+        if (is_array($decodedData) && !empty($decodedData)) {
+            // Form data provided - merge with extracted data
+            $extractedData = array_merge($extractedData, $decodedData);
+            $this->fsm->setContextData([
+                'extractedData' => $extractedData,
+                'pendingTask' => $currentTask
+            ]);
+            // Treat as approval with updated data
+            return $this->executeTask($currentTask, $extractedData);
+        }
+        
         // Check if message is "id X" format (from selection list)
         if (preg_match('/^id\s+(\d+)$/i', trim($message), $matches)) {
             $selectedId = (int)$matches[1];
             error_log("Selected ID from list: {$selectedId}");
             
-            // Update extracted data with the selected ID
+            // Handle supplier selection
+            if (in_array($currentTask['action'], ['update_supplier', 'delete_supplier', 'view_supplier', 'supplier_balance', 'supplier_transactions', 'supplier_details'])) {
+                $extractedData['supplier_id'] = $selectedId;
+                
+                // For update_supplier, fetch and show form
+                if ($currentTask['action'] === 'update_supplier') {
+                    $stmt = $this->pdo->prepare("
+                        SELECT id, name, contact_person, phone, email, address, 
+                               tax_number, payment_terms, is_active 
+                        FROM suppliers 
+                        WHERE id = ? AND company_id = ?
+                    ");
+                    $stmt->execute([$selectedId, $this->companyId]);
+                    $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if (!$supplier) {
+                        return $this->formatResponse(
+                            'error',
+                            'Supplier not found.',
+                            []
+                        );
+                    }
+                    
+                    // Map database fields to form fields
+                    $data = [
+                        'supplier_id' => $selectedId,
+                        'company_name' => $supplier['name'],
+                        'contact_person' => $supplier['contact_person'],
+                        'phone' => $supplier['phone'],
+                        'email' => $supplier['email'],
+                        'address' => $supplier['address'],
+                        'tax_number' => $supplier['tax_number'],
+                        'payment_terms' => $supplier['payment_terms'] ?? 'Net 30 days',
+                        'is_active' => $supplier['is_active'] == 1
+                    ];
+                    error_log("Loaded supplier data for edit: " . json_encode($data));
+                    
+                    // Update FSM context with complete data
+                    $this->fsm->setContextData([
+                        'extractedData' => $data,
+                        'pendingTask' => $currentTask
+                    ]);
+                    
+                    // Build and return form
+                    $formConfig = $this->buildSupplierFormConfig($data);
+                    
+                    return $this->formatResponse(
+                        'form',
+                        "📝 Edit Supplier - Review and edit the details below:",
+                        array_merge($formConfig, [
+                            'action' => $currentTask['action'],
+                            'module' => $currentTask['module']
+                        ])
+                    );
+                }
+                
+                // For delete_supplier, fetch supplier details for confirmation display
+                if ($currentTask['action'] === 'delete_supplier') {
+                    $stmt = $this->pdo->prepare("
+                        SELECT id, name, email, phone, contact_person 
+                        FROM suppliers 
+                        WHERE id = ? AND company_id = ?
+                    ");
+                    $stmt->execute([$selectedId, $this->companyId]);
+                    $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($supplier) {
+                        $extractedData['supplier_name'] = $supplier['name'];
+                        $extractedData['supplier_email'] = $supplier['email'];
+                        $extractedData['supplier_phone'] = $supplier['phone'];
+                    }
+                    
+                    // Update context without re-transitioning (already in AWAITING_CONFIRMATION)
+                    $this->fsm->setContextData([
+                        'extractedData' => $extractedData,
+                        'pendingTask' => $currentTask
+                    ]);
+                    
+                    // Build and return confirmation directly without requestConfirmation()
+                    $displayData = $this->enhanceDataForDisplay($currentTask, $extractedData);
+                    $summary = $this->formatConfirmationMessage($currentTask, $displayData);
+                    
+                    return $this->formatResponse(
+                        'confirmation',
+                        $summary,
+                        [
+                            'action' => $currentTask['action'],
+                            'module' => $currentTask['module'],
+                            'data' => $displayData,
+                            'options' => ['Confirm', 'Cancel', 'Modify']
+                        ]
+                    );
+                }
+                
+                // For other supplier actions with selection, update data and show confirmation
+                $this->fsm->setContextData([
+                    'extractedData' => $extractedData,
+                    'pendingTask' => $currentTask
+                ]);
+                
+                return $this->requestConfirmation($currentTask, $extractedData);
+            }
+            
+            // Handle customer selection
             $extractedData['customer_id'] = $selectedId;
             
             // For update_customer, fetch and show form
@@ -604,6 +725,18 @@ class Orchestrator {
                 return $this->requestConfirmation($currentTask, $extractedData);
             }
             
+            // For create_supplier with missing data, show form immediately
+            if ($action === 'create_supplier') {
+                // Go straight to form for create supplier
+                $extractedData = $extracted['extracted_data'] ?? [];
+                $this->fsm->transition(FSM::STATE_DATA_EXTRACTED, [
+                    'extractedData' => $extractedData,
+                    'confidence' => 0.8
+                ], 'Showing supplier creation form');
+                
+                return $this->requestConfirmation($currentTask, $extractedData);
+            }
+            
             // For update_customer with missing customer identifier, show customer list
             if ($action === 'update_customer' && 
                 (in_array('customer_name', $validation['missing']) || in_array('customer_id', $validation['missing']))) {
@@ -638,6 +771,102 @@ class Orchestrator {
                             ];
                         }, $customers),
                         'selectType' => 'customer',
+                        'awaitingInput' => true
+                    ]
+                );
+            }
+            
+            // For update_supplier with missing supplier identifier, show supplier list
+            if ($action === 'update_supplier' && 
+                (in_array('supplier_name', $validation['missing']) || in_array('supplier_id', $validation['missing']))) {
+                $suppliers = $this->fetchSupplierList(20);
+                
+                if (empty($suppliers)) {
+                    return $this->formatResponse(
+                        'error',
+                        'No suppliers found in your account. Please create a supplier first.',
+                        []
+                    );
+                }
+                
+                // CRITICAL: Transition through proper FSM states
+                // INTENT_DETECTED → DATA_EXTRACTED → AWAITING_CONFIRMATION
+                $this->fsm->transition(FSM::STATE_DATA_EXTRACTED, [
+                    'extractedData' => $extracted['extracted_data'] ?? [],
+                    'pendingFields' => $validation['missing'],
+                    'pendingTask' => $currentTask
+                ], 'Data extracted for supplier selection');
+                
+                $this->fsm->transition(FSM::STATE_AWAITING_CONFIRMATION, [
+                    'extractedData' => $extracted['extracted_data'] ?? [],
+                    'pendingFields' => $validation['missing'],
+                    'pendingTask' => $currentTask,
+                    'action' => $action
+                ], 'Showing supplier selection list for update');
+                
+                return $this->formatResponse(
+                    'clarification',
+                    '**Select a supplier to edit:**',
+                    [
+                        'missing' => $validation['missing'],
+                        'currentData' => $extracted['extracted_data'] ?? [],
+                        'options' => array_map(function($supplier) {
+                            return [
+                                'id' => $supplier['id'],
+                                'label' => $supplier['name'],
+                                'sublabel' => $supplier['email'] ?? $supplier['contact_person'] ?? '',
+                                'value' => $supplier['id']
+                            ];
+                        }, $suppliers),
+                        'selectType' => 'supplier',
+                        'awaitingInput' => true
+                    ]
+                );
+            }
+            
+            // For delete_supplier with missing supplier identifier, show supplier list
+            if ($action === 'delete_supplier' && 
+                (in_array('supplier_name', $validation['missing']) || in_array('supplier_id', $validation['missing']))) {
+                $suppliers = $this->fetchSupplierList(20);
+                
+                if (empty($suppliers)) {
+                    return $this->formatResponse(
+                        'error',
+                        'No suppliers found in your account. Please create a supplier first.',
+                        []
+                    );
+                }
+                
+                // CRITICAL: Transition through proper FSM states
+                // INTENT_DETECTED → DATA_EXTRACTED → AWAITING_CONFIRMATION
+                $this->fsm->transition(FSM::STATE_DATA_EXTRACTED, [
+                    'extractedData' => $extracted['extracted_data'] ?? [],
+                    'pendingFields' => $validation['missing'],
+                    'pendingTask' => $currentTask
+                ], 'Data extracted for supplier selection');
+                
+                $this->fsm->transition(FSM::STATE_AWAITING_CONFIRMATION, [
+                    'extractedData' => $extracted['extracted_data'] ?? [],
+                    'pendingFields' => $validation['missing'],
+                    'pendingTask' => $currentTask,
+                    'action' => $action
+                ], 'Showing supplier selection list for delete');
+                
+                return $this->formatResponse(
+                    'clarification',
+                    '**Select a supplier to delete:**',
+                    [
+                        'missing' => $validation['missing'],
+                        'currentData' => $extracted['extracted_data'] ?? [],
+                        'options' => array_map(function($supplier) {
+                            return [
+                                'id' => $supplier['id'],
+                                'label' => $supplier['name'],
+                                'sublabel' => $supplier['email'] ?? $supplier['contact_person'] ?? '',
+                                'value' => $supplier['id']
+                            ];
+                        }, $suppliers),
+                        'selectType' => 'supplier',
                         'awaitingInput' => true
                     ]
                 );
@@ -679,6 +908,25 @@ class Orchestrator {
                 }
             }
             
+            // Add selectable supplier list for supplier-related actions
+            if (in_array($action, ['delete_supplier', 'view_supplier', 'supplier_balance', 'supplier_transactions', 'supplier_details']) && 
+                (in_array('supplier_name', $validation['missing']) || in_array('supplier_id', $validation['missing']))) {
+                $suppliers = $this->fetchSupplierList(20);
+                error_log("Fetched " . count($suppliers) . " suppliers for selection");
+                if (!empty($suppliers)) {
+                    $responseData['options'] = array_map(function($supplier) {
+                        return [
+                            'id' => $supplier['id'],
+                            'label' => $supplier['name'],
+                            'sublabel' => $supplier['email'] ?? $supplier['contact_person'] ?? '',
+                            'value' => $supplier['id']
+                        ];
+                    }, $suppliers);
+                    $responseData['selectType'] = 'supplier';
+                    error_log("Added " . count($responseData['options']) . " supplier options to response");
+                }
+            }
+            
             error_log("Response data: " . json_encode($responseData));
             
             return $this->formatResponse(
@@ -694,6 +942,11 @@ class Orchestrator {
         
         // For customer_details, also include raw_input for fallback name extraction
         if ($action === 'customer_details') {
+            $extractedData['raw_input'] = $message;
+        }
+        
+        // For supplier_details, also include raw_input for fallback name extraction
+        if ($action === 'supplier_details') {
             $extractedData['raw_input'] = $message;
         }
         
@@ -990,6 +1243,154 @@ class Orchestrator {
             );
         }
         
+        // For create/edit supplier, return editable form
+        if (in_array($task['action'], ['create_supplier', 'update_supplier'])) {
+            // For update_supplier, fetch full supplier data if only ID/name provided
+            if ($task['action'] === 'update_supplier') {
+                $supplierId = $data['supplier_id'] ?? null;
+                $supplierName = null;
+                
+                // Check if supplier_name is numeric (ID from selection) or actual name
+                if (!$supplierId && isset($data['supplier_name'])) {
+                    if (is_numeric($data['supplier_name'])) {
+                        $supplierId = (int)$data['supplier_name'];
+                    } else {
+                        $supplierName = $data['supplier_name'];
+                    }
+                }
+                
+                // If we have a supplier ID, fetch the record
+                if ($supplierId) {
+                    $stmt = $this->pdo->prepare("
+                        SELECT id, name, contact_person, phone, email, address, 
+                               tax_number, payment_terms, is_active 
+                        FROM suppliers 
+                        WHERE id = ? AND company_id = ?
+                    ");
+                    $stmt->execute([$supplierId, $this->companyId]);
+                    $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($supplier) {
+                        // Filter out empty values from $data to preserve supplier data
+                        $nonEmptyData = array_filter($data, function($value) {
+                            return $value !== '' && $value !== null;
+                        });
+                        // Map database fields to form fields
+                        $mappedSupplier = [
+                            'supplier_id' => $supplier['id'],
+                            'company_name' => $supplier['name'],
+                            'contact_person' => $supplier['contact_person'],
+                            'phone' => $supplier['phone'],
+                            'email' => $supplier['email'],
+                            'address' => $supplier['address'],
+                            'tax_number' => $supplier['tax_number'],
+                            'payment_terms' => $supplier['payment_terms'],
+                            'is_active' => $supplier['is_active'] == 1
+                        ];
+                        $data = array_merge($mappedSupplier, $nonEmptyData);
+                        $data['supplier_id'] = $supplierId;
+                    }
+                } elseif ($supplierName) {
+                    // Search by name
+                    error_log("Searching for supplier by name: {$supplierName}");
+                    $stmt = $this->pdo->prepare("
+                        SELECT id, name, contact_person, phone, email, address, 
+                               tax_number, payment_terms, is_active 
+                        FROM suppliers 
+                        WHERE name LIKE ? AND company_id = ? AND is_active = 1
+                    ");
+                    $stmt->execute(["%{$supplierName}%", $this->companyId]);
+                    $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    error_log("Found " . count($matches) . " matching suppliers");
+                    
+                    if (empty($matches)) {
+                        // No supplier found - show full list with message
+                        $allSuppliers = $this->fetchSupplierList(20);
+                        
+                        if (empty($allSuppliers)) {
+                            return $this->formatResponse(
+                                'error',
+                                'No suppliers found in your account.',
+                                []
+                            );
+                        }
+                        
+                        return $this->formatResponse(
+                            'clarification',
+                            "⚠️ Supplier **{$supplierName}** not found. Please select from the list below:",
+                            [
+                                'missing' => ['supplier_name'],
+                                'currentData' => [],
+                                'options' => array_map(function($supplier) {
+                                    return [
+                                        'id' => $supplier['id'],
+                                        'label' => $supplier['name'],
+                                        'sublabel' => $supplier['email'] ?? $supplier['contact_person'] ?? '',
+                                        'value' => $supplier['id']
+                                    ];
+                                }, $allSuppliers),
+                                'selectType' => 'supplier',
+                                'awaitingInput' => true
+                            ]
+                        );
+                    } elseif (count($matches) === 1) {
+                        // Exact match - show form
+                        $supplier = $matches[0];
+                        // Filter out empty values to preserve supplier data
+                        $nonEmptyData = array_filter($data, function($value) {
+                            return $value !== '' && $value !== null;
+                        });
+                        // Map database fields to form fields
+                        $mappedSupplier = [
+                            'supplier_id' => $supplier['id'],
+                            'company_name' => $supplier['name'],
+                            'contact_person' => $supplier['contact_person'],
+                            'phone' => $supplier['phone'],
+                            'email' => $supplier['email'],
+                            'address' => $supplier['address'],
+                            'tax_number' => $supplier['tax_number'],
+                            'payment_terms' => $supplier['payment_terms'],
+                            'is_active' => $supplier['is_active'] == 1
+                        ];
+                        $data = array_merge($mappedSupplier, $nonEmptyData);
+                        $data['supplier_id'] = $supplier['id'];
+                    } else {
+                        // Multiple matches - show selection
+                        return $this->formatResponse(
+                            'clarification',
+                            "Found **" . count($matches) . " suppliers** matching **{$supplierName}**. Please select one:",
+                            [
+                                'missing' => ['supplier_name'],
+                                'currentData' => [],
+                                'options' => array_map(function($supplier) {
+                                    return [
+                                        'id' => $supplier['id'],
+                                        'label' => $supplier['name'],
+                                        'sublabel' => $supplier['email'] ?? $supplier['contact_person'] ?? '',
+                                        'value' => $supplier['id']
+                                    ];
+                                }, $matches),
+                                'selectType' => 'supplier',
+                                'awaitingInput' => true
+                            ]
+                        );
+                    }
+                }
+            }
+            
+            $formConfig = $this->buildSupplierFormConfig($data);
+            $actionLabel = $task['action'] === 'create_supplier' ? 'Create Supplier' : 'Edit Supplier';
+            
+            return $this->formatResponse(
+                'form',
+                "📝 {$actionLabel} - Review and edit the details below:",
+                array_merge($formConfig, [
+                    'action' => $task['action'],
+                    'module' => $task['module']
+                ])
+            );
+        }
+        
         // For other actions, enhance data for display and show confirmation
         $displayData = $this->enhanceDataForDisplay($task, $data);
         
@@ -1040,6 +1441,32 @@ class Orchestrator {
             }
         }
         
+        // For supplier actions, enhance display with supplier details
+        if (in_array($task['action'], ['delete_supplier', 'view_supplier', 'supplier_balance', 'supplier_transactions', 'supplier_details'])) {
+            $supplierId = null;
+            
+            // Get supplier ID from either supplier_id field or supplier_name if it's numeric
+            if (isset($data['supplier_id'])) {
+                $supplierId = $data['supplier_id'];
+            } elseif (isset($data['supplier_name']) && is_numeric($data['supplier_name'])) {
+                // supplier_name contains an ID
+                $supplierId = (int)$data['supplier_name'];
+            }
+            
+            if ($supplierId && !isset($data['supplier_name']) || (isset($data['supplier_name']) && is_numeric($data['supplier_name']))) {
+                error_log("Fetching supplier by ID: {$supplierId}");
+                $supplier = $this->fetchSupplierById($supplierId);
+                error_log("Fetched supplier: " . json_encode($supplier));
+                if ($supplier) {
+                    $displayData['supplier_id'] = $supplierId; // Ensure ID is in data for execution
+                    $displayData['supplier_name'] = $supplier['name'];
+                    if ($supplier['email']) {
+                        $displayData['supplier_email'] = $supplier['email'];
+                    }
+                }
+            }
+        }
+        
         error_log("Enhanced display data: " . json_encode($displayData));
         return $displayData;
     }
@@ -1058,6 +1485,11 @@ class Orchestrator {
             
             // Skip showing customer_id if we have customer_name (it's redundant for display)
             if ($key === 'customer_id' && isset($data['customer_name'])) {
+                continue;
+            }
+            
+            // Skip showing supplier_id if we have supplier_name (it's redundant for display)
+            if ($key === 'supplier_id' && isset($data['supplier_name'])) {
                 continue;
             }
             
@@ -1094,6 +1526,21 @@ class Orchestrator {
             return $customer ?: null;
         } catch (Exception $e) {
             error_log("fetchCustomerById error: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Fetch supplier by ID for display purposes
+     */
+    private function fetchSupplierById(int $supplierId): ?array {
+        try {
+            $stmt = $this->pdo->prepare("SELECT id, name, email, phone, contact_person FROM suppliers WHERE id = ? AND company_id = ?");
+            $stmt->execute([$supplierId, $this->companyId]);
+            $supplier = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $supplier ?: null;
+        } catch (Exception $e) {
+            error_log("fetchSupplierById error: " . $e->getMessage());
             return null;
         }
     }
@@ -1167,6 +1614,78 @@ class Orchestrator {
                 'payment_terms' => $data['payment_terms'] ?? 'Cash on Delivery',
                 'credit_limit' => $data['credit_limit'] ?? '',
                 'is_active' => $data['is_active'] ?? true
+            ]
+        ];
+    }
+    
+    /**
+     * Build supplier form configuration for editable UI
+     */
+    private function buildSupplierFormConfig(array $data = []): array {
+        return [
+            'type' => 'form',
+            'fieldConfig' => [
+                'company_name' => [
+                    'label' => 'Company Name',
+                    'type' => 'text',
+                    'required' => true,
+                    'placeholder' => 'Enter supplier company name'
+                ],
+                'contact_person' => [
+                    'label' => 'Contact Person',
+                    'type' => 'text',
+                    'required' => true,
+                    'placeholder' => 'Enter contact person name'
+                ],
+                'phone' => [
+                    'label' => 'Phone Number',
+                    'type' => 'tel',
+                    'required' => true,
+                    'placeholder' => 'Enter phone number'
+                ],
+                'email' => [
+                    'label' => 'Email Address',
+                    'type' => 'email',
+                    'required' => true,
+                    'placeholder' => 'supplier@example.com'
+                ],
+                'address' => [
+                    'label' => 'Address',
+                    'type' => 'textarea',
+                    'required' => true,
+                    'placeholder' => 'Enter complete address'
+                ],
+                'tax_number' => [
+                    'label' => 'Tax Number / TIN',
+                    'type' => 'text',
+                    'required' => false,
+                    'placeholder' => 'Enter tax identification number'
+                ],
+                'payment_terms' => [
+                    'label' => 'Payment Terms',
+                    'type' => 'select',
+                    'required' => false,
+                    'options' => ['Immediate', 'Net 7 days', 'Net 15 days', 'Net 30 days', 'Net 45 days', 'Net 60 days'],
+                    'default' => 'Net 30 days'
+                ],
+                'is_active' => [
+                    'label' => 'Active Supplier',
+                    'type' => 'checkbox',
+                    'required' => false,
+                    'placeholder' => 'Mark as active supplier',
+                    'default' => true
+                ]
+            ],
+            'fields' => [
+                'supplier_id' => $data['supplier_id'] ?? $data['id'] ?? null, // CRITICAL: Preserve ID for updates
+                'company_name' => $data['company_name'] ?? $data['name'] ?? $data['supplier_name'] ?? '',
+                'contact_person' => $data['contact_person'] ?? $data['contact'] ?? '',
+                'phone' => $data['phone'] ?? '',
+                'email' => $data['email'] ?? '',
+                'address' => $data['address'] ?? '',
+                'tax_number' => $data['tax_number'] ?? $data['tax_id'] ?? '',
+                'payment_terms' => $data['payment_terms'] ?? 'Net 30 days',
+                'is_active' => $data['is_active'] ?? (($data['status'] ?? 'active') === 'active')
             ]
         ];
     }
@@ -1262,12 +1781,32 @@ class Orchestrator {
     private function callAI(string $systemPrompt, string $userMessage): array {
         $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
         
+        // Build messages array with conversation history
+        $messages = [['role' => 'system', 'content' => $systemPrompt]];
+        
+        // Add conversation history (limit to last N messages to avoid token limits)
+        $historyToInclude = array_slice($this->conversationHistory, -self::MAX_CONTEXT_MESSAGES);
+        foreach ($historyToInclude as $msg) {
+            $messages[] = [
+                'role' => $msg['role'] ?? 'user',
+                'content' => $msg['content'] ?? ''
+            ];
+        }
+        
+        // Add current user message
+        $messages[] = ['role' => 'user', 'content' => $userMessage];
+        
+        // Log context info for debugging
+        $contextInfo = sprintf(
+            "AI Context: %d history messages + 1 system + 1 current = %d total messages sent to AI",
+            count($historyToInclude),
+            count($messages)
+        );
+        error_log($contextInfo);
+        
         $data = [
             'model' => 'openai/gpt-oss-20b',
-            'messages' => [
-                ['role' => 'system', 'content' => $systemPrompt],
-                ['role' => 'user', 'content' => $userMessage]
-            ],
+            'messages' => $messages,
             'temperature' => 0.1, // Low temperature for deterministic extraction
             'max_tokens' => 500,
             'response_format' => ['type' => 'json_object']
@@ -1351,6 +1890,7 @@ class Orchestrator {
      */
     private function getRequiredFields(string $action): array {
         $requirements = [
+            // Customer actions
             'create_customer' => [], // Form will collect all fields
             'update_customer' => ['customer_name'], // Need identifier to know which customer to edit
             'delete_customer' => ['customer_name'], // Need customer identifier
@@ -1358,6 +1898,19 @@ class Orchestrator {
             'customer_balance' => ['customer_name'],
             'customer_transactions' => ['customer_name'],
             'customer_details' => ['customer_name'], // Need customer identifier for profile
+            
+            // Supplier actions
+            'create_supplier' => [], // Form will collect all fields
+            'update_supplier' => ['supplier_name'], // Need identifier to know which supplier to edit
+            'delete_supplier' => ['supplier_name'], // Need supplier identifier
+            'view_supplier' => ['supplier_name'],
+            'supplier_balance' => ['supplier_name'],
+            'supplier_transactions' => ['supplier_name'],
+            'supplier_details' => ['supplier_name'], // Need supplier identifier for profile
+            'activate_supplier' => ['supplier_name'],
+            'deactivate_supplier' => ['supplier_name'],
+            
+            // Other actions
             'add_product' => ['name', 'selling_price'],
             'update_product' => [],
             'create_invoice' => ['items'], // Customer can be looked up
@@ -1382,6 +1935,11 @@ class Orchestrator {
             // For customer actions, accept EITHER customer_id OR customer_name
             if ($field === 'customer_name' && in_array($action, ['delete_customer', 'view_customer', 'customer_balance', 'customer_transactions', 'update_customer', 'customer_details'])) {
                 if (!isset($data['customer_name']) && !isset($data['customer_id'])) {
+                    $missing[] = $field;
+                }
+            // For supplier actions, accept EITHER supplier_id OR supplier_name
+            } elseif ($field === 'supplier_name' && in_array($action, ['delete_supplier', 'view_supplier', 'supplier_balance', 'supplier_transactions', 'update_supplier', 'supplier_details', 'activate_supplier', 'deactivate_supplier'])) {
+                if (!isset($data['supplier_name']) && !isset($data['supplier_id'])) {
                     $missing[] = $field;
                 }
             } else {
@@ -1426,9 +1984,36 @@ class Orchestrator {
             }
         }
         
+        // For supplier actions, assume input is a supplier name/identifier
+        if (in_array($action, ['delete_supplier', 'view_supplier', 'supplier_balance', 'supplier_transactions', 'activate_supplier', 'deactivate_supplier', 'supplier_details'])) {
+            if (in_array('supplier_name', $missingFields) || in_array('supplier_id', $missingFields)) {
+                // Check if user entered a list number (1, 2, 3...) - resolve to actual supplier
+                if (is_numeric($extractedValue) && (int)$extractedValue <= 10) {
+                    $listIndex = (int)$extractedValue - 1;
+                    $suppliers = $this->fetchSupplierList();
+                    if (isset($suppliers[$listIndex])) {
+                        $merged['supplier_id'] = $suppliers[$listIndex]['id'];
+                        $merged['supplier_name'] = $suppliers[$listIndex]['name'];
+                        return $merged;
+                    }
+                    // Fall through - treat as supplier ID
+                    $merged['supplier_id'] = (int)$extractedValue;
+                } else {
+                    $merged['supplier_name'] = $extractedValue;
+                }
+                return $merged;
+            }
+        }
+        
         // For create_customer, assume input is the name
         if ($action === 'create_customer' && in_array('name', $missingFields)) {
             $merged['name'] = $input;
+            return $merged;
+        }
+        
+        // For create_supplier, assume input is the company name
+        if ($action === 'create_supplier' && in_array('company_name', $missingFields)) {
+            $merged['company_name'] = $input;
             return $merged;
         }
         
@@ -1467,6 +2052,10 @@ class Orchestrator {
         $fieldLabels = [
             'customer_name' => 'customer name',
             'customer_id' => 'customer',
+            'supplier_name' => 'supplier name',
+            'supplier_id' => 'supplier',
+            'company_name' => 'company name',
+            'contact_person' => 'contact person',
             'name' => 'name',
             'selling_price' => 'selling price',
             'cost_price' => 'cost price',
@@ -1513,6 +2102,29 @@ class Orchestrator {
             return $customers;
         } catch (Exception $e) {
             error_log("fetchCustomerList error: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Fetch supplier list for clarification
+     */
+    private function fetchSupplierList(int $limit = 10): array {
+        try {
+            error_log("fetchSupplierList called with companyId={$this->companyId}, limit={$limit}");
+            $stmt = $this->pdo->prepare("
+                SELECT id, name, email, phone, contact_person 
+                FROM suppliers 
+                WHERE company_id = ? AND is_active = 1
+                ORDER BY name ASC
+                LIMIT " . intval($limit) . "
+            ");
+            $stmt->execute([$this->companyId]);
+            $suppliers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            error_log("fetchSupplierList returned " . count($suppliers) . " suppliers");
+            return $suppliers;
+        } catch (Exception $e) {
+            error_log("fetchSupplierList error: " . $e->getMessage());
             return [];
         }
     }

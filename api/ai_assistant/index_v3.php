@@ -109,8 +109,11 @@ try {
     $companyId = $_SESSION['company_id'];
     $userId = $_SESSION['user_id'];
     
-    // Initialize Orchestrator
-    $orchestrator = new Orchestrator($pdo, $companyId, $userId, $groqApiKey);
+    // Get conversation history from request (sent by frontend)
+    $conversationHistory = $input['conversationHistory'] ?? [];
+    
+    // Initialize Orchestrator with conversation history
+    $orchestrator = new Orchestrator($pdo, $companyId, $userId, $groqApiKey, $conversationHistory);
     
     switch ($action) {
         // ============================================
@@ -138,7 +141,15 @@ try {
         // ============================================
         case 'confirm':
             $response = $input['response'] ?? 'confirm'; // confirm, reject, modify
-            $result = $orchestrator->processMessage($response);
+            $formData = $input['formData'] ?? null;
+            $message = $input['message'] ?? $response;
+            
+            // If formData is provided, pass it as JSON for the orchestrator to parse
+            if ($formData && is_array($formData)) {
+                $message = json_encode($formData);
+            }
+            
+            $result = $orchestrator->processMessage($message);
             echo json_encode($result);
             break;
         

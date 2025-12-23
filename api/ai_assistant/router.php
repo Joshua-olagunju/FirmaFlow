@@ -138,6 +138,12 @@ class Router {
             'action' => 'create_customer',
             'priority' => 2
         ],
+        // Casual: "add john", "register alice", "new customer bob"
+        '/^(add|create|register|new)\s+([a-z]+\s*)+$/i' => [
+            'module' => 'customers',
+            'action' => 'create_customer',
+            'priority' => 3
+        ],
         
         // EDIT/UPDATE CUSTOMER (with typo tolerance)
         '/\b(edit|edti|eidt|update|updat|updaet|change|chang|modify|modfy)\s+(my|a|an|the)?\s*(customer|custmer|costomer|customar|customr|cusomer|cutomer|custoemr|client)s?\b/i' => [
@@ -177,6 +183,17 @@ class Router {
             'action' => 'delete_customer',
             'priority' => 0
         ],
+        // Casual: "delete john", "remove bob", "get rid of alice"
+        '/^(delete|remove|delet|remov)\s+([a-z]+\s*)+$/i' => [
+            'module' => 'customers',
+            'action' => 'delete_customer',
+            'priority' => 2
+        ],
+        '/\b(get\s+rid\s+of|dump)\b.*\b(customer|[A-Z][a-z]+)\b/i' => [
+            'module' => 'customers',
+            'action' => 'delete_customer',
+            'priority' => 1
+        ],
         
         // CUSTOMER DETAILS/INFO - "tell me about X", "info about X", "who is X"
         // This should fetch detailed customer profile with spending history
@@ -199,6 +216,12 @@ class Router {
             'module' => 'customers',
             'action' => 'customer_details',
             'priority' => 1
+        ],
+        // Casual: "who is john", "tell me about alice", "what about bob"
+        '/^(who\s+is|tell\s+me\s+about|what\s+about|info\s+on)\s+([a-z]+\s*)+$/i' => [
+            'module' => 'customers',
+            'action' => 'customer_details',
+            'priority' => 2
         ],
         // "What's the profile of customer X" patterns
         '/\b(what\'?s|whats|what\s+is)\s+(the\s+)?(profile|details|info)\b.*\b(customer|custmer|costomer|customar|customr|cusomer|cutomer|custoemr|client)\b/i' => [
@@ -305,21 +328,174 @@ class Router {
         ],
         
         // ============================================
-        // SUPPLIERS MODULE
+        // SUPPLIERS MODULE - FULL CRUD SUPPORT
         // ============================================
-        '/\b(view|show|list|get)\b.*\bsuppliers?\b/i' => [
+        
+        // --- CREATE SUPPLIER ---
+        // Casual: "i want to add a supplier", "need new vendor" - HIGHEST PRIORITY
+        '/\b(i\s+(want|wnat|watn|wnta|need|nedd|wanna|would\s+like)|can\s+you|please).*(add|ad|create|creat|make|register|new).*\b(supplier|suppier|suplier|suppliar|supp|vendor|vendur)\b/i' => [
             'module' => 'suppliers',
-            'action' => 'view_suppliers',
+            'action' => 'create_supplier',
+            'priority' => 0
+        ],
+        '/\b(want|wnat|watn|wnta|need|nedd|wanna|would\s+like).*(add|ad|create|creat).*\b(supplier|suppier|suplier|suppliar|vendor|vendur)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'create_supplier',
+            'priority' => 0
+        ],
+        '/\b(add|ad|create|creat|new|nwe|register|registr|save|make)\b.*\b(supplier|suppier|suplier|suppliar|supp|vendor|vendur)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'create_supplier',
             'priority' => 1
         ],
-        '/\b(top|best|main|biggest)\b.*\bsuppliers?\b/i' => [
+        // Possessive create: "add my supplier ABC"
+        '/\b(add|ad|create|creat)\b\s+(my\s+)?(supplier|suppier|suplier|vendor|vendur)\s+\w+/i' => [
+            'module' => 'suppliers',
+            'action' => 'create_supplier',
+            'priority' => 1
+        ],
+        
+        // --- UPDATE SUPPLIER ---
+        '/\b(edit|edti|eidt|update|updat|updaet|change|chang|modify|modfy|correct|fix)\b.*\b(supplier|suppier|suplier|suppliar|vendor|vendur)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'update_supplier',
+            'priority' => 1
+        ],
+        // Casual: "i want to edit supplier", "need to update vendor"
+        '/\b(i\s+(want|wnat|watn|wnta|need|nedd)|can\s+you|please)\b.*\b(update|updat|edit|edti|eidt|change|chang)\b.*\b(supplier|suppier|suplier|vendor|vendur)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'update_supplier',
+            'priority' => 0
+        ],
+        '/\b(want|wnat|watn|wnta|need|nedd)\s+to\s+(edit|edti|eidt|update|updat)\s+(my|a|an|the)?\s*(supplier|suppier|suplier|vendor|vendur)s?\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'update_supplier',
+            'priority' => 0
+        ],
+        // Pattern: "change ABC's phone number"
+        '/\b(change|update|edit)\b\s+\w+.*\b(phone|email|address|contact|name)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'update_supplier',
+            'priority' => 3
+        ],
+        
+        // --- DELETE SUPPLIER ---
+        '/\b(delete|delet|deldt|deldta|remove|remov|rmove|erase|get rid of|drop)\b.*\b(supplier|suppier|suplier|suppliar|vendor|vendur)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'delete_supplier',
+            'priority' => 1
+        ],
+        // Casual: "i want to delete supplier", "need to remove vendor"
+        '/\b(i\s+(want|wnat|watn|wnta|need|nedd)|can\s+you|please)\b.*\b(delete|delet|deldt|remove|remov)\b.*\b(supplier|suppier|suplier|vendor|vendur)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'delete_supplier',
+            'priority' => 0
+        ],
+        '/\b(want|wnat|watn|wnta|need|nedd)\s+to\s+(delete|delet|deldt|remove|remov)\s+(my|a|an|the)?\s*(supplier|suppier|suplier|vendor|vendur)s?\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'delete_supplier',
+            'priority' => 0
+        ],
+        // Pattern: "delete ABC from suppliers"
+        '/\b(delete|delet|deldt|remove|remov)\b\s+\w+\s+(from\s+)?(supplier|suppier|suplier|vendor|vendur)s?\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'delete_supplier',
+            'priority' => 1
+        ],
+        
+        // --- SUPPLIER DETAILS / INFO ---
+        '/\b(info|information|details?|profile)\b.*\b(about|for|on)\b.*\b(supplier|vendor)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'supplier_details',
+            'priority' => 1
+        ],
+        '/\b(tell\s+me\s+about|who\s+is|show\s+me)\b.*\b(supplier|vendor)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'supplier_details',
+            'priority' => 1
+        ],
+        '/\bsupplier\b\s+\w+\s*(info|details?|profile)?$/i' => [
+            'module' => 'suppliers',
+            'action' => 'supplier_details',
+            'priority' => 2
+        ],
+        
+        // --- SUPPLIER BALANCE ---
+        '/\b(what|how\s+much)\b.*(owe|owing|balance|outstanding).*\b(supplier|vendor)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'supplier_balance',
+            'priority' => 1
+        ],
+        '/\bsupplier\b.*\b(balance|outstanding|owe|owing)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'supplier_balance',
+            'priority' => 1
+        ],
+        
+        // --- SUPPLIER TRANSACTIONS ---
+        '/\b(supplier|vendor)\b.*\b(transaction|purchase|history|orders?)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'supplier_transactions',
+            'priority' => 1
+        ],
+        '/\b(purchase|transaction)\s+history\b.*\b(supplier|vendor|from)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'supplier_transactions',
+            'priority' => 1
+        ],
+        
+        // --- VIEW SUPPLIERS LIST ---
+        '/\b(view|show|list|get|display|see)\b.*\b(supplier|vendor|supplie|suplier)s?\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'view_suppliers',
+            'priority' => 2
+        ],
+        '/\bmy\s+(supplier|vendor)s?\b(?!.*\b(edit|update|delete|remove|change|modify)\b)/i' => [
+            'module' => 'suppliers',
+            'action' => 'view_suppliers',
+            'priority' => 5
+        ],
+        '/\b(all|our)\s+(supplier|vendor)s?\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'view_suppliers',
+            'priority' => 3
+        ],
+        // GENERIC CATCH-ALL: Just "supplier" or "suppliers" alone
+        '/^\s*(supplier|vendor|supplie|suplier)s?\s*$/i' => [
+            'module' => 'suppliers',
+            'action' => 'view_suppliers',
+            'priority' => 10
+        ],
+        // Broad fallback: any mention of supplier/vendor without specific action verbs
+        '/\b(supplier|vendor)s?\b(?!.*\b(add|create|edit|update|delete|remove|info|balance|transaction|owe)\b)/i' => [
+            'module' => 'suppliers',
+            'action' => 'view_suppliers',
+            'priority' => 10
+        ],
+        
+        // --- TOP SUPPLIERS ---
+        '/\b(top|best|main|biggest|highest)\b.*\b(supplier|vendor)s?\b/i' => [
             'module' => 'suppliers',
             'action' => 'top_suppliers',
             'priority' => 1
         ],
-        '/\bsupplier\b.*\b(summary|stats|statistics)\b/i' => [
+        
+        // --- SUPPLIER SUMMARY ---
+        '/\bsupplier\b.*\b(summary|stats|statistics|overview)\b/i' => [
             'module' => 'suppliers',
             'action' => 'supplier_summary',
+            'priority' => 1
+        ],
+        
+        // --- ACTIVATE / DEACTIVATE ---
+        '/\b(activate|enable|turn\s+on)\b.*\b(supplier|vendor)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'activate_supplier',
+            'priority' => 1
+        ],
+        '/\b(deactivate|disable|turn\s+off)\b.*\b(supplier|vendor)\b/i' => [
+            'module' => 'suppliers',
+            'action' => 'deactivate_supplier',
             'priority' => 1
         ],
         
@@ -601,6 +777,8 @@ class Router {
         $message = trim($message);
         $detectedIntents = [];
         
+        error_log("Router::detectIntents - Input message: '{$message}'");
+        
         // Check for cancel command first
         if (self::isCancelCommand($message)) {
             return [[
@@ -612,8 +790,11 @@ class Router {
         }
         
         // Match against patterns
+        $matchCount = 0;
         foreach (self::$intentPatterns as $pattern => $intent) {
             if (preg_match($pattern, $message)) {
+                $matchCount++;
+                error_log("Router::detectIntents - Pattern matched: {$pattern} => {$intent['module']}.{$intent['action']}");
                 $detectedIntents[] = [
                     'module' => $intent['module'],
                     'action' => $intent['action'],
@@ -624,6 +805,8 @@ class Router {
             }
         }
         
+        error_log("Router::detectIntents - Total patterns matched: {$matchCount}");
+        
         // Remove duplicates (same action)
         $detectedIntents = self::deduplicateIntents($detectedIntents);
         
@@ -632,11 +815,14 @@ class Router {
         
         // If no intents detected, try fuzzy keyword matching as fallback
         if (empty($detectedIntents)) {
+            error_log("Router::detectIntents - No pattern matches, trying fuzzy matching");
             $fuzzyIntent = self::fuzzyMatchIntent($message);
             if ($fuzzyIntent) {
+                error_log("Router::detectIntents - Fuzzy match found: {$fuzzyIntent['module']}.{$fuzzyIntent['action']}");
                 return [$fuzzyIntent];
             }
             
+            error_log("Router::detectIntents - No matches found, returning 'unknown'");
             return [[
                 'module' => 'general',
                 'action' => 'unknown',
@@ -695,6 +881,27 @@ class Router {
                 'action_keywords' => ['create', 'add', 'make', 'register'],
                 'context' => ['customer', 'customers', 'client', 'clients'],
                 'module' => 'customers'
+            ],
+            // Supplier actions
+            'create_supplier' => [
+                'keywords' => ['create', 'add', 'new', 'register', 'make'],
+                'context' => ['supplier', 'suppliers', 'vendor', 'vendors'],
+                'module' => 'suppliers'
+            ],
+            'update_supplier' => [
+                'keywords' => ['edit', 'update', 'change', 'modify'],
+                'context' => ['supplier', 'suppliers', 'vendor', 'vendors'],
+                'module' => 'suppliers'
+            ],
+            'delete_supplier' => [
+                'keywords' => ['delete', 'remove', 'erase'],
+                'context' => ['supplier', 'suppliers', 'vendor', 'vendors'],
+                'module' => 'suppliers'
+            ],
+            'view_suppliers' => [
+                'keywords' => ['list', 'show', 'view', 'all', 'get', 'see'],
+                'context' => ['supplier', 'suppliers', 'vendor', 'vendors'],
+                'module' => 'suppliers'
             ],
         ];
         
@@ -999,6 +1206,10 @@ class Router {
             'view_customer', 'customer_balance', 'customer_transactions',
             'customer_details',  // Needs AI to extract customer name from message
             'change_customer_type', 'activate_customer', 'deactivate_customer',
+            'create_supplier', 'update_supplier', 'delete_supplier',
+            'view_supplier', 'supplier_balance', 'supplier_transactions',
+            'supplier_details',  // Needs AI to extract supplier name from message
+            'activate_supplier', 'deactivate_supplier',
             'add_product', 'add_multiple_products', 'update_product', 'adjust_stock',
             'create_invoice', 'update_invoice', 'record_payment',
             'create_purchase_order', 'update_purchase_order',

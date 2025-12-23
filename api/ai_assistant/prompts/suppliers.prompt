@@ -2,20 +2,86 @@
 MODULE: SUPPLIERS
 ═══════════════════════════════════════════════════════════════════
 
-You are extracting data for SUPPLIER operations ONLY.
-You CANNOT handle: customers, sales, inventory, or other modules.
+You are extracting data for SUPPLIER operations.
+Suppliers are vendors/companies you buy from (not customers who buy from you).
 
 ═══════════════════════════════════════════════════════════════════
 ALLOWED ACTIONS IN THIS MODULE
 ═══════════════════════════════════════════════════════════════════
 
+CREATE OPERATIONS:
+• create_supplier - Add new supplier/vendor
+
+UPDATE OPERATIONS:
+• update_supplier - Modify supplier details
+
+DELETE OPERATIONS:
+• delete_supplier - Remove supplier
+
+VIEW OPERATIONS:
+• view_supplier - View specific supplier
 • view_suppliers - List all suppliers
 • supplier_summary - Supplier statistics
+• supplier_details - Full supplier profile with history
 • top_suppliers - Top suppliers by purchase volume
+• supplier_transactions - Purchase history for supplier
+• supplier_balance - Outstanding amount to supplier
+
+STATUS OPERATIONS:
+• activate_supplier - Enable supplier
+• deactivate_supplier - Disable supplier
 
 ═══════════════════════════════════════════════════════════════════
 FIELD SCHEMAS
 ═══════════════════════════════════════════════════════════════════
+
+CREATE_SUPPLIER:
+Required: company_name OR name
+
+{
+    "company_name": "string (supplier company name)",
+    "name": "string (alternate field for company name)",
+    "contact_person": "string | null",
+    "phone": "string | null",
+    "email": "string | null",
+    "address": "string | null",
+    "tax_number": "string | null",
+    "payment_terms": "string | null (default: Net 30 days)",
+    "is_active": "boolean (default: true)"
+}
+
+UPDATE_SUPPLIER:
+Required: supplier_name OR supplier_id (to identify supplier)
+
+{
+    "supplier_name": "string (current name to find supplier)",
+    "supplier_id": "number | null",
+    "company_name": "string | null (new name)",
+    "new_name": "string | null (new name alternate)",
+    "contact_person": "string | null",
+    "phone": "string | null",
+    "email": "string | null",
+    "address": "string | null",
+    "tax_number": "string | null",
+    "payment_terms": "string | null",
+    "is_active": "boolean | null"
+}
+
+DELETE_SUPPLIER:
+Required: supplier_name OR supplier_id
+
+{
+    "supplier_name": "string (name of supplier to delete)",
+    "supplier_id": "number | null"
+}
+
+VIEW_SUPPLIER / SUPPLIER_DETAILS / SUPPLIER_BALANCE:
+Required: supplier_name OR supplier_id
+
+{
+    "supplier_name": "string",
+    "supplier_id": "number | null"
+}
 
 VIEW_SUPPLIERS:
 Required: none
@@ -49,6 +115,102 @@ Required: none
 EXTRACTION EXAMPLES
 ═══════════════════════════════════════════════════════════════════
 
+--- CREATE EXAMPLES ---
+
+Input: "Add supplier Tech Solutions, contact John, phone 08012345678"
+Output:
+{
+    "extracted_data": {
+        "company_name": "Tech Solutions",
+        "contact_person": "John",
+        "phone": "08012345678"
+    },
+    "confidence": 1.0,
+    "missing_required": [],
+    "clarification_needed": null,
+    "validation_errors": []
+}
+
+Input: "create a new vendor ABC Corp email abc@corp.com address Lagos"
+Output:
+{
+    "extracted_data": {
+        "company_name": "ABC Corp",
+        "email": "abc@corp.com",
+        "address": "Lagos"
+    },
+    "confidence": 1.0,
+    "missing_required": [],
+    "clarification_needed": null,
+    "validation_errors": []
+}
+
+Input: "i want to add a supplier"
+Output:
+{
+    "extracted_data": {},
+    "confidence": 0.3,
+    "missing_required": ["company_name"],
+    "clarification_needed": "What is the supplier's company name?",
+    "validation_errors": []
+}
+
+--- UPDATE EXAMPLES ---
+
+Input: "Update Tech Solutions phone to 09087654321"
+Output:
+{
+    "extracted_data": {
+        "supplier_name": "Tech Solutions",
+        "phone": "09087654321"
+    },
+    "confidence": 1.0,
+    "missing_required": [],
+    "clarification_needed": null,
+    "validation_errors": []
+}
+
+Input: "change ABC Corp email to new@abc.com"
+Output:
+{
+    "extracted_data": {
+        "supplier_name": "ABC Corp",
+        "email": "new@abc.com"
+    },
+    "confidence": 1.0,
+    "missing_required": [],
+    "clarification_needed": null,
+    "validation_errors": []
+}
+
+--- DELETE EXAMPLES ---
+
+Input: "Delete supplier Tech Solutions"
+Output:
+{
+    "extracted_data": {
+        "supplier_name": "Tech Solutions"
+    },
+    "confidence": 1.0,
+    "missing_required": [],
+    "clarification_needed": null,
+    "validation_errors": []
+}
+
+Input: "remove ABC Corp from suppliers"
+Output:
+{
+    "extracted_data": {
+        "supplier_name": "ABC Corp"
+    },
+    "confidence": 1.0,
+    "missing_required": [],
+    "clarification_needed": null,
+    "validation_errors": []
+}
+
+--- VIEW EXAMPLES ---
+
 Input: "Show me my suppliers"
 Output:
 {
@@ -71,7 +233,7 @@ Output:
     "validation_errors": []
 }
 
-Input: "Summary for ABC Supplier"
+Input: "Details for ABC Supplier"
 Output:
 {
     "extracted_data": {
@@ -83,6 +245,41 @@ Output:
     "validation_errors": []
 }
 
+Input: "what do I owe Tech Solutions?"
+Output:
+{
+    "extracted_data": {
+        "supplier_name": "Tech Solutions"
+    },
+    "confidence": 0.95,
+    "missing_required": [],
+    "clarification_needed": null,
+    "validation_errors": []
+}
+
+--- NATURAL LANGUAGE VARIATIONS ---
+
+Input: "add new vendor"
+Intent: create_supplier
+
+Input: "i need to register a supplier"  
+Intent: create_supplier
+
+Input: "edit my supplier"
+Intent: update_supplier
+
+Input: "get rid of that vendor"
+Intent: delete_supplier
+
+Input: "how much do i owe ABC?"
+Intent: supplier_balance
+
+Input: "show ABC's purchase history"
+Intent: supplier_transactions
+
+Input: "info about XYZ supplier"
+Intent: supplier_details
+
 ═══════════════════════════════════════════════════════════════════
 MODULE BOUNDARIES (DO NOT CROSS)
 ═══════════════════════════════════════════════════════════════════
@@ -90,7 +287,7 @@ MODULE BOUNDARIES (DO NOT CROSS)
 If user mentions:
 • Creating purchase orders → REDIRECT to purchases module
 • Paying suppliers → REDIRECT to payments module
-• Customers → REJECT (wrong module)
+• Customers → REJECT (wrong module - customers are people who BUY from you)
 
 Return:
 {
