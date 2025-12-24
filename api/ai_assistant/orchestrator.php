@@ -26,6 +26,7 @@ require_once __DIR__ . '/fsm.php';
 require_once __DIR__ . '/task_queue.php';
 require_once __DIR__ . '/router.php';
 require_once __DIR__ . '/prompt_loader.php';
+require_once __DIR__ . '/semantic_analyzer.php';
 
 class Orchestrator {
     private $pdo;
@@ -34,6 +35,8 @@ class Orchestrator {
     private $apiKey;
     private $fsm;
     private $conversationHistory; // Store conversation context
+    private $lastOfferedActions = []; // Track what was just offered for follow-up handling
+    private $router;
     
     // Confidence thresholds
     const MIN_CONFIDENCE_TO_PROCEED = 0.7;
@@ -49,6 +52,12 @@ class Orchestrator {
         $this->apiKey = $apiKey;
         $this->conversationHistory = $conversationHistory;
         $this->fsm = new FSM($pdo, $companyId, $userId);
+        $this->router = new Router();
+        
+        // Load last offered actions from session
+        if (isset($_SESSION['ai_last_offered_actions'])) {
+            $this->lastOfferedActions = $_SESSION['ai_last_offered_actions'];
+        }
     }
     
     /**
@@ -60,6 +69,9 @@ class Orchestrator {
         $startTime = microtime(true);
         
         try {
+            // STEP 0: Check for timeout and auto-reset if needed
+            $this->checkAndHandleTimeout();
+            
             // STEP 1: Check for cancel/reset command
             if (Router::isCancelCommand($message)) {
                 return $this->handleCancel();
@@ -108,51 +120,277 @@ class Orchestrator {
             error_log("Orchestrator Error: " . $e->getMessage());
             $this->fsm->resetToIdle('Error: ' . $e->getMessage());
             
+            // NEVER return a hard error - always conversational
             return $this->formatResponse(
-                'error',
-                'An error occurred. Please try again.',
-                ['error' => $e->getMessage()]
+                'assistant',
+                "Oops! Something went wrong on my end, but don't worry - I've reset everything. What would you like to do?",
+                ['technical_note' => $e->getMessage()]
             );
         }
     }
     
     /**
+     * Check for timeout and handle gracefully
+     * 
+     * This ensures states don't get stuck indefinitely
+     */
+    private function checkAndHandleTimeout(): void {
+        $state = $this->fsm->getState();
+        
+        // If no timeout is set or state is IDLE, nothing to check
+        if ($state['state'] === FSM::STATE_IDLE || empty($state['timeout_at'])) {
+            return;
+        }
+        
+        $timeoutAt = strtotime($state['timeout_at']);
+        $now = time();
+        
+        // If timeout exceeded, reset to IDLE
+        if ($timeoutAt > 0 && $now > $timeoutAt) {
+            error_log("State timeout detected: {$state['state']} exceeded timeout at {$state['timeout_at']}");
+            $this->fsm->resetToIdle("State timeout after " . ($now - $timeoutAt) . " seconds");
+        }
+    }
+    
+    /**
      * IDLE STATE: Detect intents and create task queue
+     * 
+     * NEW FLOW:
+     * 1. Check if this is a follow-up to recently offered actions
+     * 2. Semantic analysis (AI understanding with spelling correction)
+     * 3. Smart routing (code + AI hints)
+     * 4. Conversational fallback (NEVER fails)
      */
     private function handleIdleState(string $message): array {
-        // STEP 1: CODE detects intents (NOT AI)
-        $intents = Router::detectIntents($message);
-        error_log("handleIdleState - message: '{$message}', detected intents: " . json_encode($intents));
-        
-        // STEP 2: Handle unknown intent
-        if (count($intents) === 1 && $intents[0]['action'] === 'unknown') {
-            error_log("Unknown intent - returning handleUnknownIntent");
-            return $this->handleUnknownIntent($message);
+        // STEP 1: Check for follow-ups to recently offered actions
+        // Examples: "yes", "view them", "okay let's do that", "create one"
+        $followUpResult = $this->handleFollowUp($message);
+        if ($followUpResult !== null) {
+            return $followUpResult;
         }
         
-        // STEP 3: Handle general/greeting intents (no AI needed)
-        if ($intents[0]['module'] === 'general') {
-            return $this->handleGeneralIntent($intents[0], $message);
+        // STEP 1.5: FAST PATH - Pattern-based data query detection
+        // This catches common queries BEFORE semantic analysis for speed and reliability
+        $fastPathResult = $this->detectDataQueryFastPath($message);
+        if ($fastPathResult !== null) {
+            error_log("handleIdleState - Fast path detected data query");
+            return $fastPathResult;
         }
         
-        // STEP 4: Handle capability questions ("can I...", "how do I...")
-        // These should respond conversationally and offer to help
-        if ($this->isCapabilityQuestion($intents[0]['action'])) {
-            return $this->handleCapabilityQuestion($intents[0], $message);
+        // STEP 2: SEMANTIC UNDERSTANDING (First AI call - with spelling tolerance)
+        error_log("handleIdleState - Starting semantic analysis for: '{$message}'");
+        $semanticAnalyzer = new SemanticAnalyzer($this->apiKey, $this->conversationHistory);
+        $semanticAnalysis = $semanticAnalyzer->analyze($message);
+        
+        error_log("handleIdleState - Semantic analysis result: " . json_encode($semanticAnalysis));
+        
+        // STEP 3: SMART ROUTING (Code uses AI hints)
+        $intents = Router::detectIntentsWithSemantics($message, $semanticAnalysis);
+        error_log("handleIdleState - Detected intents: " . json_encode($intents));
+        
+        // STEP 3: Handle based on intent type
+        $primaryIntent = $intents[0];
+        
+        // If it's a general/conversational intent, handle immediately
+        if ($primaryIntent['module'] === 'general') {
+            return $this->handleGeneralIntent($primaryIntent, $message, $semanticAnalysis);
         }
         
-        // STEP 5: Create task queue
+        // STEP 4: Check if it's a data query that should execute immediately
+        // Examples: "who is my top customer?", "show my sales", "what products do I have?"
+        if (!empty($primaryIntent['is_data_query']) || 
+            $semanticAnalysis['user_intent_type'] === 'data_query') {
+            // This is a database query - execute immediately and return REAL data
+            error_log("handleIdleState - Detected data query, executing immediately");
+            
+            // For data queries, we need to determine the specific action
+            $originalQuery = $primaryIntent['data']['original_query'] ?? $message;
+            $dataIntent = $this->determineDataQueryAction($primaryIntent, $originalQuery);
+            
+            return $this->executeDataQuery($dataIntent, $originalQuery);
+        }
+        
+        // STEP 5: Check if it's a pure definition question (no database needed)
+        if (!$semanticAnalysis['action_required'] && 
+            $semanticAnalysis['user_intent_type'] === 'question') {
+            // This is a definition question, not a data query
+            // Example: "what is a customer?", "how does invoicing work?"
+            error_log("handleIdleState - Detected definition question, routing to chat");
+            return $this->handleGeneralIntent($primaryIntent, $message, $semanticAnalysis);
+        }
+        
+        // STEP 5: Handle capability questions ("can I...", "how do I...")
+        if ($this->isCapabilityQuestion($primaryIntent['action'])) {
+            return $this->handleCapabilityQuestion($primaryIntent, $message);
+        }
+        
+        // STEP 6: This is an action request - create task queue
         $taskQueue = TaskQueue::buildQueue($intents);
         $this->fsm->setTaskQueue($taskQueue);
         
-        // STEP 6: Transition to INTENT_DETECTED
+        // STEP 7: Transition to INTENT_DETECTED
         $this->fsm->transition(FSM::STATE_INTENT_DETECTED, [
             'originalMessage' => $message,
-            'intentCount' => count($intents)
+            'intentCount' => count($intents),
+            'semanticAnalysis' => $semanticAnalysis
         ], 'Intents detected by router');
         
-        // STEP 7: Immediately process first task
+        // STEP 8: Immediately process first task
         return $this->processCurrentTask($message);
+    }
+    
+    /**
+     * Execute informational query directly (no confirmation needed)
+     */
+    private function executeInformationalQuery(array $intent, string $message): array {
+        error_log("executeInformationalQuery - Module: {$intent['module']}, Action: {$intent['action']}");
+        
+        // Load handler
+        $handlerFile = __DIR__ . '/handlers/' . $intent['module'] . '_handler.php';
+        if (!file_exists($handlerFile)) {
+            return $this->formatResponse(
+                'assistant',
+                "I understand you're asking about {$intent['module']}, but I don't have access to that module yet. What else can I help you with?",
+                []
+            );
+        }
+        
+        require_once $handlerFile;
+        $handlerFunction = 'handle' . ucfirst($intent['module']) . 'Intent';
+        
+        if (!function_exists($handlerFunction)) {
+            return $this->formatResponse(
+                'assistant',
+                "I can help you with {$intent['module']}, but the system needs to be configured first. Is there anything else I can assist with?",
+                []
+            );
+        }
+        
+        // Execute query
+        $result = $handlerFunction(
+            $intent['action'],
+            $intent['data'] ?? [],
+            'executing',
+            $this->pdo,
+            $this->companyId,
+            $this->userId
+        );
+        
+        // Return result directly
+        return $result;
+    }
+    
+    /**
+     * Determine specific action for a data query
+     * Examples: "who is my top customer?" -> top_customers
+     *           "show my customers" -> customer_summary
+     *           "today's sales" -> sales_summary
+     */
+    private function determineDataQueryAction(array $intent, string $query): array {
+        $query = strtolower($query);
+        
+        // Detect "top" queries for customers
+        if (preg_match('/\b(top|best|biggest|highest)\b.*\b(customer|client)/i', $query)) {
+            $intent['action'] = 'top_customers';
+            $intent['data']['limit'] = 10;
+            $intent['data']['metric'] = 'revenue';
+        }
+        // Detect sales/revenue queries
+        elseif (preg_match('/\b(sales?|revenue|earnings?|income)\b/i', $query)) {
+            // Check for time-based filters
+            if (preg_match('/\b(today|today\'?s)\b/i', $query)) {
+                $intent['data']['date_range'] = 'today';
+            } elseif (preg_match('/\b(this\s+month|monthly)\b/i', $query)) {
+                $intent['data']['date_range'] = 'this_month';
+            } elseif (preg_match('/\b(this\s+week|weekly)\b/i', $query)) {
+                $intent['data']['date_range'] = 'this_week';
+            } elseif (preg_match('/\b(this\s+year|yearly|annual)\b/i', $query)) {
+                $intent['data']['date_range'] = 'this_year';
+            }
+            
+            // Ensure correct module and action
+            $intent['module'] = 'sales';
+            $intent['action'] = 'sales_summary';
+        }
+        // Detect "recent" queries
+        elseif (preg_match('/\b(recent|latest|last)\b/i', $query)) {
+            // Keep the summary action but add ordering
+            $intent['data']['sort'] = 'recent';
+        }
+        
+        return $intent;
+    }
+    
+    /**
+     * Execute data query and format response using AI with REAL data
+     * This prevents AI from inventing data
+     */
+    private function executeDataQuery(array $intent, string $originalQuery): array {
+        error_log("executeDataQuery - Query: '{$originalQuery}', Module: {$intent['module']}, Action: {$intent['action']}");
+        
+        // Load handler
+        $handlerFile = __DIR__ . '/handlers/' . $intent['module'] . '_handler.php';
+        if (!file_exists($handlerFile)) {
+            return $this->formatResponse(
+                'assistant',
+                "I'd like to help with that query, but I don't have access to {$intent['module']} data yet.",
+                []
+            );
+        }
+        
+        require_once $handlerFile;
+        $handlerFunction = 'handle' . ucfirst($intent['module']) . 'Intent';
+        
+        if (!function_exists($handlerFunction)) {
+            return $this->formatResponse(
+                'assistant',
+                "I can access {$intent['module']}, but the handler isn't configured. Please contact support.",
+                []
+            );
+        }
+        
+        // Execute query to get REAL data
+        $result = $handlerFunction(
+            $intent['action'],
+            $intent['data'] ?? [],
+            'executing',
+            $this->pdo,
+            $this->companyId,
+            $this->userId
+        );
+        
+        error_log("executeDataQuery - Raw result: " . json_encode($result));
+        
+        // If query succeeded, store result in session for follow-up questions
+        // Note: Some handlers return 'success', others return 'status'
+        $isSuccess = (!empty($result['success']) || (!empty($result['status']) && $result['status'] === 'success'));
+        
+        if ($isSuccess && !empty($result['data'])) {
+            $_SESSION['last_query_result'] = [
+                'query' => $originalQuery,
+                'module' => $intent['module'],
+                'action' => $intent['action'],
+                'data' => $result['data'],
+                'timestamp' => time()
+            ];
+            error_log("executeDataQuery - Stored result in session for follow-ups");
+        }
+        
+        // Return the result wrapped in formatResponse for frontend compatibility
+        // Handlers return {success, message, data} OR {status, message, data}
+        if ($isSuccess) {
+            return $this->formatResponse(
+                'success',
+                $result['message'] ?? 'Query completed',
+                $result['data'] ?? []
+            );
+        } else {
+            return $this->formatResponse(
+                'error',
+                $result['error'] ?? $result['message'] ?? 'Query failed',
+                []
+            );
+        }
     }
     
     /**
@@ -1704,26 +1942,263 @@ class Orchestrator {
     }
     
     /**
-     * Handle unknown intent
+     * Handle unknown intent - NEVER fails, always responds helpfully
      */
-    private function handleUnknownIntent(string $message): array {
+    private function handleUnknownIntent(string $message, array $semanticAnalysis = []): array {
+        // Use semantic summary if available
+        $summary = $semanticAnalysis['summary'] ?? '';
+        
+        // If semantic analysis gave us some hints
+        if (!empty($semanticAnalysis['suggested_topics'])) {
+            $topics = implode(', ', $semanticAnalysis['suggested_topics']);
+            return $this->formatResponse(
+                'assistant',
+                "I think you're asking about {$topics}. Could you tell me a bit more about what you'd like to do? For example:\n" .
+                "• View information\n" .
+                "• Create something new\n" .
+                "• Update existing data\n" .
+                "• Get a report",
+                ['originalMessage' => $message, 'semanticHints' => $semanticAnalysis]
+            );
+        }
+        
+        // Generic helpful response
         return $this->formatResponse(
-            'unknown',
-            "I'm not sure what you'd like to do. Try:\n" .
-            "• \"Create customer John Doe\"\n" .
-            "• \"Show me my inventory\"\n" .
-            "• \"Create invoice for...\"\n" .
-            "• \"Add expense...\"\n" .
-            "• \"Show sales summary\"",
+            'assistant',
+            "I want to help, but I'm not quite sure what you're looking for. Here are some things I can do:\n\n" .
+            "**Data & Reports:**\n" .
+            "• \"Show me my customers\"\n" .
+            "• \"List my products\"\n" .
+            "• \"Sales summary\"\n\n" .
+            "**Actions:**\n" .
+            "• \"Create a customer\"\n" .
+            "• \"Add a product\"\n" .
+            "• \"Record an expense\"\n\n" .
+            "What would you like to try?",
             ['originalMessage' => $message]
         );
     }
     
     /**
-     * Handle general intents (greetings, help, chat)
+     * Handle follow-up responses to recently offered actions
+     * Examples: "yes", "view them", "okay let's do that", "create one"
      */
-    private function handleGeneralIntent(array $intent, string $message): array {
-        switch ($intent['action']) {
+    private function handleFollowUp(string $message): ?array {
+        if (empty($this->lastOfferedActions)) {
+            error_log("handleFollowUp - No offered actions in session");
+            return null; // No recent offers to follow up on
+        }
+        
+        error_log("handleFollowUp - Last offered actions: " . json_encode($this->lastOfferedActions));
+        
+        $lower = trim(strtolower($message));
+        
+        // Check if message is a confirmation/selection
+        $isViewRequest = preg_match('/^(yes|yeah|yep|sure|ok|okay|alright|yea|yup)$/i', $lower) ||
+                         preg_match('/\b(view|show|list|see|display)\s*(them|it|those|the|my|all)?\b/i', $lower) ||
+                         preg_match('/^let\'?s?\s*(view|show|see|look)/i', $lower);
+        
+        $isCreateRequest = preg_match('/\b(create|add|new|make)\s*(one|it|a|an|them)?\b/i', $lower) ||
+                           preg_match('/^let\'?s?\s*(create|add|make)/i', $lower);
+        
+        $isNegative = preg_match('/^(no|nope|nah|cancel|nevermind|never\s*mind|not?\s*now)$/i', $lower);
+        
+        error_log("handleFollowUp - isViewRequest: " . ($isViewRequest ? 'yes' : 'no') . 
+                  ", isCreateRequest: " . ($isCreateRequest ? 'yes' : 'no') . 
+                  ", isNegative: " . ($isNegative ? 'yes' : 'no'));
+        
+        if ($isNegative) {
+            // User declined - clear offers and stay conversational
+            $this->clearOfferedActions();
+            return $this->formatResponse(
+                'assistant',
+                "No problem! Let me know if you need anything else.",
+                []
+            );
+        }
+        
+        if ($isViewRequest) {
+            // User wants to VIEW - execute the view action
+            $actionInfo = $this->lastOfferedActions;
+            $this->clearOfferedActions();
+            
+            if (isset($actionInfo['view_action']) && isset($actionInfo['module'])) {
+                error_log("handleFollowUp - Executing view action: {$actionInfo['view_action']} in {$actionInfo['module']}");
+                // Execute the view action immediately (no confirmation needed)
+                return $this->executeDirectQuery($actionInfo['view_action'], $actionInfo['module']);
+            }
+        }
+        
+        if ($isCreateRequest) {
+            // User wants to CREATE
+            $actionInfo = $this->lastOfferedActions;
+            $this->clearOfferedActions();
+            
+            if (isset($actionInfo['create_action']) && isset($actionInfo['module'])) {
+                error_log("handleFollowUp - Starting create flow: {$actionInfo['create_action']} in {$actionInfo['module']}");
+                // Start the creation flow
+                return $this->startCreationFlow($actionInfo['create_action'], $actionInfo['module']);
+            }
+        }
+        
+        error_log("handleFollowUp - No match, returning null");
+        return null; // Not a follow-up, process normally
+    }
+    
+    /**
+     * Execute a direct query action (view customers, list products, etc.)
+     */
+    private function executeDirectQuery(string $action, string $module): array {
+        try {
+            error_log("Executing direct query: {$action} in module {$module}");
+            
+            // Route to appropriate handler based on module
+            $handlerPath = __DIR__ . "/handlers/{$module}_handler.php";
+            if (!file_exists($handlerPath)) {
+                return $this->formatResponse(
+                    'error',
+                    "I couldn't find the handler for {$module}. Please try again or contact support.",
+                    []
+                );
+            }
+            
+            require_once $handlerPath;
+            
+            // Map module to handler function
+            $handlerFunctionMap = [
+                'customers' => 'handleCustomersIntent',
+                'inventory' => 'handleInventoryIntent',
+                'suppliers' => 'handleSuppliersIntent',
+                'sales' => 'handleSalesIntent',
+                'expenses' => 'handleExpensesIntent',
+                'reports' => 'handleReportsIntent',
+                'payments' => 'handlePaymentsIntent',
+                'purchases' => 'handlePurchasesIntent'
+            ];
+            
+            $handlerFunction = $handlerFunctionMap[$module] ?? null;
+            
+            if (!$handlerFunction || !function_exists($handlerFunction)) {
+                return $this->formatResponse(
+                    'error',
+                    "Handler function not found for module: {$module}",
+                    []
+                );
+            }
+            
+            // Call the handler with the action and empty data (list all)
+            $state = $this->fsm->getState();
+            $result = $handlerFunction($action, [], $state, $this->pdo, $this->companyId, $this->userId);
+            
+            if ($result['success']) {
+                return $result;
+            } else {
+                return $this->formatResponse(
+                    'error',
+                    $result['message'] ?? "An error occurred while fetching the data.",
+                    []
+                );
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error executing direct query: " . $e->getMessage());
+            return $this->formatResponse(
+                'error',
+                "Sorry, I encountered an error: " . $e->getMessage(),
+                []
+            );
+        }
+    }
+    
+    /**
+     * Start a creation flow (create customer, product, etc.)
+     */
+    private function startCreationFlow(string $action, string $module): array {
+        // Build task queue for creation
+        $intent = [
+            'module' => $module,
+            'action' => $action,
+            'confidence' => 1.0,
+            'matched_patterns' => []
+        ];
+        
+        $taskQueue = TaskQueue::buildQueue([$intent]);
+        $this->fsm->setTaskQueue($taskQueue);
+        
+        $this->fsm->transition(FSM::STATE_INTENT_DETECTED, [
+            'originalMessage' => "create {$module}",
+            'intentCount' => 1
+        ], 'Starting creation flow from follow-up');
+        
+        // Process the first task
+        return $this->handleIntentDetected();
+    }
+    
+    /**
+     * Save offered actions to session for follow-up
+     */
+    private function saveOfferedActions(string $module, ?string $viewAction = null, ?string $createAction = null) {
+        $this->lastOfferedActions = [
+            'module' => $module,
+            'view_action' => $viewAction,
+            'create_action' => $createAction,
+            'timestamp' => time()
+        ];
+        $_SESSION['ai_last_offered_actions'] = $this->lastOfferedActions;
+    }
+    
+    /**
+     * Clear offered actions
+     */
+    private function clearOfferedActions() {
+        $this->lastOfferedActions = [];
+        unset($_SESSION['ai_last_offered_actions']);
+    }
+    
+    /**
+     * Save offered actions based on message content
+     * This detects what topic was discussed and saves relevant actions for follow-up
+     */
+    private function saveOfferedActionsFromMessage(string $message) {
+        $lower = strtolower($message);
+        
+        // Topic to action mappings
+        $topicMappings = [
+            'customer' => ['module' => 'customers', 'view_action' => 'customer_summary', 'create_action' => 'create_customer'],
+            'supplier' => ['module' => 'suppliers', 'view_action' => 'supplier_summary', 'create_action' => 'create_supplier'],
+            'vendor' => ['module' => 'suppliers', 'view_action' => 'supplier_summary', 'create_action' => 'create_supplier'],
+            'product' => ['module' => 'inventory', 'view_action' => 'inventory_summary', 'create_action' => 'create_product'],
+            'inventory' => ['module' => 'inventory', 'view_action' => 'inventory_summary', 'create_action' => 'create_product'],
+            'invoice' => ['module' => 'sales', 'view_action' => 'sales_summary', 'create_action' => 'create_invoice'],
+            'sale' => ['module' => 'sales', 'view_action' => 'sales_summary', 'create_action' => 'create_invoice'],
+            'expense' => ['module' => 'expenses', 'view_action' => 'expense_summary', 'create_action' => 'create_expense'],
+            'payment' => ['module' => 'payments', 'view_action' => 'payment_summary', 'create_action' => 'record_payment'],
+            'report' => ['module' => 'reports', 'view_action' => 'view_dashboard', 'create_action' => null],
+        ];
+        
+        // Find which topic was mentioned
+        foreach ($topicMappings as $topic => $actions) {
+            if (preg_match("/\\b{$topic}s?\\b/i", $lower)) {
+                $this->saveOfferedActions($actions['module'], $actions['view_action'], $actions['create_action']);
+                error_log("Saved offered actions for topic: {$topic} - " . json_encode($actions));
+                return;
+            }
+        }
+    }
+
+    /**
+     * Handle general intents (greetings, help, chat)
+     * Now accepts semantic analysis for smarter responses
+     */
+    private function handleGeneralIntent(array $intent, string $message, array $semanticAnalysis = []): array {
+        $action = $intent['action'];
+        
+        // For unknown actions, use semantic intelligence
+        if ($action === 'unknown') {
+            return $this->handleUnknownIntent($message, $semanticAnalysis);
+        }
+        
+        switch ($action) {
             case 'greeting':
                 return $this->formatResponse(
                     'greeting',
@@ -1734,20 +2209,124 @@ class Orchestrator {
                     "• 💰 Sales - Invoices, payments\n" .
                     "• 💸 Expenses - Track spending\n" .
                     "• 📊 Reports - Financial insights\n\n" .
-                    "What would you like to do?",
+                    "Just ask me anything or tell me what you need!",
                     []
                 );
             
             case 'chat':
-                // Friendly responses to general conversation
-                $responses = [
-                    "I'm doing great, thank you for asking! 😊 How can I help you with your business today?",
-                    "All good here! Ready to assist you. What would you like to do?",
-                    "I'm great! Always ready to help manage your business. What do you need?"
-                ];
+                // For actual questions, use AI to respond intelligently (NOT as JSON)
+                if ($semanticAnalysis['user_intent_type'] === 'question' || 
+                    preg_match('/\b(what|who|where|when|why|how|explain|tell\s+me)\b/i', $message)) {
+                    
+                    // Check if we have recent query results that might be relevant
+                    $contextData = '';
+                    if (!empty($_SESSION['last_query_result'])) {
+                        $lastQuery = $_SESSION['last_query_result'];
+                        // Only use if it's recent (within last 2 minutes)
+                        if ((time() - $lastQuery['timestamp']) < 120) {
+                            $contextData = "\n\nIMPORTANT: The user just received this data from the database:\n" .
+                                json_encode($lastQuery['data'], JSON_PRETTY_PRINT) . "\n" .
+                                "Use this REAL data to answer their question. Do NOT make up any information.";
+                            error_log("handleGeneralIntent - Providing last query result as context");
+                        }
+                    }
+                    
+                    // Build a simple conversational prompt (no JSON requirement)
+                    $conversationalPrompt = "You are a helpful business assistant for FirmaFlow, a business management system. " .
+                        "Answer the user's question naturally and conversationally. " .
+                        "If it's about a business concept (customer, invoice, product, expense, etc.), explain it clearly. " .
+                        "If they ask about something you can help with, offer to show them or help them create one. " .
+                        "Keep your response brief and friendly. Do NOT return JSON - just respond naturally." .
+                        $contextData;
+                    
+                    $aiResponse = $this->callAI($conversationalPrompt, $message, false); // false = don't force JSON
+                    
+                    if ($aiResponse['success'] && !empty($aiResponse['data']['response'])) {
+                        // Save offered actions based on the topic discussed
+                        $this->saveOfferedActionsFromMessage($message);
+                        
+                        return $this->formatResponse(
+                            'assistant',
+                            $aiResponse['data']['response'],
+                            ['ai_generated' => true]
+                        );
+                    }
+                    
+                    // Fallback if AI fails - but still try to answer
+                    return $this->formatResponse(
+                        'assistant',
+                        $this->getContextualAnswer($message, $semanticAnalysis),
+                        ['fallback_used' => true]
+                    );
+                }
+                
+                // For casual greetings and small talk - use AI for natural response
+                if (preg_match('/\b(how\s+(are|is|r)\s+(you|u|your\s+day)|what\'?s?\s+up|hows?\s+it\s+going)\b/i', $message)) {
+                    $casualPrompt = "You are a friendly business assistant. The user is making small talk. " .
+                        "Respond warmly and briefly, then ask how you can help with their business. " .
+                        "Do NOT return JSON - just respond naturally.";
+                    
+                    $casualResponse = $this->callAI($casualPrompt, $message, false);
+                    if ($casualResponse['success'] && !empty($casualResponse['data']['response'])) {
+                        return $this->formatResponse(
+                            'assistant',
+                            $casualResponse['data']['response'],
+                            ['ai_generated' => true]
+                        );
+                    }
+                    
+                    return $this->formatResponse(
+                        'assistant',
+                        "I'm doing great, thanks for asking! 😊 How can I help you with your business today?",
+                        []
+                    );
+                }
+                
+                // For off-topic questions (sports, weather, news, etc.) - use AI for natural deflection
+                if (preg_match('/\b(football|soccer|basketball|sports|weather|news|movie|music|game|politics)\b/i', $message)) {
+                    $offTopicPrompt = "You are a friendly business assistant for FirmaFlow. " .
+                        "The user asked about something off-topic (not business related). " .
+                        "Politely acknowledge their question, explain you specialize in business management " .
+                        "(customers, products, sales, expenses, reports), and ask if there's anything " .
+                        "business-related you can help with. Be friendly, not dismissive. " .
+                        "Do NOT return JSON - just respond naturally.";
+                    
+                    $offTopicResponse = $this->callAI($offTopicPrompt, $message, false);
+                    if ($offTopicResponse['success'] && !empty($offTopicResponse['data']['response'])) {
+                        return $this->formatResponse(
+                            'assistant',
+                            $offTopicResponse['data']['response'],
+                            ['ai_generated' => true]
+                        );
+                    }
+                    
+                    return $this->formatResponse(
+                        'assistant',
+                        "That's an interesting topic! While I'd love to chat about it, I'm specifically designed to help you manage your business. " .
+                        "I'm great at helping with customers, products, sales, expenses, and reports. Is there anything business-related I can help with?",
+                        []
+                    );
+                }
+                
+                // For other conversational messages - use AI to respond naturally
+                $generalPrompt = "You are a friendly business assistant for FirmaFlow. " .
+                    "Respond naturally to the user. If they seem to want help, offer to assist with " .
+                    "customers, products, sales, expenses, or reports. Keep it brief and friendly. " .
+                    "Do NOT return JSON - just respond naturally.";
+                
+                $generalResponse = $this->callAI($generalPrompt, $message, false);
+                if ($generalResponse['success'] && !empty($generalResponse['data']['response'])) {
+                    return $this->formatResponse(
+                        'assistant',
+                        $generalResponse['data']['response'],
+                        ['ai_generated' => true]
+                    );
+                }
+                
+                // Final fallback
                 return $this->formatResponse(
-                    'chat',
-                    $responses[array_rand($responses)],
+                    'assistant',
+                    "I'm here to help! What would you like to do today?",
                     []
                 );
             
@@ -1771,14 +2350,14 @@ class Orchestrator {
                 );
                 
             default:
-                return $this->handleUnknownIntent($message);
+                return $this->handleUnknownIntent($message, $semanticAnalysis);
         }
     }
     
     /**
      * Call AI API for data extraction
      */
-    private function callAI(string $systemPrompt, string $userMessage): array {
+    private function callAI(string $systemPrompt, string $userMessage, bool $forceJson = true): array {
         $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
         
         // Build messages array with conversation history
@@ -1805,12 +2384,17 @@ class Orchestrator {
         error_log($contextInfo);
         
         $data = [
-            'model' => 'openai/gpt-oss-20b',
+            'model' => 'llama-3.3-70b-versatile',  // Updated to currently supported model
             'messages' => $messages,
-            'temperature' => 0.1, // Low temperature for deterministic extraction
-            'max_tokens' => 500,
-            'response_format' => ['type' => 'json_object']
+            'temperature' => 0.7, // Higher temperature for more natural responses
+            'max_tokens' => 500
         ];
+        
+        // Only force JSON for structured extraction, not for conversation
+        if ($forceJson) {
+            $data['response_format'] = ['type' => 'json_object'];
+            $data['temperature'] = 0.1; // Lower for structured extraction
+        }
         
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -1830,11 +2414,13 @@ class Orchestrator {
         curl_close($ch);
         
         if ($curlError) {
+            error_log("AI curl error: " . $curlError);
             return ['success' => false, 'error' => 'Network error: ' . $curlError];
         }
         
         if ($httpCode !== 200) {
             $errorData = json_decode($response, true);
+            error_log("AI HTTP error {$httpCode}: " . substr($response, 0, 500));
             if ($httpCode === 429) {
                 preg_match('/try again in ([^.]+)/', $errorData['error']['message'] ?? '', $matches);
                 return ['success' => false, 'error' => 'Rate limit. Try again in ' . ($matches[1] ?? '30 seconds')];
@@ -1844,10 +2430,52 @@ class Orchestrator {
         
         $result = json_decode($response, true);
         $aiContent = $result['choices'][0]['message']['content'] ?? '';
+        
+        error_log("AI raw response: " . substr($aiContent, 0, 300));
+        
+        // If not forcing JSON, return plain text response
+        if (!$forceJson) {
+            return [
+                'success' => true,
+                'data' => [
+                    'response' => trim($aiContent),
+                    'mode' => 'conversational'
+                ]
+            ];
+        }
+        
+        // Try to parse as JSON
         $parsed = json_decode($aiContent, true);
         
-        if (!$parsed) {
-            return ['success' => false, 'error' => 'Failed to parse AI response'];
+        // If JSON parsing fails, create a conversational fallback response
+        if (!$parsed || json_last_error() !== JSON_ERROR_NONE) {
+            error_log("AI JSON parsing failed, using conversational fallback");
+            
+            // Return raw content as conversational response
+            return [
+                'success' => true,
+                'data' => [
+                    'mode' => 'conversational',
+                    'confidence' => 0.5,
+                    'response' => $aiContent ?: 'I\'m processing your request. Could you provide more details?',
+                    'extracted_data' => [],
+                    'parsing_failed' => true
+                ]
+            ];
+        }
+        
+        // Normalize the response field (AI might use different names)
+        if (!isset($parsed['response']) && isset($parsed['answer'])) {
+            $parsed['response'] = $parsed['answer'];
+        }
+        if (!isset($parsed['response']) && isset($parsed['message'])) {
+            $parsed['response'] = $parsed['message'];
+        }
+        if (!isset($parsed['response']) && isset($parsed['reply'])) {
+            $parsed['response'] = $parsed['reply'];
+        }
+        if (!isset($parsed['response']) && isset($parsed['text'])) {
+            $parsed['response'] = $parsed['text'];
         }
         
         return ['success' => true, 'data' => $parsed];
@@ -2259,5 +2887,260 @@ class Orchestrator {
             'currentTask' => $this->fsm->getCurrentTask(),
             'hasMoreTasks' => $this->fsm->hasMoreTasks()
         ];
+    }
+    
+    /**
+     * Get contextual answer for questions (fallback when AI fails)
+     */
+    private function getContextualAnswer(string $message, array $semanticAnalysis): string {
+        $lower = strtolower($message);
+        
+        // Business concept explanations
+        $concepts = [
+            'customer' => [
+                'explanation' => "A **customer** is a person or business who purchases your products or services. In FirmaFlow, you can:\n• Track customer contact details\n• View purchase history\n• Manage invoices and payments\n• Set payment terms and credit limits\n\nWould you like to view your customers or create a new one?",
+                'module' => 'customers',
+                'view_action' => 'customer_summary',
+                'create_action' => 'create_customer'
+            ],
+            
+            'supplier' => [
+                'explanation' => "A **supplier** (or vendor) is a person or business that provides goods or services to your company. In FirmaFlow, you can:\n• Store supplier information\n• Track purchase orders\n• Manage payments to suppliers\n• Monitor supplier balances\n\nWould you like to see your suppliers or add a new one?",
+                'module' => 'suppliers',
+                'view_action' => 'supplier_summary',
+                'create_action' => 'create_supplier'
+            ],
+            
+            'invoice' => [
+                'explanation' => "An **invoice** is a bill you send to customers for products or services. It includes:\n• Items and quantities\n• Prices and totals\n• Payment terms\n• Due dates\n\nIn FirmaFlow, you can create, track, and manage invoices. Want to create one?",
+                'module' => 'sales',
+                'view_action' => 'sales_summary',
+                'create_action' => 'create_invoice'
+            ],
+            
+            'product' => [
+                'explanation' => "A **product** (or inventory item) is something you sell to customers. You can track:\n• Product details and descriptions\n• Stock quantities\n• Selling prices\n• Categories\n\nWould you like to view your inventory or add a new product?",
+                'module' => 'inventory',
+                'view_action' => 'inventory_summary',
+                'create_action' => 'create_product'
+            ],
+            
+            'expense' => [
+                'explanation' => "An **expense** is money spent to run your business, such as:\n• Rent and utilities\n• Supplies and materials\n• Salaries and wages\n• Marketing costs\n\nFirmaFlow helps you track and categorize expenses. Want to record one or see your expenses?",
+                'module' => 'expenses',
+                'view_action' => 'expense_summary',
+                'create_action' => 'create_expense'
+            ],
+            
+            'payment' => [
+                'explanation' => "A **payment** is money received from customers or paid to suppliers. You can:\n• Record incoming payments\n• Track payment methods\n• Monitor outstanding balances\n• Generate payment receipts\n\nNeed help viewing payments or recording a new one?",
+                'module' => 'payments',
+                'view_action' => 'payment_summary',
+                'create_action' => 'record_payment'
+            ],
+            
+            'report' => [
+                'explanation' => "**Reports** give you insights into your business performance:\n• Sales reports\n• Expense summaries\n• Profit & loss statements\n• Customer analytics\n\nWant to see your dashboard or a specific report?",
+                'module' => 'reports',
+                'view_action' => 'view_dashboard',
+                'create_action' => null
+            ],
+        ];
+        
+        // Check for concept matches and save offered actions
+        foreach ($concepts as $concept => $info) {
+            if (preg_match("/\b(what\s+(is|are)|explain|tell\s+me\s+about)\s+.*\b{$concept}s?\b/i", $lower) ||
+                preg_match("/\b{$concept}s?\b.*\?/i", $lower)) {
+                
+                // Save the offered actions for follow-up
+                $this->saveOfferedActions($info['module'], $info['view_action'], $info['create_action']);
+                
+                return $info['explanation'];
+            }
+        }
+        
+        // Generic helpful response for off-topic questions
+        if (preg_match('/\b(football|soccer|sports|weather|news|movies|games|music)\b/i', $lower)) {
+            return "I appreciate the question, but I'm specifically designed to help you manage your business with FirmaFlow. " .
+                   "I specialize in helping with customers, products, sales, expenses, and reports.\n\n" .
+                   "Is there anything business-related I can help you with?";
+        }
+        
+        // Generic helpful response for other questions
+        if (preg_match('/\b(what|how|why|when|where|who|can\s+you|do\s+you)\b/i', $message)) {
+            return "I'm designed to help you manage your business with FirmaFlow. " .
+                   "I can help you with customers, products, sales, expenses, and reports.\n\n" .
+                   "What would you like to explore?";
+        }
+        
+        return "I'm here to assist you with your business management. What would you like to do?";
+    }
+    
+    /**
+     * Fast path detection for common data queries
+     * Bypasses AI for speed and reliability
+     */
+    private function detectDataQueryFastPath(string $message): ?array {
+        $lower = strtolower(trim($message));
+        
+        // Pattern: "tell me about [customer name]", "info about [customer]"
+        if (preg_match('/\b(tell\s+me\s+about|info\s+about|details\s+(about|of|for)|information\s+(about|on))\s+(.+)/i', $message, $matches)) {
+            $possibleName = trim($matches[5] ?? $matches[4]);
+            
+            // Check if it mentions "customer" explicitly or if it's a proper name
+            if (preg_match('/\bcustomer\b/i', $lower) || 
+                preg_match('/^[A-Z][a-z]+(\s+[A-Z][a-z]+)+/', $possibleName)) {
+                
+                error_log("Fast path: customer details query detected for: {$possibleName}");
+                
+                // Clean up the name
+                $cleanName = preg_replace('/\b(customer|client|that|this)\b/i', '', $possibleName);
+                $cleanName = trim($cleanName);
+                
+                $intent = [
+                    'module' => 'customers',
+                    'action' => 'customer_details',
+                    'data' => ['customer_name' => $cleanName, 'raw_input' => $message],
+                    'is_data_query' => true
+                ];
+                return $this->executeDataQuery($intent, $message);
+            }
+        }
+        
+        // Pattern: "[Customer Name] tell me about that customer"
+        if (preg_match('/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s+(tell\s+me|what|who|show)/i', $message, $matches)) {
+            $customerName = trim($matches[1]);
+            error_log("Fast path: customer details query detected (name first) for: {$customerName}");
+            
+            $intent = [
+                'module' => 'customers',
+                'action' => 'customer_details',
+                'data' => ['customer_name' => $customerName, 'raw_input' => $message],
+                'is_data_query' => true
+            ];
+            return $this->executeDataQuery($intent, $message);
+        }
+        
+        // Pattern: "show/pull [customer]'s transactions/history"
+        if (preg_match('/\b(show|pull|get|give\s+me|display)\s+(?:the\s+)?(.+?)(?:\'s|\s+)(transaction|history|purchases|orders|invoices)/i', $message, $matches)) {
+            $customerName = trim($matches[2]);
+            $customerName = preg_replace('/\b(customer|client|that|this)\b/i', '', $customerName);
+            $customerName = trim($customerName);
+            
+            error_log("Fast path: customer transactions query detected for: {$customerName}");
+            
+            $intent = [
+                'module' => 'customers',
+                'action' => 'customer_details',
+                'data' => ['customer_name' => $customerName, 'raw_input' => $message],
+                'is_data_query' => true
+            ];
+            return $this->executeDataQuery($intent, $message);
+        }
+        
+        // Pattern: "who is my top customer", "show top customers"
+        if (preg_match('/\b(who\s+is|show|give\s+me|what\s+is).*\btop\s+(customer|client)s?\b/i', $lower)) {
+            error_log("Fast path: top customers query detected");
+            $intent = [
+                'module' => 'customers',
+                'action' => 'top_customers',
+                'data' => ['limit' => 10, 'metric' => 'revenue'],
+                'is_data_query' => true
+            ];
+            return $this->executeDataQuery($intent, $message);
+        }
+        
+        // Pattern: "who is my best customer"
+        if (preg_match('/\b(who\s+is|show|give\s+me).*\b(best|biggest|largest)\s+(customer|client)s?\b/i', $lower)) {
+            error_log("Fast path: best customers query detected");
+            $intent = [
+                'module' => 'customers',
+                'action' => 'top_customers',
+                'data' => ['limit' => 10, 'metric' => 'revenue'],
+                'is_data_query' => true
+            ];
+            return $this->executeDataQuery($intent, $message);
+        }
+        
+        // Pattern: "show my customers", "list customers", "view customers"
+        if (preg_match('/\b(show|list|view|give\s+me|display)\s+(my\s+)?customers?\b/i', $lower) &&
+            !preg_match('/\b(create|add|new|delete|remove|update|edit)  \b/i', $lower)) {
+            error_log("Fast path: customer list query detected");
+            $intent = [
+                'module' => 'customers',
+                'action' => 'customer_summary',
+                'data' => [],
+                'is_data_query' => true
+            ];
+            return $this->executeDataQuery($intent, $message);
+        }
+        
+        // Pattern: "show my products", "list inventory"
+        if (preg_match('/\b(show|list|view|give\s+me|display)\s+(my\s+)?(products?|inventory|items?)\b/i', $lower) &&
+            !preg_match('/\b(create|add|new|delete|remove|update|edit)\b/i', $lower)) {
+            error_log("Fast path: inventory query detected");
+            $intent = [
+                'module' => 'inventory',
+                'action' => 'inventory_summary',
+                'data' => [],
+                'is_data_query' => true
+            ];
+            return $this->executeDataQuery($intent, $message);
+        }
+        
+        // Pattern: "today's sales", "sales summary", "show sales"
+        if (preg_match('/\b(show|give\s+me|display|what\s+(is|are)|tell\s+me).*\b(sales?|revenue|earnings?|summary)\b/i', $lower) ||
+            preg_match('/\bsales?\s+(summary|report|today|this\s+(month|week|year))\b/i', $lower) ||
+            preg_match('/\b(today|today\'?s|this\s+(month|week|year))\s+(summary|report|sales?)\b/i', $lower)) {
+            error_log("Fast path: sales query detected");
+            
+            $intent = [
+                'module' => 'sales',
+                'action' => 'sales_summary',
+                'data' => [],
+                'is_data_query' => true
+            ];
+            
+            // Add date filters
+            if (preg_match('/\b(today|today\'?s)\b/i', $lower)) {
+                $intent['data']['date_range'] = 'today';
+            } elseif (preg_match('/\bthis\s+month\b/i', $lower)) {
+                $intent['data']['date_range'] = 'this_month';
+            } elseif (preg_match('/\bthis\s+week\b/i', $lower)) {
+                $intent['data']['date_range'] = 'this_week';
+            } elseif (preg_match('/\bthis\s+year\b/i', $lower)) {
+                $intent['data']['date_range'] = 'this_year';
+            }
+            
+            return $this->executeDataQuery($intent, $message);
+        }
+        
+        // Pattern: "show my expenses", "expense summary"
+        if (preg_match('/\b(show|list|view|give\s+me|display)\s+(my\s+)?expenses?\b/i', $lower) ||
+            preg_match('/\bexpenses?\s+summary\b/i', $lower)) {
+            error_log("Fast path: expenses query detected");
+            $intent = [
+                'module' => 'expenses',
+                'action' => 'expense_summary',
+                'data' => [],
+                'is_data_query' => true
+            ];
+            return $this->executeDataQuery($intent, $message);
+        }
+        
+        // Pattern: "show my suppliers", "list suppliers"
+        if (preg_match('/\b(show|list|view|give\s+me|display)\s+(my\s+)?(suppliers?|vendors?)\b/i', $lower) &&
+            !preg_match('/\b(create|add|new|delete|remove|update|edit)\b/i', $lower)) {
+            error_log("Fast path: suppliers query detected");
+            $intent = [
+                'module' => 'suppliers',
+                'action' => 'supplier_summary',
+                'data' => [],
+                'is_data_query' => true
+            ];
+            return $this->executeDataQuery($intent, $message);
+        }
+        
+        return null; // No fast path match, continue to semantic analysis
     }
 }
