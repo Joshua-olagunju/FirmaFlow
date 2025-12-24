@@ -21,6 +21,147 @@
 
 class Router {
     
+    /**
+     * Detect intents using BOTH semantic analysis AND patterns
+     * 
+     * This is the NEW forgiving router that:
+     * - Uses semantic understanding as primary
+     * - Falls back to patterns when needed
+     * - ALWAYS returns something useful
+     * - NEVER fails silently
+     */
+    public static function detectIntentsWithSemantics(string $message, array $semanticAnalysis): array {
+        error_log("Router::detectIntentsWithSemantics - Message: '{$message}'");
+        error_log("Router::detectIntentsWithSemantics - Semantic analysis: " . json_encode($semanticAnalysis));
+        
+        $intentType = $semanticAnalysis['user_intent_type'] ?? 'unclear';
+        
+        // CRITICAL: Questions should ALWAYS go to general/chat, never to action modules
+        // This prevents "what is a customer?" from being routed to customers module
+        if ($intentType === 'question' || $intentType === 'off_topic') {
+            error_log("Router::detectIntentsWithSemantics - Detected {$intentType}, routing to general/chat");
+            return [[
+                'module' => 'general',
+                'action' => 'chat',
+                'confidence' => $semanticAnalysis['confidence'],
+                'priority' => 0,
+                'data' => [],
+                'semantic_routed' => true
+            ]];
+        }
+        
+        // CRITICAL: Data queries need database access - route to appropriate module
+        // Examples: "who is my top customer?", "show my sales", "what are my products?"
+        if ($intentType === 'data_query' && !empty($semanticAnalysis['suggested_topics'])) {
+            $primaryTopic = $semanticAnalysis['suggested_topics'][0];
+            
+            // Map topics to modules and actions
+            $topicMap = [
+                'customer' => ['module' => 'customers', 'action' => 'customer_summary'],
+                'customers' => ['module' => 'customers', 'action' => 'customer_summary'],
+                'product' => ['module' => 'inventory', 'action' => 'inventory_summary'],
+                'products' => ['module' => 'inventory', 'action' => 'inventory_summary'],
+                'inventory' => ['module' => 'inventory', 'action' => 'inventory_summary'],
+                'invoice' => ['module' => 'sales', 'action' => 'sales_summary'],
+                'invoices' => ['module' => 'sales', 'action' => 'sales_summary'],
+                'sale' => ['module' => 'sales', 'action' => 'sales_summary'],
+                'sales' => ['module' => 'sales', 'action' => 'sales_summary'],
+                'expense' => ['module' => 'expenses', 'action' => 'expense_summary'],
+                'expenses' => ['module' => 'expenses', 'action' => 'expense_summary'],
+                'payment' => ['module' => 'payments', 'action' => 'payment_summary'],
+                'payments' => ['module' => 'payments', 'action' => 'payment_summary'],
+                'supplier' => ['module' => 'suppliers', 'action' => 'supplier_summary'],
+                'suppliers' => ['module' => 'suppliers', 'action' => 'supplier_summary'],
+                'report' => ['module' => 'reports', 'action' => 'dashboard_stats'],
+                'reports' => ['module' => 'reports', 'action' => 'dashboard_stats'],
+            ];
+            
+            if (isset($topicMap[$primaryTopic])) {
+                error_log("Router::detectIntentsWithSemantics - Data query detected, routing to {$topicMap[$primaryTopic]['module']}");
+                return [[
+                    'module' => $topicMap[$primaryTopic]['module'],
+                    'action' => $topicMap[$primaryTopic]['action'],
+                    'confidence' => $semanticAnalysis['confidence'],
+                    'priority' => 1,
+                    'data' => ['original_query' => $message],
+                    'semantic_routed' => true,
+                    'is_data_query' => true
+                ]];
+            }
+        }
+        
+        // If semantic analysis suggests it's purely conversational
+        if ($semanticAnalysis['is_conversational'] && !$semanticAnalysis['action_required']) {
+            // Map intent types to actions
+            $intentMap = [
+                'greeting' => 'greeting',
+                'help' => 'help',
+                'conversation' => 'chat',
+                'unclear' => 'chat'
+            ];
+            
+            $action = $intentMap[$intentType] ?? 'chat';
+            
+            return [[
+                'module' => 'general',
+                'action' => $action,
+                'confidence' => $semanticAnalysis['confidence'],
+                'priority' => 0,
+                'data' => [],
+                'semantic_routed' => true
+            ]];
+        }
+        
+        // Try pattern matching (existing logic)
+        $patternIntents = self::detectIntents($message);
+        
+        // If patterns found something, use it
+        if (!empty($patternIntents) && $patternIntents[0]['action'] !== 'unknown') {
+            error_log("Router::detectIntentsWithSemantics - Using pattern-based routing");
+            return $patternIntents;
+        }
+        
+        // If patterns failed but semantic analysis has suggestions, use topics
+        if (!empty($semanticAnalysis['suggested_topics'])) {
+            $primaryTopic = $semanticAnalysis['suggested_topics'][0];
+            
+            // Map topics to modules and actions
+            $topicMap = [
+                'customer' => ['module' => 'customers', 'action' => 'customer_summary'],
+                'product' => ['module' => 'inventory', 'action' => 'inventory_summary'],
+                'invoice' => ['module' => 'sales', 'action' => 'sales_summary'],
+                'sale' => ['module' => 'sales', 'action' => 'sales_summary'],
+                'expense' => ['module' => 'expenses', 'action' => 'expense_summary'],
+                'payment' => ['module' => 'payments', 'action' => 'payment_summary'],
+                'supplier' => ['module' => 'suppliers', 'action' => 'supplier_summary'],
+                'report' => ['module' => 'reports', 'action' => 'dashboard_stats'],
+            ];
+            
+            if (isset($topicMap[$primaryTopic])) {
+                error_log("Router::detectIntentsWithSemantics - Using topic-based routing to {$primaryTopic}");
+                return [[
+                    'module' => $topicMap[$primaryTopic]['module'],
+                    'action' => $topicMap[$primaryTopic]['action'],
+                    'confidence' => $semanticAnalysis['confidence'],
+                    'priority' => 1,
+                    'data' => [],
+                    'semantic_routed' => true
+                ]];
+            }
+        }
+        
+        // Last resort: return general/chat
+        error_log("Router::detectIntentsWithSemantics - Falling back to general/chat");
+        return [[
+            'module' => 'general',
+            'action' => 'chat',
+            'confidence' => 0.5,
+            'priority' => 0,
+            'data' => [],
+            'semantic_routed' => true
+        ]];
+    }
+    
     // Intent patterns (regex-based detection)
     // Format: pattern => ['module' => ..., 'action' => ..., 'priority' => ...]
     private static $intentPatterns = [
