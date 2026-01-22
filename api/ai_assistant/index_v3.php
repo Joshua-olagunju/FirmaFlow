@@ -63,8 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../config/env_loader.php';
 
-// Load new architecture components
-require_once __DIR__ . '/orchestrator.php';
+// Load new MODULAR architecture (JEPA-style)
+// The adapter maintains backward compatibility while using the new modular system
+require_once __DIR__ . '/orchestrator_adapter.php';
 require_once __DIR__ . '/utils.php';
 require_once __DIR__ . '/query_engine.php';
 

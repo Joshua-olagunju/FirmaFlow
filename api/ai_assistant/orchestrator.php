@@ -2384,7 +2384,7 @@ class Orchestrator {
         error_log($contextInfo);
         
         $data = [
-            'model' => 'llama-3.3-70b-versatile',  // Updated to currently supported model
+            'model' => 'openai/gpt-oss-20b',  // Updated to currently supported model
             'messages' => $messages,
             'temperature' => 0.7, // Higher temperature for more natural responses
             'max_tokens' => 500

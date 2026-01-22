@@ -321,6 +321,8 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
           "complete",
           "error",
           "assistant", // Add assistant type for conversational responses
+          "data_report", // Business intelligence reports
+          "insight", // Single stat insights
         ].includes(data.type)
       ) {
         setMessages((prev) => [
@@ -331,8 +333,28 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
                 ? "error"
                 : data.type === "task_complete" || data.type === "success"
                 ? "success"
+                : data.type === "data_report" || data.type === "insight"
+                ? data.type
                 : "assistant",
             content: data.message,
+            summary: data.data?.summary || null,
+            timestamp: new Date(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Handle selection response (clickable entity list)
+      if (data.type === "selection" && data.options) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "selection",
+            content: data.message,
+            options: data.options,
+            selectType: data.selectType,
+            action: data.action,
             timestamp: new Date(),
           },
         ]);
@@ -1411,6 +1433,54 @@ const MessageBubble = ({
             >
               {message.content}
             </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Data report message (business intelligence with tables)
+  if (message.type === "data_report" || message.type === "insight") {
+    return (
+      <div
+        className={`max-w-[90%] ${theme.bgPrimary} p-4 rounded-lg shadow-md border-l-4 border-blue-500`}
+      >
+        <div className="flex items-start gap-3">
+          <svg
+            className="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
+            <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
+          </svg>
+          <div className="flex-1">
+            <p
+              className={`text-sm ${theme.textPrimary} whitespace-pre-line leading-relaxed`}
+              dangerouslySetInnerHTML={{
+                __html: message.content
+                  .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                  .replace(/\n/g, "<br />"),
+              }}
+            />
+            {message.summary && (
+              <div className={`mt-3 pt-3 border-t ${theme.borderSecondary}`}>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {Object.entries(message.summary).map(([key, value]) => (
+                    <div key={key} className="flex justify-between">
+                      <span className={`${theme.textSecondary} capitalize`}>
+                        {key.replace(/_/g, " ")}:
+                      </span>
+                      <span className={`${theme.textPrimary} font-medium`}>
+                        {typeof value === "number" && key.includes("spent")
+                          ? `$${value.toFixed(2)}`
+                          : value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
