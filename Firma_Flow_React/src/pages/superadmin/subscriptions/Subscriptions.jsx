@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import SuperAdminLayout from '../components/SuperAdminLayout';
+import React, { useState, useEffect } from 'react';
+import SuperAdminLayout from '../../../components/SuperAdminLayout';
 import { 
   CreditCard, 
   Search,
@@ -42,7 +42,7 @@ export default function Subscriptions() {
         plan: planFilter !== 'all' ? planFilter : ''
       });
 
-      const response = await fetch(`http://localhost/FirmaFlow/superadmin/api/subscriptions.php?${params}`, {
+      const response = await fetch(`http://localhost/FirmaFlow/superadmin/api/subscriptions.php?action=list&${params}`, {
         method: 'GET',
         credentials: 'include',
       });

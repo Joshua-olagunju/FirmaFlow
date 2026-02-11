@@ -23,9 +23,12 @@ import {
   LabelList,
 } from "recharts";
 import DashboardModal from "../../components/modals/DashboardModal";
+import SwitchAccountModal from "../../components/modals/SwitchAccountModal";
+import ContactSupportModal from "../../components/modals/ContactSupportModal";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useUser } from "../../contexts/UserContext";
+import { buildApiUrl } from "../../config/api.config";
 
 const COLORS = [
   "#667eea",
@@ -40,7 +43,7 @@ const COLORS = [
   "#30cfd0",
 ];
 
-const API_ENDPOINT = "http://localhost/FirmaFlow/api/admin_dashboard_stats.php";
+const API_ENDPOINT = buildApiUrl("api/admin_dashboard_stats.php");
 
 const Dashboard = () => {
   const { theme } = useTheme();
@@ -50,6 +53,10 @@ const Dashboard = () => {
   const [open, setOpen] = useState(false);
   const openSidebarRef = useRef(null);
   const [modalopen, setModalOpen] = useState(true);
+  
+  // Modal states
+  const [showSwitchAccountModal, setShowSwitchAccountModal] = useState(false);
+  const [showContactSupportModal, setShowContactSupportModal] = useState(false);
 
   // Dashboard data state
   const [loading, setLoading] = useState(true);
@@ -57,6 +64,21 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
 
   const toggleDropdown = () => setOpen(!open);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Close dropdown if clicking outside the dropdown area
+      if (open && !event.target.closest('.dropdown-container')) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [open]);
 
   const getInitials = (name) => {
     if (!name) return "";
@@ -181,7 +203,7 @@ const Dashboard = () => {
           {/* Right Side - User Menu & Hamburger */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* User Dropdown - Always visible, compact on mobile */}
-            <div className="relative">
+            <div className="relative dropdown-container">
               {/* Desktop: Full user info, Mobile: Just avatar */}
               <div
                 className="flex items-center gap-2 md:gap-3 md:w-[160px] md:h-[55px] py-1 md:py-0.5 px-1 md:px-2 md:border border-white rounded-md cursor-pointer select-none hover:bg-white/10 transition"
@@ -221,19 +243,37 @@ const Dashboard = () => {
               {open && (
                 <div className="absolute right-0 md:right-auto top-full mt-2 w-[160px] bg-white shadow-lg rounded-md p-2 z-50">
                   <div
-                    onClick={() => navigate("/subscription")}
+                    onClick={() => {
+                      navigate("/subscription");
+                      setOpen(false);
+                    }}
                     className="hover:bg-gray-100 p-2 rounded cursor-pointer"
                   >
                     Subscription
                   </div>
-                  <div className="hover:bg-gray-100 p-2 rounded cursor-pointer">
+                  <div 
+                    onClick={() => {
+                      setShowContactSupportModal(true);
+                      setOpen(false);
+                    }}
+                    className="hover:bg-gray-100 p-2 rounded cursor-pointer"
+                  >
                     Contact Support
                   </div>
-                  <div className="hover:bg-gray-100 p-2 rounded cursor-pointer border-t border-b border-slate-300">
+                  <div 
+                    onClick={() => {
+                      setShowSwitchAccountModal(true);
+                      setOpen(false);
+                    }}
+                    className="hover:bg-gray-100 p-2 rounded cursor-pointer border-t border-b border-slate-300"
+                  >
                     Switch Accounts
                   </div>
                   <div
-                    onClick={() => navigate("/settings")}
+                    onClick={() => {
+                      navigate("/settings");
+                      setOpen(false);
+                    }}
                     className="hover:bg-gray-100 p-2 rounded cursor-pointer"
                   >
                     Settings
@@ -746,6 +786,20 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <SwitchAccountModal
+        isOpen={showSwitchAccountModal}
+        onClose={() => setShowSwitchAccountModal(false)}
+        onSuccess={(newUser) => {
+          console.log('Switched to user:', newUser);
+        }}
+      />
+
+      <ContactSupportModal
+        isOpen={showContactSupportModal}
+        onClose={() => setShowContactSupportModal(false)}
+      />
     </Layout>
   );
 };

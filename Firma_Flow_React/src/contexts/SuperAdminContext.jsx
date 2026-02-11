@@ -44,16 +44,19 @@ export const SuperAdminProvider = ({ children }) => {
 
   const login = async (username, password, remember = false) => {
     try {
-      const formData = new FormData();
-      formData.append('action', 'login');
-      formData.append('username', username);
-      formData.append('password', password);
-      formData.append('remember', remember ? 'true' : 'false');
-
+      // Use email field for login (can accept username too)
       const response = await fetch('http://localhost/FirmaFlow/superadmin/api/auth.php', {
         method: 'POST',
         credentials: 'include',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'login',
+          email: username, // API expects 'email' but accepts username format too
+          password: password,
+          remember: remember
+        })
       });
 
       const data = await response.json();
@@ -61,9 +64,14 @@ export const SuperAdminProvider = ({ children }) => {
       if (data.success) {
         setSuperAdmin(data.user);
         setIsAuthenticated(true);
-        return { success: true, user: data.user };
+        // Return redirect path from API
+        return { 
+          success: true, 
+          user: data.user,
+          redirect_path: data.redirect_path || '/superadmin/dashboard'
+        };
       } else {
-        return { success: false, message: data.message || 'Login failed' };
+        return { success: false, message: data.message || data.error || 'Login failed' };
       }
     } catch (error) {
       console.error('Login failed:', error);
@@ -73,16 +81,22 @@ export const SuperAdminProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await fetch('http://localhost/FirmaFlow/superadmin/api/auth.php?action=logout', {
+      await fetch('http://localhost/FirmaFlow/superadmin/api/auth.php', {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'logout'
+        })
       });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       setSuperAdmin(null);
       setIsAuthenticated(false);
-      navigate('/login');
+      navigate('/superadmin/login');
     }
   };
 
