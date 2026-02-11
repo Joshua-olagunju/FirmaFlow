@@ -1,10 +1,11 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, User, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, User, X, Lock } from "lucide-react";
 import { pageData } from "./pageData";
 import { useUserStore } from "../stores/useUserStore";
 import { useTheme } from "../contexts/ThemeContext";
 import ThemeToggle from "./ThemeToggle";
 import LogoutModal from "./modals/LogoutModal";
+import useSubscription from "../hooks/useSubscription";
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -16,6 +17,9 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const { theme } = useTheme();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  // Subscription hook
+  const { hasAccess, isExpired, loading: subscriptionLoading } = useSubscription();
 
   const userData = {
     userIcon: <User size={20} className="text-white" />,
@@ -25,11 +29,44 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     company: user?.company_name || "FirmaFlow",
   };
 
+  // Define pages that require subscription (all except Dashboard, Settings, and Subscription itself)
+  const restrictedPages = [
+    "Customers", 
+    "Suppliers", 
+    "Inventory", 
+    "Sales", 
+    "Payments", 
+    "Purchases", 
+    "Expenses", 
+    "Reports"
+  ];
+
   // Filter menu items based on user role
   const filteredPages = useMemo(() => {
     const userRole = user?.role || "user";
     return pageData.filter(page => page.roles?.includes(userRole));
   }, [user?.role]);
+
+  // Check if a page should be locked
+  const isPageLocked = (pageName) => {
+    if (subscriptionLoading) return false; // Don't lock while loading
+    return isExpired && restrictedPages.includes(pageName);
+  };
+
+  // Handle click on locked pages
+  const handleLockedPageClick = (e, pageName) => {
+    if (isPageLocked(pageName)) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Navigate to subscription page
+      navigate('/subscription');
+      
+      // Close mobile sidebar
+      if (window.innerWidth < 768) {
+        onClose();
+      }
+    }
+  };
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -171,29 +208,28 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
               const isActive = location.pathname === linkPath || 
                 (location.pathname === "/user-dashboard" && page.path === "/dashboard");
               
+              // Check if this page is locked
+              const locked = isPageLocked(page.name);
+              
               const Icon = page.icon;
-              return (
-                <Link
-                  to={linkPath}
-                  key={index}
-                  onClick={(e) => {
-                    // Don't auto-expand on mobile when clicking a link
-                    if (window.innerWidth < 768) {
-                      onClose();
-                    }
-                    // Prevent auto-expand when collapsed on desktop
-                  }}
+              
+              // Create the content component
+              const pageContent = (
+                <div
                   className={`group relative items-center justify-start md:justify-center ${
                     !isCollapsed ? "md:justify-start" : ""
                   } flex p-2 w-full rounded-md mb-1 flex-shrink-0 ${
                     isActive
                       ? "bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white"
+                      : locked
+                      ? `${theme.bgCard} opacity-50 cursor-not-allowed`
                       : `hover:bg-gradient-to-br ${
                           theme.mode === "light"
                             ? "from-[#f1f5f9] to-[#f9f7fa]"
                             : "from-slate-700 to-slate-600"
                         }`
                   }`}
+                  onClick={(e) => handleLockedPageClick(e, page.name)}
                 >
                   <div
                     className={`flex items-center justify-start md:justify-center ${
@@ -204,20 +240,36 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                       <Icon
                         size={20}
                         className={`flex-shrink-0 ${
-                          isActive ? "text-white" : theme.textPrimary
+                          isActive 
+                            ? "text-white" 
+                            : locked
+                            ? theme.textTertiary
+                            : theme.textPrimary
                         }`}
                       />
                     )}
+                    
+                    {/* Lock icon for locked pages */}
+                    {locked && (
+                      <Lock
+                        size={16}
+                        className={`flex-shrink-0 ${theme.textTertiary}`}
+                      />
+                    )}
+                    
                     {/* Always show on mobile */}
                     <p
                       className={`md:hidden m-0 text-normal font-md flex-1 whitespace-nowrap overflow-hidden ${
                         isActive
                           ? "text-white font-semibold"
+                          : locked
+                          ? theme.textTertiary
                           : `${theme.textPrimary}`
                       }`}
                     >
                       {page.name}
                     </p>
+                    
                     {/* Animated on desktop */}
                     <AnimatePresence mode="wait">
                       {!isCollapsed && (
@@ -230,6 +282,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                           className={`hidden md:block m-0 text-normal font-md flex-1 whitespace-nowrap overflow-hidden ${
                             isActive
                               ? "text-white font-semibold"
+                              : locked
+                              ? theme.textTertiary
                               : `${theme.textPrimary} hover:font-semibold`
                           }`}
                         >
@@ -242,10 +296,31 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                   {/* Tooltip for collapsed state - positioned outside sidebar */}
                   {isCollapsed && (
                     <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-[9999] shadow-lg">
-                      {page.name}
+                      {page.name} {locked && "(Locked - Subscription Required)"}
                       <div className="absolute right-full top-1/2 -translate-y-1/2 border-[6px] border-transparent border-r-gray-900"></div>
                     </div>
                   )}
+                </div>
+              );
+              
+              // Return either a Link or a div based on whether the page is locked
+              return locked ? (
+                <div key={index}>
+                  {pageContent}
+                </div>
+              ) : (
+                <Link
+                  to={linkPath}
+                  key={index}
+                  onClick={(e) => {
+                    // Don't auto-expand on mobile when clicking a link
+                    if (window.innerWidth < 768) {
+                      onClose();
+                    }
+                    // Prevent auto-expand when collapsed on desktop
+                  }}
+                >
+                  {pageContent}
                 </Link>
               );
             })}

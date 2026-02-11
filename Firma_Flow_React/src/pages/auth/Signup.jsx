@@ -1,1013 +1,614 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  User,
-  Briefcase,
-  Mail,
-  Phone,
-  Eye,
-  EyeOff,
-  Rocket,
-  ShieldCheck,
-  CheckCircle,
-  Gift,
-  LogIn,
-  Lock,
-  Home,
-  X,
-  Shield,
-} from "lucide-react";
-import { buildApiUrl } from "../../config/api.config";
-
-// ✅ Reusable Modal Component
-function TermsModal({ title, onClose, content }) {
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white max-w-2xl w-full rounded-2xl shadow-xl overflow-hidden animate-fadeIn">
-        {/* Header */}
-        <div className="flex justify-between items-center border-b px-6 py-4 bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Scrollable Content */}
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-4 text-gray-700 text-sm space-y-3">
-          {content}
-        </div>
-
-        {/* Footer */}
-        <div className="border-t px-6 py-4 flex justify-end bg-gray-50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 transition"
-          >
-            I Understand
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, UserPlus, Mail, Lock, User, Building, Phone, AlertCircle, CheckCircle } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
+import { buildApiUrl } from '../../config/api.config';
 
 export default function Signup() {
   const navigate = useNavigate();
-
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    company: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    agree: false,
+  const { theme } = useTheme();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    companyName: '',
+    phone: '',
+    agreeToTerms: false
   });
-
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [generalError, setGeneralError] = useState("");
-  const [showTerms, setShowTerms] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
 
-  const API_ENDPOINT = buildApiUrl("api/auth.php");
+  const validateStep = (step) => {
+    const newErrors = {};
 
-  const features = [
-    { label: "14-day free trial" },
-    { label: "No credit card required" },
-    { label: "Cancel anytime" },
-    { label: "24/7 support included" },
-  ];
+    if (step === 1) {
+      if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+      if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
+      if (!formData.email.trim()) {
+        newErrors.email = 'Email is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
+    }
 
-  const strongPasswordPattern =
-    /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
+    if (step === 2) {
+      if (!formData.password) {
+        newErrors.password = 'Password is required';
+      } else if (formData.password.length < 8) {
+        newErrors.password = 'Password must be at least 8 characters';
+      }
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
+      if (!formData.companyName.trim()) newErrors.companyName = 'Company name is required';
+    }
 
-  const validate = () => {
-    const e = {};
-    if (!form.firstName.trim()) e.firstName = "First name is required";
-    if (!form.lastName.trim()) e.lastName = "Last name is required";
-    if (!form.company.trim()) e.company = "Company name is required";
-    if (!form.email.match(/^\S+@\S+\.\S+$/)) e.email = "Valid email required";
-    if (!form.password || form.password.length < 6)
-      e.password = "Password must be at least 6 characters";
-    else if (!strongPasswordPattern.test(form.password))
-      e.password =
-        "Password must include at least one uppercase letter, one number, and one special character";
-    if (form.password !== form.confirmPassword)
-      e.confirmPassword = "Passwords do not match";
-    if (!form.agree) e.agree = "You must agree to Terms of Service";
-    return e;
+    if (step === 3) {
+      if (!formData.agreeToTerms) newErrors.agreeToTerms = 'You must agree to the terms and conditions';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e) => {
+  const calculatePasswordStrength = (password) => {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^a-zA-Z0-9]/.test(password)) strength++;
+    return strength;
+  };
+
+  const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((s) => ({ ...s, [name]: type === "checkbox" ? checked : value }));
-    setErrors((s) => ({ ...s, [name]: undefined }));
-    setGeneralError("");
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value,
+    });
+
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: ''
+      });
+    }
+
+    // Calculate password strength
+    if (name === 'password') {
+      setPasswordStrength(calculatePasswordStrength(value));
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(currentStep - 1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const eobj = validate();
-    setErrors(eobj);
-    if (Object.keys(eobj).length) return;
+    if (!validateStep(3)) return;
 
-    setIsSubmitting(true);
-    setGeneralError("");
+    setLoading(true);
 
     try {
-      const payload = {
-        action: "signup",
-        first_name: form.firstName.trim(),
-        last_name: form.lastName.trim(),
-        company_name: form.company.trim(),
-        email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim(),
-        password: form.password,
-        confirm_password: form.confirmPassword,
-      };
-
-      const res = await fetch(API_ENDPOINT, {
-        method: "POST",
-        credentials: "include", // allow cookies (session) to be set by PHP
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const response = await fetch(buildApiUrl('api/auth.php'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'signup',
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          companyName: formData.companyName,
+          phone: formData.phone
+        }),
       });
 
-      const data = await res.json().catch((parseError) => {
-        console.error("JSON parse error:", parseError);
-        return null;
-      });
+      const data = await response.json();
 
-      if (!res.ok) {
-        const msg = (data && data.error) || `Server returned ${res.status}`;
-        setGeneralError(msg);
-        return;
-      }
-
-      if (data?.success) {
-        navigate("/email-verification", {
-          state: { email: data.email || form.email },
+      if (response.ok && data.success) {
+        // Redirect to email verification
+        navigate('/email-verification', { 
+          state: { 
+            email: formData.email,
+            message: 'Please check your email to verify your account.'
+          } 
         });
       } else {
-        setGeneralError(data?.error || "Unable to complete registration");
+        setErrors({ submit: data.message || 'Registration failed. Please try again.' });
       }
-    } catch (err) {
-      console.error("Signup error", err);
-      setGeneralError("Network error. Please try again.");
+    } catch (error) {
+      console.error('Signup error:', error);
+      setErrors({ submit: 'Network error. Please check your connection and try again.' });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
+    }
+  };
+
+  const getPasswordStrengthText = () => {
+    switch (passwordStrength) {
+      case 0:
+      case 1:
+        return 'Weak';
+      case 2:
+      case 3:
+        return 'Medium';
+      case 4:
+      case 5:
+        return 'Strong';
+      default:
+        return '';
+    }
+  };
+
+  const getPasswordStrengthColor = () => {
+    switch (passwordStrength) {
+      case 0:
+      case 1:
+        return 'bg-red-500';
+      case 2:
+      case 3:
+        return 'bg-yellow-500';
+      case 4:
+      case 5:
+        return 'bg-green-500';
+      default:
+        return 'bg-gray-300';
+    }
+  };
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Personal Information
+              </h3>
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                Let's start with your basic details
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  First Name
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                      errors.firstName ? 'border-red-500' : theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                    placeholder="John"
+                  />
+                  {errors.firstName && (
+                    <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Last Name
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                      errors.lastName ? 'border-red-500' : theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    }`}
+                    placeholder="Doe"
+                  />
+                  {errors.lastName && (
+                    <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Email Address
+              </label>
+              <div className="relative">
+                <div className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`}>
+                  <Mail className="h-5 w-5" />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-3 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    errors.email ? 'border-red-500' : theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                  placeholder="john@company.com"
+                />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Security & Company
+              </h3>
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                Secure your account and set up your company
+              </p>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Password
+              </label>
+              <div className="relative">
+                <div className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`}>
+                  <Lock className="h-5 w-5" />
+                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    errors.password ? 'border-red-500' : theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                  placeholder="Create a strong password"
+                />
+                <button
+                  type="button"
+                  className={`absolute inset-y-0 right-0 pr-3 flex items-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`}
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {formData.password && (
+                <div className="mt-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                      <div 
+                        className={`h-1.5 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
+                        style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                      />
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      passwordStrength <= 1 ? 'text-red-500' :
+                      passwordStrength <= 3 ? 'text-yellow-500' : 'text-green-500'
+                    }`}>
+                      {getPasswordStrengthText()}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-500">{errors.password}</p>
+              )}
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Confirm Password
+              </label>
+              <div className="relative">
+                <div className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`}>
+                  <Lock className="h-5 w-5" />
+                </div>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-10 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    errors.confirmPassword ? 'border-red-500' : theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                  placeholder="Confirm your password"
+                />
+                <button
+                  type="button"
+                  className={`absolute inset-y-0 right-0 pr-3 flex items-center ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>
+              )}
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Company Name
+              </label>
+              <div className="relative">
+                <div className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`}>
+                  <Building className="h-5 w-5" />
+                </div>
+                <input
+                  type="text"
+                  name="companyName"
+                  value={formData.companyName}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-3 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    errors.companyName ? 'border-red-500' : theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                  placeholder="Your Company Ltd."
+                />
+                {errors.companyName && (
+                  <p className="mt-1 text-sm text-red-500">{errors.companyName}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Phone Number (Optional)
+              </label>
+              <div className="relative">
+                <div className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`}>
+                  <Phone className="h-5 w-5" />
+                </div>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className={`w-full pl-10 pr-3 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-white'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Almost There!
+              </h3>
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                Review your information and agree to our terms
+              </p>
+            </div>
+
+            {/* Summary */}
+            <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+              <h4 className={`font-semibold mb-3 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Account Summary:</h4>
+              <div className="space-y-2 text-sm">
+                <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                  <strong>Name:</strong> {formData.firstName} {formData.lastName}
+                </p>
+                <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                  <strong>Email:</strong> {formData.email}
+                </p>
+                <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                  <strong>Company:</strong> {formData.companyName}
+                </p>
+                {formData.phone && (
+                  <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}>
+                    <strong>Phone:</strong> {formData.phone}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Terms and Conditions */}
+            <div>
+              <label className="flex items-start space-x-3">
+                <input
+                  type="checkbox"
+                  name="agreeToTerms"
+                  checked={formData.agreeToTerms}
+                  onChange={handleInputChange}
+                  className={`mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded ${errors.agreeToTerms ? 'border-red-500' : ''}`}
+                />
+                <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                  I agree to the{' '}
+                  <Link to="/terms" className="text-purple-600 hover:text-purple-500 font-medium">
+                    Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link to="/privacy" className="text-purple-600 hover:text-purple-500 font-medium">
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
+              {errors.agreeToTerms && (
+                <p className="mt-1 text-sm text-red-500">{errors.agreeToTerms}</p>
+              )}
+            </div>
+
+            {errors.submit && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <p className="text-sm text-red-600">{errors.submit}</p>
+              </div>
+            )}
+          </div>
+        );
+
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800 py-12 px-4">
-      <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-br from-purple-600 to-purple-400 text-white p-6 md:p-8">
-          <div className="w-full flex items-center justify-start mb-5">
-            <button
-              onClick={() => navigate("/")}
-              className="w-20 flex items-center justify-center gap-1 border-2 rounded-md hover:bg-blue-50 hover:text-gray-600 transition"
-            >
-              <Home size={18} className="mt-0.5" /> Home
-            </button>
-          </div>
+    <div className={`min-h-screen flex items-center justify-center px-4 ${
+      theme === 'dark' ? 'bg-gray-900' : 'bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50'
+    }`}>
+      <div className="max-w-md w-full space-y-8">
+        {/* Logo and Header */}
+        <div className="text-center">
+          <Link to="/" className="inline-flex items-center gap-2 text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
+            <img src="/firmaflow-logo.jpg" className="w-10 h-10 rounded-lg" alt="FirmaFlow" />
+            FirmaFlow
+          </Link>
+          <h2 className={`mt-6 text-3xl font-extrabold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+            Create your account
+          </h2>
+          <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+            Join thousands of businesses managing their finances better
+          </p>
+        </div>
 
-          <div className="flex flex-col items-start gap-4 md:gap-6">
-            <div className="m-auto w-75 gap-3 flex items-start justify-center mb-2">
-              <img
-                src="./firmaflow-logo.jpg"
-                alt="FirmaFlow Ledger"
-                className="mx-auto w-14 h-14 mb-2 rounded-md mt-1"
-              />
-              <span className="flex flex-col items-start">
-                <h1 className="text-4xl font-semibold">FirmaFlow</h1>
-                <p className="text-xs opacity-100 mt-1">LEDGER</p>
-              </span>
-            </div>
-            <div className="flex flex-col m-auto text-center">
-              <p className="text-sm md:text-base max-w-xl">
-                Start managing your business like a pro
-              </p>
-              <div className="mt-3 inline-flex items-center gap-2 bg-white/10 rounded-full px-3 py-1 text-xs md:text-sm">
-                <Gift size={15} />
-                <span>14-day free trial • No credit card required</span>
+        {/* Progress Steps */}
+        <div className="flex justify-center">
+          <div className="flex items-center space-x-4">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  step <= currentStep
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                    : theme === 'dark'
+                    ? 'bg-gray-700 text-gray-400'
+                    : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {step < currentStep ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    step
+                  )}
+                </div>
+                {step < 3 && (
+                  <div className={`w-12 h-0.5 ml-4 ${
+                    step < currentStep
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600'
+                      : theme === 'dark'
+                      ? 'bg-gray-700'
+                      : 'bg-gray-200'
+                  }`} />
+                )}
               </div>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-          {/* Names */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                <User size={14} /> First Name{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="firstName"
-                value={form.firstName}
-                onChange={handleChange}
-                placeholder="Enter first name"
-                className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-                  errors.firstName ? "border-red-400" : "border-gray-200"
-                }`}
-              />
-              {errors.firstName && (
-                <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="lastName"
-                value={form.lastName}
-                onChange={handleChange}
-                placeholder="Enter last name"
-                className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-                  errors.lastName ? "border-red-400" : "border-gray-200"
-                }`}
-              />
-              {errors.lastName && (
-                <p className="text-xs text-red-500 mt-1">{errors.lastName}</p>
-              )}
-            </div>
-          </div>
+        <form onSubmit={currentStep === 3 ? handleSubmit : (e) => e.preventDefault()} className={`p-8 rounded-2xl shadow-lg border ${
+          theme === 'dark' 
+            ? 'bg-gray-800 border-gray-700' 
+            : 'bg-white border-gray-100'
+        }`}>
+          {renderStep()}
 
-          {/* Company */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-              <Briefcase size={14} /> Company Name{" "}
-              <span className="text-red-500">*</span>
-            </label>
-            <input
-              name="company"
-              value={form.company}
-              onChange={handleChange}
-              placeholder="Enter company name"
-              className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-                errors.company ? "border-red-400" : "border-gray-200"
-              }`}
-            />
-            {errors.company && (
-              <p className="text-xs text-red-500 mt-1">{errors.company}</p>
-            )}
-          </div>
-
-          {/* Email & Phone */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                <Mail size={14} /> Email Address{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="Enter email address"
-                className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-                  errors.email ? "border-red-400" : "border-gray-200"
-                }`}
-              />
-              {errors.email && (
-                <p className="text-xs text-red-500 mt-1">{errors.email}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                <Phone size={14} /> Phone Number
-              </label>
-              <input
-                name="phone"
-                value={form.phone}
-                onChange={handleChange}
-                placeholder="Enter phone number"
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none border-gray-200"
-              />
-            </div>
-          </div>
-
-          {/* Passwords */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                <Lock size={14} /> Password{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="Create password"
-                  className={`w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-                    errors.password ? "border-red-400" : "border-gray-200"
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-2 top-2 text-gray-500"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="text-xs text-red-500 mt-1">{errors.password}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirm Password <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  name="confirmPassword"
-                  type={showConfirm ? "text" : "password"}
-                  value={form.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirm password"
-                  className={`w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-                    errors.confirmPassword
-                      ? "border-red-400"
-                      : "border-gray-200"
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((s) => !s)}
-                  className="absolute right-2 top-2 text-gray-500"
-                >
-                  {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-xs text-red-500 mt-1">
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Terms */}
-          <div className="flex items-start gap-3">
-            <input
-              name="agree"
-              type="checkbox"
-              checked={form.agree}
-              onChange={handleChange}
-              className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded"
-            />
-            <div className="text-sm text-gray-700">
-              I agree to the{" "}
+          {/* Navigation Buttons */}
+          <div className="flex justify-between pt-6 space-x-4">
+            {currentStep > 1 && (
               <button
                 type="button"
-                onClick={() => setShowTerms(true)}
-                className="text-purple-600 hover:underline"
+                onClick={handleBack}
+                className={`px-6 py-3 border border-gray-300 rounded-xl font-medium transition-colors ${
+                  theme === 'dark'
+                    ? 'text-gray-300 hover:bg-gray-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
               >
-                Terms of Service
-              </button>{" "}
-              and{" "}
-              <button
-                type="button"
-                onClick={() => setShowPrivacy(true)}
-                className="text-purple-600 hover:underline"
-              >
-                Privacy Policy
+                Back
               </button>
-              .
-              {errors.agree && (
-                <div className="text-xs text-red-500 mt-1">{errors.agree}</div>
-              )}
-            </div>
-          </div>
-
-          {/* Submit */}
-          {generalError && (
-            <p className="text-sm text-red-500 text-center">{generalError}</p>
-          )}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-purple-600 to-purple-500 hover:opacity-95 transition flex items-center justify-center gap-1"
-          >
-            {isSubmitting ? (
-              "Starting trial..."
-            ) : (
-              <>
-                <Rocket size={18} /> Start Free Trial
-              </>
             )}
-          </button>
 
-          {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm text-gray-600">
-            {features.map((f, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <CheckCircle size={18} className="text-purple-600 mt-0.5" />
-                <div className="font-medium text-gray-800">{f.label}</div>
-              </div>
-            ))}
+            {currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="flex-1 py-3 px-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105"
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading}
+                className={`flex-1 flex justify-center items-center py-3 px-6 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  loading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <UserPlus className={`w-5 h-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? 'Creating Account...' : 'Create Account'}
+              </button>
+            )}
           </div>
 
-          {/* Sign In */}
-          <div className="text-center">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-gray-200" />
-              <div className="text-xs text-gray-400">
-                Already have an account?
-              </div>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="w-full mt-5 flex items-center justify-center gap-1 py-2 border-2 border-gray-200 rounded-lg text-gray-800 hover:bg-blue-50 hover:border-blue-600"
+          {/* Login Link */}
+          <div className="text-center pt-6 border-t border-gray-200 dark:border-gray-700">
+            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+              Already have an account?{' '}
+              <Link
+                to="/login"
+                className="font-medium text-purple-600 hover:text-purple-500 transition-colors"
+              >
+                Sign in here
+              </Link>
+            </p>
+          </div>
+
+          {/* Back to Home */}
+          <div className="text-center pt-2">
+            <Link
+              to="/"
+              className={`text-sm font-medium transition-colors ${
+                theme === 'dark' 
+                  ? 'text-gray-400 hover:text-gray-300' 
+                  : 'text-gray-600 hover:text-gray-700'
+              }`}
             >
-              <LogIn size={15} className="mt-1" /> Sign In Instead
-            </button>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center text-xs text-gray-500 mt-4">
-            <div className="flex items-center justify-center gap-2">
-              <div className="bg-gray-100 p-2 rounded-full">
-                <ShieldCheck size={16} />
-              </div>
-              <div>
-                Your data is secure and protected with enterprise-grade
-                encryption
-              </div>
-            </div>
+              ← Back to home
+            </Link>
           </div>
         </form>
       </div>
-
-      {/* Terms Modal */}
-      {showTerms && (
-        <TermsModal
-          title="Terms of Service"
-          onClose={() => setShowTerms(false)}
-          content={
-            <>
-              <p>
-                <strong>Last updated:</strong> November 13, 2025
-              </p>
-              <p>
-                <strong>1. Acceptance of Terms</strong> — By accessing and using
-                FirmaFlow Ledger ("the Service"), you accept and agree to be
-                bound by the terms and provision of this agreement.
-              </p>
-              <p>
-                <strong>2. Description of Service</strong> — FirmaFlow Ledger is
-                a comprehensive business management platform that provides:
-              </p>
-              <ul className="list-disc pl-6 space-y-1">
-                <li>Inventory and sales management</li>
-                <li>Customer relationship management</li>
-                <li>Financial tracking and reporting</li>
-                <li>Invoice generation and payment processing</li>
-                <li>Business analytics and insights</li>
-              </ul>
-              <p>
-                <strong>3. User Accounts and Security</strong> — You are
-                responsible for maintaining the confidentiality of your account
-                credentials and all activities that occur under your account.
-              </p>
-              <p>
-                <strong>4. Data Security and Privacy</strong> — We use 256-bit
-                SSL encryption, regular audits, secure cloud infrastructure, and
-                role-based access controls.
-              </p>
-              <p>
-                <strong>5. Service Availability</strong> — We maintain 99.9%
-                uptime with advance notice for maintenance.
-              </p>
-              <p>
-                <strong>6. Payment Terms</strong> — Subscription fees are billed
-                monthly or annually, non-refundable except as required by law.
-              </p>
-              <p>
-                <strong>7. Limitation of Liability</strong> — FirmaFlow Ledger
-                shall not be liable for indirect, incidental, or consequential
-                damages.
-              </p>
-              <p>
-                <strong>8. Termination</strong> — Either party may terminate
-                this agreement anytime. Data available for export for 30 days
-                post-termination.
-              </p>
-              <p>
-                <strong>9. Changes to Terms</strong> — We reserve the right to
-                modify these terms at any time. Users will be notified of
-                significant changes via email.
-              </p>
-              <p>
-                <strong>10. Contact Information</strong> — For questions,
-                contact us at{" "}
-                <a
-                  href="mailto:legal@firmaflowledger.com"
-                  className="text-purple-600"
-                >
-                  legal@firmaflowledger.com
-                </a>
-              </p>
-            </>
-          }
-        />
-      )}
-
-      {/* Privacy Modal */}
-      {showPrivacy && (
-        <TermsModal
-          title="Privacy Policy"
-          onClose={() => setShowPrivacy(false)}
-          content={
-            <>
-              <p>
-                <strong>Last updated:</strong> November 13, 2025
-              </p>
-              <p>
-                <strong>Your Privacy is Protected:</strong> We use bank-level
-                security to safeguard your business data.
-              </p>
-              <p>
-                <strong>1. Information We Collect</strong> — We collect:
-              </p>
-              <ul className="list-disc pl-6 space-y-1">
-                <li>Account registration information (name, email, company)</li>
-                <li>Business data you input</li>
-                <li>Payment and billing information</li>
-                <li>Communication preferences and support interactions</li>
-              </ul>
-              <p>
-                <strong>2. How We Use Your Information</strong> — To provide
-                services, process payments, offer support, send updates, and
-                improve our platform.
-              </p>
-              <p>
-                <strong>3. Data Security Measures</strong> — 256-bit SSL
-                encryption, secure cloud infrastructure, daily backups, and
-                access monitoring.
-              </p>
-              <p>
-                <strong>4. Information Sharing</strong> — We do not sell or rent
-                data. We share only with consent, for legal compliance, or with
-                trusted providers.
-              </p>
-              <p>
-                <strong>5. Data Retention</strong> — We retain your data while
-                your account is active and delete it 30 days after termination.
-              </p>
-              <p>
-                <strong>6. Your Rights</strong> — You can access, update,
-                export, or delete your data, and opt out of marketing
-                communications.
-              </p>
-              <p>
-                <strong>7. Compliance</strong> — We comply with GDPR, CCPA, and
-                applicable privacy laws.
-              </p>
-              <p>
-                <strong>8. Contact Us</strong> — For privacy inquiries, email{" "}
-                <a
-                  href="mailto:privacy@firmaflowledger.com"
-                  className="text-purple-600"
-                >
-                  privacy@firmaflowledger.com
-                </a>
-              </p>
-            </>
-          }
-        />
-      )}
     </div>
   );
 }
-
-// import { useState } from "react";
-// import { useNavigate } from "react-router-dom";
-// import {
-//   User,
-//   Briefcase,
-//   Mail,
-//   Phone,
-//   Eye,
-//   EyeOff,
-//   Rocket,
-//   ShieldCheck,
-//   CheckCircle,
-//   Gift,
-//   LogIn,
-//   Lock,
-//   Home,
-// } from "lucide-react";
-
-// export default function Signup() {
-//   const navigate = useNavigate();
-
-//   const [form, setForm] = useState({
-//     firstName: "",
-//     lastName: "",
-//     company: "",
-//     email: "",
-//     phone: "",
-//     password: "",
-//     confirmPassword: "",
-//     agree: false,
-//   });
-
-//   const [showPassword, setShowPassword] = useState(false);
-//   const [showConfirm, setShowConfirm] = useState(false);
-//   const [isSubmitting, setIsSubmitting] = useState(false);
-//   const [errors, setErrors] = useState({});
-//   const [generalError, setGeneralError] = useState("");
-
-//   // ✅ API Endpoint
-//   const API_BASE =
-//     import.meta.env.VITE_API_BASE ||
-//     "http://localhost:8888/firmaflow-React/FirmaFlow";
-//   const API_ENDPOINT = `${API_BASE}/api/auth.php`;
-
-//   const features = [
-//     { label: "14-day free trial" },
-//     { label: "No credit card required" },
-//     { label: "Cancel anytime" },
-//     { label: "24/7 support included" },
-//   ];
-
-//   // ✅ Strong password rule
-//   const strongPasswordPattern =
-//     /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
-
-//   // ✅ Validation logic
-//   const validate = () => {
-//     const e = {};
-//     if (!form.firstName.trim()) e.firstName = "First name is required";
-//     if (!form.lastName.trim()) e.lastName = "Last name is required";
-//     if (!form.company.trim()) e.company = "Company name is required";
-//     if (!form.email.match(/^\S+@\S+\.\S+$/)) e.email = "Valid email required";
-//     if (!form.password || form.password.length < 6)
-//       e.password = "Password must be at least 6 characters";
-//     else if (!strongPasswordPattern.test(form.password))
-//       e.password =
-//         "Password must include at least one uppercase letter, one number, and one special character";
-//     if (form.password !== form.confirmPassword)
-//       e.confirmPassword = "Passwords do not match";
-//     if (!form.agree) e.agree = "You must agree to Terms of Service";
-//     return e;
-//   };
-
-//   const handleChange = (e) => {
-//     const { name, value, type, checked } = e.target;
-//     setForm((s) => ({ ...s, [name]: type === "checkbox" ? checked : value }));
-//     setErrors((s) => ({ ...s, [name]: undefined }));
-//     setGeneralError("");
-//   };
-
-//   // ✅ Submit logic
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     const eobj = validate();
-//     setErrors(eobj);
-//     if (Object.keys(eobj).length) return;
-
-//     setIsSubmitting(true);
-//     setGeneralError("");
-
-//     try {
-//       const payload = {
-//         action: "signup",
-//         first_name: form.firstName.trim(),
-//         last_name: form.lastName.trim(),
-//         company_name: form.company.trim(),
-//         email: form.email.trim().toLowerCase(),
-//         phone: form.phone.trim(),
-//         password: form.password,
-//         confirm_password: form.confirmPassword,
-//       };
-
-//       const res = await fetch(API_ENDPOINT, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify(payload),
-//       });
-
-//       const data = await res.json().catch(() => null);
-
-//       if (!res.ok) {
-//         const msg = (data && data.error) || `Server returned ${res.status}`;
-//         setGeneralError(msg);
-//         return;
-//       }
-
-//       if (data?.success) {
-//         if (data.requires_verification && data.email) {
-//           navigate("/email-verification", { state: { email: data.email } });
-//         } else {
-//           navigate("/email-verification", { state: { email: form.email } });
-//         }
-//       } else {
-//         setGeneralError(data?.error || "Unable to complete registration");
-//       }
-//     } catch (err) {
-//       console.error("Signup error", err);
-//       setGeneralError("Network error. Please try again.");
-//     } finally {
-//       setIsSubmitting(false);
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800 py-12 px-4">
-//       <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
-//         {/* Header */}
-//         <div className="bg-gradient-to-br from-purple-600 to-purple-400 text-white p-6 md:p-8">
-//           <div className="w-full flex items-center justify-start mb-5">
-//             <button
-//               onClick={() => navigate("/")}
-//               className="w-20 flex items-center justify-center gap-1 border-2 rounded-md hover:bg-blue-50 hover:text-gray-600 transition"
-//             >
-//               <Home size={18} className="mt-0.5" /> Home
-//             </button>
-//           </div>
-
-//           <div className="flex flex-col items-start gap-4 md:gap-6">
-//             <div className="m-auto w-75 gap-3 flex items-start justify-center mb-2">
-//               <img
-//                 src="./firmaflow-logo.jpg"
-//                 alt="FirmaFlow Ledger"
-//                 className="mx-auto w-14 h-14 mb-2 rounded-md mt-1"
-//               />
-//               <span className="flex flex-col items-start">
-//                 <h1 className="text-4xl font-semibold">FirmaFlow</h1>
-//                 <p className="text-xs opacity-100 mt-1">LEDGER</p>
-//               </span>
-//             </div>
-//             <div className="flex flex-col m-auto text-center">
-//               <p className="text-sm md:text-base max-w-xl">
-//                 Start managing your business like a pro
-//               </p>
-//               <div className="mt-3 inline-flex items-center gap-2 bg-white/10 rounded-full px-3 py-1 text-xs md:text-sm">
-//                 <Gift size={15} />
-//                 <span>14-day free trial • No credit card required</span>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Form */}
-//         <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-//           {/* Name Row */}
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-//                 <User size={14} /> First Name <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 name="firstName"
-//                 value={form.firstName}
-//                 onChange={handleChange}
-//                 placeholder="Enter first name"
-//                 className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-//                   errors.firstName ? "border-red-400" : "border-gray-200"
-//                 }`}
-//               />
-//               {errors.firstName && (
-//                 <div className="text-xs text-red-500 mt-1">{errors.firstName}</div>
-//               )}
-//             </div>
-
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 Last Name <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 name="lastName"
-//                 value={form.lastName}
-//                 onChange={handleChange}
-//                 placeholder="Enter last name"
-//                 className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-//                   errors.lastName ? "border-red-400" : "border-gray-200"
-//                 }`}
-//               />
-//               {errors.lastName && (
-//                 <div className="text-xs text-red-500 mt-1">{errors.lastName}</div>
-//               )}
-//             </div>
-//           </div>
-
-//           {/* Company */}
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-//               <Briefcase size={14} /> Company Name <span className="text-red-500">*</span>
-//             </label>
-//             <input
-//               name="company"
-//               value={form.company}
-//               onChange={handleChange}
-//               placeholder="Enter your company name"
-//               className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-//                 errors.company ? "border-red-400" : "border-gray-200"
-//               }`}
-//             />
-//             {errors.company && (
-//               <div className="text-xs text-red-500 mt-1">{errors.company}</div>
-//             )}
-//           </div>
-
-//           {/* Email + Phone */}
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-//                 <Mail size={14} /> Email Address <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 name="email"
-//                 value={form.email}
-//                 onChange={handleChange}
-//                 placeholder="Enter email address"
-//                 className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-//                   errors.email ? "border-red-400" : "border-gray-200"
-//                 }`}
-//               />
-//               {errors.email && (
-//                 <div className="text-xs text-red-500 mt-1">{errors.email}</div>
-//               )}
-//             </div>
-
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-//                 <Phone size={14} /> Phone Number
-//               </label>
-//               <input
-//                 name="phone"
-//                 value={form.phone}
-//                 onChange={handleChange}
-//                 placeholder="Enter phone number"
-//                 className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none border-gray-200"
-//               />
-//             </div>
-//           </div>
-
-//           {/* Password Fields */}
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//             <div>
-//               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-//                 <Lock size={14} /> Password <span className="text-red-500">*</span>
-//               </label>
-//               <div className="relative">
-//                 <input
-//                   name="password"
-//                   type={showPassword ? "text" : "password"}
-//                   value={form.password}
-//                   onChange={handleChange}
-//                   placeholder="Create password"
-//                   className={`w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-//                     errors.password ? "border-red-400" : "border-gray-200"
-//                   }`}
-//                 />
-//                 <button
-//                   type="button"
-//                   onClick={() => setShowPassword((s) => !s)}
-//                   className="absolute right-2 top-2 text-gray-500"
-//                 >
-//                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-//                 </button>
-//               </div>
-//               {errors.password && (
-//                 <div className="text-xs text-red-500 mt-1">{errors.password}</div>
-//               )}
-//             </div>
-
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-1">
-//                 Confirm Password <span className="text-red-500">*</span>
-//               </label>
-//               <div className="relative">
-//                 <input
-//                   name="confirmPassword"
-//                   type={showConfirm ? "text" : "password"}
-//                   value={form.confirmPassword}
-//                   onChange={handleChange}
-//                   placeholder="Confirm password"
-//                   className={`w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-purple-500 outline-none ${
-//                     errors.confirmPassword ? "border-red-400" : "border-gray-200"
-//                   }`}
-//                 />
-//                 <button
-//                   type="button"
-//                   onClick={() => setShowConfirm((s) => !s)}
-//                   className="absolute right-2 top-2 text-gray-500"
-//                 >
-//                   {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-//                 </button>
-//               </div>
-//               {errors.confirmPassword && (
-//                 <div className="text-xs text-red-500 mt-1">
-//                   {errors.confirmPassword}
-//                 </div>
-//               )}
-//             </div>
-//           </div>
-
-//           {/* Terms */}
-//           <div className="flex items-start gap-3">
-//             <input
-//               name="agree"
-//               type="checkbox"
-//               checked={form.agree}
-//               onChange={handleChange}
-//               className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded"
-//             />
-//             <div className="text-sm text-gray-700">
-//               I agree to the{" "}
-//               <a className="text-purple-600 hover:underline" href="#">
-//                 Terms of Service
-//               </a>{" "}
-//               and{" "}
-//               <a className="text-purple-600 hover:underline" href="#">
-//                 Privacy Policy
-//               </a>
-//               .
-//               {errors.agree && (
-//                 <div className="text-xs text-red-500 mt-1">{errors.agree}</div>
-//               )}
-//             </div>
-//           </div>
-
-//           {/* Submit */}
-//           {generalError && (
-//             <div className="text-sm text-red-500 text-center">{generalError}</div>
-//           )}
-//           <button
-//             type="submit"
-//             disabled={isSubmitting}
-//             className="w-full py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-purple-600 to-purple-500 hover:opacity-95 transition flex items-center justify-center gap-1"
-//           >
-//             {isSubmitting ? (
-//               "Starting trial..."
-//             ) : (
-//               <>
-//                 <Rocket size={18} /> Start Free Trial
-//               </>
-//             )}
-//           </button>
-
-//           {/* Features */}
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs md:text-sm text-gray-600">
-//             {features.map((f, i) => (
-//               <div key={i} className="flex items-start gap-2">
-//                 <CheckCircle size={18} className="text-purple-600 mt-0.5" />
-//                 <div className="font-medium text-gray-800">{f.label}</div>
-//               </div>
-//             ))}
-//           </div>
-
-//           {/* Sign In */}
-//           <div className="text-center">
-//             <div className="flex items-center gap-3">
-//               <div className="flex-1 h-px bg-gray-200" />
-//               <div className="text-xs text-gray-400">Already have an account?</div>
-//               <div className="flex-1 h-px bg-gray-200" />
-//             </div>
-//             <button
-//               type="button"
-//               onClick={() => navigate("/login")}
-//               className="w-full mt-5 flex items-center justify-center gap-1 py-2 border-2 border-gray-200 rounded-lg text-gray-800 hover:bg-blue-50 hover:border-blue-600"
-//             >
-//               <LogIn size={15} className="mt-1" /> Sign In Instead
-//             </button>
-//           </div>
-
-//           {/* Footer */}
-//           <div className="text-center text-xs text-gray-500 mt-4">
-//             <div className="flex items-center justify-center gap-2">
-//               <div className="bg-gray-100 p-2 rounded-full">
-//                 <ShieldCheck size={16} />
-//               </div>
-//               <div>
-//                 Your data is secure and protected with enterprise-grade encryption
-//               </div>
-//             </div>
-//           </div>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// }

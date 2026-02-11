@@ -8,7 +8,6 @@ import {
   ShoppingBag,
   Receipt,
   FileText,
-  BarChart3,
   Settings,
   Crown,
 } from "lucide-react";
@@ -73,12 +72,6 @@ export const pageData = [
     path: "/subscription",
     icon: Crown,
     roles: ["admin", "user"], // both can see
-  },
-  {
-    name: "Advanced Reports",
-    path: "/advance-reports",
-    icon: BarChart3,
-    roles: ["admin"], // admin only
   },
   {
     name: "Settings",

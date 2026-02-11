@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import SuperAdminLayout from '../components/SuperAdminLayout';
+import React, { useState, useEffect } from 'react';
+import SuperAdminLayout from '../../../components/SuperAdminLayout';
 import { 
   Users as UsersIcon, 
   Search,

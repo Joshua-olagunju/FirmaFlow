@@ -8,6 +8,7 @@ import { ThemeProvider } from "./contexts/ThemeContext.jsx";
 import { SettingsProvider } from "./contexts/SettingsContext.jsx";
 import { SubscriptionProvider } from "./contexts/SubscriptionContext.jsx";
 import { SuperAdminProvider } from "./contexts/SuperAdminContext.jsx";
+import { StaffProvider } from "./contexts/StaffContext.jsx";
 
 const rootElement = document.getElementById("root");
 if (rootElement) {
@@ -15,15 +16,17 @@ if (rootElement) {
     <StrictMode>
       <BrowserRouter>
         <SuperAdminProvider>
-          <UserProvider>
-            <SubscriptionProvider>
-              <ThemeProvider>
-                <SettingsProvider>
-                  <App />
-                </SettingsProvider>
-              </ThemeProvider>
-            </SubscriptionProvider>
-          </UserProvider>
+          <StaffProvider>
+            <UserProvider>
+              <SubscriptionProvider>
+                <ThemeProvider>
+                  <SettingsProvider>
+                    <App />
+                  </SettingsProvider>
+                </ThemeProvider>
+              </SubscriptionProvider>
+            </UserProvider>
+          </StaffProvider>
         </SuperAdminProvider>
       </BrowserRouter>
     </StrictMode>

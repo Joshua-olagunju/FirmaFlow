@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import SuperAdminLayout from '../components/SuperAdminLayout';
+import React, { useState, useEffect } from 'react';
+import SuperAdminLayout from '../../../components/SuperAdminLayout';
 import { 
   Building2, 
   Search,
@@ -36,6 +36,7 @@ export default function Companies() {
     try {
       setLoading(true);
       const params = new URLSearchParams({
+        action: 'list',
         page: currentPage,
         limit: 15,
         search: searchTerm,

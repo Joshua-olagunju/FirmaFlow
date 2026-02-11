@@ -15,14 +15,21 @@ import Expenses from "./pages/expenses/Expenses";
 import Settings from "./pages/Settings/Settings";
 import FinancialReports from "./pages/reports/FinancialReports";
 import Subscription from "./pages/subscription/Subscription";
+import SuperAdminLogin from "./pages/superadmin/auth/SuperAdminLogin";
 import SuperAdminDashboard from "./pages/superadmin/dashboard/SuperAdminDashboard";
-import SuperAdminTickets from "./pages/superadmin/tickets/Tickets";
+import SuperAdminTickets from "./pages/superadmin/tickets/SupportTickets";
+import SuperAdminLiveChat from "./pages/superadmin/chat/LiveChat";
 import SuperAdminUsers from "./pages/superadmin/users/Users";
 import SuperAdminCompanies from "./pages/superadmin/companies/Companies";
 import SuperAdminSubscriptions from "./pages/superadmin/subscriptions/Subscriptions";
-import SuperAdminSettings from "./pages/superadmin/settings/Settings";
+import SuperAdminSettings from "./pages/superadmin/Settings";
+import StaffDashboard from "./pages/staff/StaffDashboard";
+import StaffChat from "./pages/staff/StaffChat";
+import StaffComplaints from "./pages/staff/StaffComplaints";
+import StaffUsers from "./pages/staff/StaffUsers";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SuperAdminProtectedRoute from "./components/SuperAdminProtectedRoute";
+import StaffProtectedRoute from "./components/StaffProtectedRoute";
 import SubscriptionBanner from "./components/SubscriptionBanner";
 import { useUser } from "./contexts/UserContext";
 
@@ -40,6 +47,9 @@ function App() {
         <Route path="/email-verification" element={<EmailVerification />} />
         <Route path="/login" element={<Login />} />
         
+        {/* SuperAdmin Login */}
+        <Route path="/superadmin/login" element={<SuperAdminLogin />} />
+        
         {/* SuperAdmin Routes */}
         <Route
           path="/superadmin/dashboard"
@@ -54,6 +64,14 @@ function App() {
           element={
             <SuperAdminProtectedRoute>
               <SuperAdminTickets />
+            </SuperAdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/superadmin/live-chat"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdminLiveChat />
             </SuperAdminProtectedRoute>
           }
         />
@@ -88,6 +106,24 @@ function App() {
               <SuperAdminSettings />
             </SuperAdminProtectedRoute>
           }
+        />
+        
+        {/* Staff Routes - uses same login as SuperAdmin, redirects based on role */}
+        <Route
+          path="/staff"
+          element={<StaffProtectedRoute><StaffDashboard /></StaffProtectedRoute>}
+        />
+        <Route
+          path="/staff/chat"
+          element={<StaffProtectedRoute><StaffChat /></StaffProtectedRoute>}
+        />
+        <Route
+          path="/staff/complaints"
+          element={<StaffProtectedRoute><StaffComplaints /></StaffProtectedRoute>}
+        />
+        <Route
+          path="/staff/users"
+          element={<StaffProtectedRoute><StaffUsers /></StaffProtectedRoute>}
         />
         
         {/* Dashboard - role-based routing */}
