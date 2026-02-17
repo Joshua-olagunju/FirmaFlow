@@ -386,6 +386,7 @@ const ViewInvoiceModal = ({
           parseFloat(invoiceData.tax) ||
           0,
         discount: parseFloat(invoiceData.discount_amount) || 0,
+        shipping: parseFloat(invoiceData.shipping) || 0,
         total: parseFloat(invoiceData.total) || 0,
         notes: invoiceData.notes || "",
         currency: currency,
@@ -610,6 +611,7 @@ const ViewInvoiceModal = ({
           parseFloat(invoiceData.tax) ||
           0,
         discount: parseFloat(invoiceData.discount_amount) || 0,
+        shipping: parseFloat(invoiceData.shipping) || 0,
         total: parseFloat(invoiceData.total) || 0,
         notes: invoiceData.notes || "",
         currency: currency,
@@ -829,6 +831,7 @@ const ViewInvoiceModal = ({
         subtotal: parseFloat(invoiceData.subtotal) || 0,
         tax: parseFloat(invoiceData.tax_amount) || 0,
         discount: parseFloat(invoiceData.discount_amount) || 0,
+        shipping: parseFloat(invoiceData.shipping) || 0,
         total: parseFloat(invoiceData.total) || 0,
         notes: invoiceData.notes || "",
         terms: invoiceData.terms || "",

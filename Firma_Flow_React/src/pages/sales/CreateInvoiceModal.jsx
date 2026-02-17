@@ -20,6 +20,7 @@ const CreateInvoiceModal = ({ isOpen, onClose, onSuccess }) => {
   const [notes, setNotes] = useState("");
   const [selectedTags, setSelectedTags] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [shipping, setShipping] = useState(0);
 
   // Data from API
   const [customers, setCustomers] = useState([]);
@@ -30,7 +31,7 @@ const CreateInvoiceModal = ({ isOpen, onClose, onSuccess }) => {
   // Invoice items
   const [items, setItems] = useState([
     {
-      product_id: "",
+      product_id: "", // Empty string for unselected, will be integer when selected
       product_name: "",
       quantity: 1,
       unit_price: 0,
@@ -42,11 +43,25 @@ const CreateInvoiceModal = ({ isOpen, onClose, onSuccess }) => {
   // Fetch initial data
   useEffect(() => {
     if (isOpen) {
+      console.log("Modal opened - fetching data");
       setInvoiceDateToToday();
       setDueDateTo30Days();
       generateInvoiceNumber();
       // Only fetch data that's absolutely needed
       fetchCustomersAndProducts();
+    } else {
+      // Reset state when modal closes
+      console.log("Modal closed - resetting state");
+      setProducts([]);
+      setCustomers([]);
+      setItems([{
+        product_id: "",
+        product_name: "",
+        quantity: 1,
+        unit_price: 0,
+        total: 0,
+        available_qty: 0,
+      }]);
     }
   }, [isOpen]);
 
@@ -58,6 +73,7 @@ const CreateInvoiceModal = ({ isOpen, onClose, onSuccess }) => {
         credentials: "include",
       });
       const customersData = await customersRes.json();
+      console.log("Customers response:", customersData);
       if (customersData.success) {
         setCustomers(customersData.data || []);
       }
@@ -68,8 +84,20 @@ const CreateInvoiceModal = ({ isOpen, onClose, onSuccess }) => {
         credentials: "include",
       });
       const productsData = await productsRes.json();
+      console.log("Products response:", productsData);
+      console.log("Products response status:", productsRes.status);
+      console.log("Products data structure:", {
+        success: productsData.success,
+        dataLength: productsData.data?.length,
+        firstProduct: productsData.data?.[0]
+      });
+      
       if (productsData.success) {
+        console.log("Setting products:", productsData.data?.length || 0, "items");
+        console.log("Product IDs:", productsData.data?.map(p => p.id));
         setProducts(productsData.data || []);
+      } else {
+        console.error("Products fetch failed:", productsData);
       }
 
       // Fetch taxes from accounting_settings
@@ -174,6 +202,8 @@ const CreateInvoiceModal = ({ isOpen, onClose, onSuccess }) => {
     setIsLoading(true);
 
     try {
+      console.log("Submitting invoice with items:", items);
+      
       const response = await fetch(buildApiUrl("api/sales.php"), {
         method: "POST",
         credentials: "include",
@@ -196,6 +226,7 @@ const CreateInvoiceModal = ({ isOpen, onClose, onSuccess }) => {
             total: item.total,
           })),
           discount: discount,
+          shipping: shipping,
         }),
       });
 
@@ -427,6 +458,8 @@ const CreateInvoiceModal = ({ isOpen, onClose, onSuccess }) => {
                 items={items}
                 setDiscount={setDiscount}
                 taxRate={taxRate}
+                shipping={shipping}
+                setShipping={setShipping}
               />
             </div>
           </div>

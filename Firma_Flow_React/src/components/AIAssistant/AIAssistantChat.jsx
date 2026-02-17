@@ -46,7 +46,13 @@ const EditableFormMessage = ({ message, theme, onConfirmTask }) => {
   const handleSubmit = () => {
     if (validateForm()) {
       // Merge form data with all original message fields (including customer_id, action, etc.)
-      const completeData = { ...message.fields, ...formData };
+      // IMPORTANT: Include action and module from message.data so backend knows what to execute
+      const completeData = { 
+        ...message.fields, 
+        ...formData,
+        _action: message.data?.action,
+        _module: message.data?.module
+      };
       onConfirmTask(true, completeData);
     }
   };
@@ -170,6 +176,38 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
   const [pendingTask, setPendingTask] = useState(null);
   const messagesEndRef = useRef(null);
   const abortControllerRef = useRef(null);
+  
+  // Chat persistence key
+  const STORAGE_KEY = 'firmaflow_ai_chat_history';
+  
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedMessages = localStorage.getItem(STORAGE_KEY);
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages);
+        // Convert timestamp strings back to Date objects
+        const messagesWithDates = parsed.map(msg => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }));
+        setMessages(messagesWithDates);
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+    }
+  }, []);
+  
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      } catch (error) {
+        console.error('Failed to save chat history:', error);
+      }
+    }
+  }, [messages]);
 
   // Cancel ongoing request
   const handleCancelRequest = () => {
@@ -197,8 +235,12 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      loadCapabilities();
+    if (isOpen) {
+      // Load capabilities only if no messages exist
+      if (messages.length === 0) {
+        loadCapabilities();
+      }
+      scrollToBottom();
     }
   }, [isOpen]);
 
@@ -222,7 +264,7 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
           {
             type: "assistant",
             content:
-              '👋 Hello! I\'m your AI Assistant. I understand natural language - just talk to me normally!\n\n💬 **Try these examples:**\n• "Add customer John Doe with email john@example.com"\n• "Create Alice, phone 08012345678"\n• "Who is Bob?"\n• "Tell me about Sarah"\n• "How much does John owe?"\n• "Show my customers"\n• "Delete Alice"\n• "Update Bob\'s phone to 08099887766"\n\n📦 **I can also help with:**\n• Products & Inventory\n• Sales & Invoices\n• Payments & Expenses\n• Reports & Analytics\n\n💡 **Tip:** You don\'t need perfect grammar - I\'ll understand!',
+              '👋 Hello! I\'m your **FirmaFlow AI Assistant**, powered by **SODATIM TECHNOLOGIES**. I understand natural language - just talk to me normally!\n\n💬 **Try these examples:**\n• "Add customer John Doe with email john@example.com"\n• "Show my products"\n• "Sales this month"\n• "Who built this software?"\n• "What can you help me with?"\n\n📦 **I can help with:**\n• Customers & Suppliers\n• Products & Inventory\n• Sales & Invoices\n• Payments & Expenses\n• Reports & Analytics\n\n💡 **Tip:** You don\'t need perfect grammar - I\'ll understand!',
             timestamp: new Date(),
           },
           {
@@ -432,6 +474,7 @@ const AIAssistantChat = ({ isOpen, onClose }) => {
             content: data.message || "Review and edit the details below:",
             fields: data.data?.fields || {},
             fieldConfig: data.data?.fieldConfig || {},
+            data: data.data, // Include full data object for access to action/module
             timestamp: new Date(),
           },
         ]);
@@ -950,6 +993,7 @@ You can use casual language - I'll understand! Try:
               content: data.message || "Review and edit the details below:",
               fields: data.data?.fields || {},
               fieldConfig: data.data?.fieldConfig || {},
+              data: data.data, // Include full data object for access to action/module
               timestamp: new Date(),
             },
           ]);

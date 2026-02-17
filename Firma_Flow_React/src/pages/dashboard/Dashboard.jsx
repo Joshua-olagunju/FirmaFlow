@@ -25,6 +25,7 @@ import {
 import DashboardModal from "../../components/modals/DashboardModal";
 import SwitchAccountModal from "../../components/modals/SwitchAccountModal";
 import ContactSupportModal from "../../components/modals/ContactSupportModal";
+import LowStockModal from "../../components/LowStockModal";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useUser } from "../../contexts/UserContext";
@@ -57,6 +58,7 @@ const Dashboard = () => {
   // Modal states
   const [showSwitchAccountModal, setShowSwitchAccountModal] = useState(false);
   const [showContactSupportModal, setShowContactSupportModal] = useState(false);
+  const [showLowStockModal, setShowLowStockModal] = useState(false);
 
   // Dashboard data state
   const [loading, setLoading] = useState(true);
@@ -128,7 +130,7 @@ const Dashboard = () => {
       name: new Date(day.date).toLocaleDateString("en-US", {
         weekday: "short",
       }),
-      amount: parseFloat(day.total_sales || 0),
+      amount: parseFloat(day.total || 0),
       date: day.date,
     })) || [];
 
@@ -397,9 +399,12 @@ const Dashboard = () => {
                 </p>
               </div>
             </div>
-            <div className="absolute text-xs md:text-sm text-blue-400 top-2 right-2 cursor-pointer hover:underline">
+            <button
+              onClick={() => setShowLowStockModal(true)}
+              className="absolute text-xs md:text-sm text-blue-400 top-2 right-2 cursor-pointer hover:underline hover:text-blue-500 transition"
+            >
               View
-            </div>
+            </button>
           </div>
         </div>
 
@@ -536,23 +541,19 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {/* Legend */}
+                {/* Legend - Color and Product Name Only */}
                 <div className="mt-1 grid grid-cols-1 gap-1 max-h-32 overflow-y-auto w-full px-2">
                   {productData.map((entry, index) => (
-                    <div key={index} className="flex items-center gap-2">
+                    <div key={index} className="flex items-center gap-2 min-w-0">
                       <span
                         className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ background: COLORS[index % COLORS.length] }}
                       ></span>
                       <span
-                        className={`text-xs ${theme.textSecondary} truncate`}
+                        className={`text-xs ${theme.textPrimary} font-medium truncate`}
+                        title={entry.name}
                       >
                         {entry.name}
-                      </span>
-                      <span
-                        className={`text-xs ${theme.textSecondary} ml-auto flex-shrink-0`}
-                      >
-                        {entry.quantity}
                       </span>
                     </div>
                   ))}
@@ -581,19 +582,34 @@ const Dashboard = () => {
             Quick Actions
           </h2>
           <div className="flex flex-wrap gap-2 md:gap-3 w-full">
-            <button className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border-none bg-gradient-to-br from-[#667eea] to-[#764ba2] text-slate-50 text-sm md:text-base hover:opacity-90 transition">
+            <button
+              onClick={() => navigate('/sales')}
+              className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border-none bg-gradient-to-br from-[#667eea] to-[#764ba2] text-slate-50 text-sm md:text-base hover:opacity-90 transition"
+            >
               New Sales
             </button>
-            <button className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border border-[#667eea] text-[#667eea] hover:bg-[#667eea] hover:text-white text-sm md:text-base transition">
+            <button
+              onClick={() => navigate('/customers')}
+              className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border border-[#667eea] text-[#667eea] hover:bg-[#667eea] hover:text-white text-sm md:text-base transition"
+            >
               Manage Customers
             </button>
-            <button className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border border-[#667eea] text-[#667eea] hover:bg-[#667eea] hover:text-white text-sm md:text-base transition">
+            <button
+              onClick={() => navigate('/inventory')}
+              className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border border-[#667eea] text-[#667eea] hover:bg-[#667eea] hover:text-white text-sm md:text-base transition"
+            >
               Products
             </button>
-            <button className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border border-[#6c757d] text-[#6c757d] hover:bg-[#6c757d] hover:text-white text-sm md:text-base transition">
+            <button
+              onClick={() => navigate('/reports')}
+              className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border border-[#6c757d] text-[#6c757d] hover:bg-[#6c757d] hover:text-white text-sm md:text-base transition"
+            >
               Reports
             </button>
-            <button className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border border-[#6c757d] text-[#6c757d] hover:bg-[#6c757d] hover:text-white text-sm md:text-base transition">
+            <button
+              onClick={() => navigate('/settings')}
+              className="flex-1 min-w-[140px] sm:flex-none px-3 md:px-4 py-2 rounded-md border border-[#6c757d] text-[#6c757d] hover:bg-[#6c757d] hover:text-white text-sm md:text-base transition"
+            >
               Settings
             </button>
           </div>
@@ -753,10 +769,10 @@ const Dashboard = () => {
                           <p
                             className={`${theme.textPrimary} text-sm font-medium truncate`}
                           >
-                            {customer.customer_name}
+                            {customer.name || customer.customer_name}
                           </p>
                           <p className={`${theme.textSecondary} text-xs`}>
-                            {customer.total_invoices || customer.total_orders}{" "}
+                            {customer.total_orders || customer.total_invoices || 0}{" "}
                             orders
                           </p>
                         </div>
@@ -799,6 +815,12 @@ const Dashboard = () => {
       <ContactSupportModal
         isOpen={showContactSupportModal}
         onClose={() => setShowContactSupportModal(false)}
+      />
+
+      <LowStockModal
+        isOpen={showLowStockModal}
+        onClose={() => setShowLowStockModal(false)}
+        lowStockItems={dashboardData?.low_stock_items || []}
       />
     </Layout>
   );

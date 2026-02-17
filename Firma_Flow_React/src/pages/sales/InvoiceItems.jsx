@@ -19,7 +19,7 @@ const InvoiceItems = ({ items, setItems, products }) => {
     setItems([
       ...items,
       {
-        product_id: "",
+        product_id: "", // Empty string for unselected
         product_name: "",
         quantity: 1,
         unit_price: 0,
@@ -37,19 +37,39 @@ const InvoiceItems = ({ items, setItems, products }) => {
   };
 
   const handleProductChange = (index, productId) => {
-    const selectedProduct = products.find((p) => p.id === parseInt(productId));
+    console.log("Product selection:", { index, productId, productsCount: products.length });
+    console.log("All available products:", products);
+    
+    if (!productId || productId === "") {
+      console.log("No product selected");
+      return;
+    }
+    
+    // Convert productId to integer for comparison and storage
+    const productIdInt = parseInt(productId);
+    console.log("Searching for product ID:", productIdInt);
+    console.log("Product IDs in list:", products.map(p => ({ id: p.id, type: typeof p.id, name: p.name })));
+    
+    // Compare with type conversion on both sides to handle string/int mismatch
+    const selectedProduct = products.find((p) => parseInt(p.id) === productIdInt);
+    console.log("Found product:", selectedProduct);
+    
     if (selectedProduct) {
       const newItems = [...items];
       newItems[index] = {
         ...newItems[index],
-        product_id: productId,
+        product_id: productIdInt, // Store as integer for consistent matching
         product_name: selectedProduct.name,
         unit_price: parseFloat(selectedProduct.price) || 0,
         available_qty: parseInt(selectedProduct.quantity) || 0,
         quantity: 1,
         total: parseFloat(selectedProduct.price) || 0,
       };
+      console.log("Updated item:", newItems[index]);
       setItems(newItems);
+    } else {
+      console.error("Product not found in list. Searched ID:", productIdInt);
+      console.error("Available product IDs:", products.map(p => p.id));
     }
   };
 
@@ -89,6 +109,13 @@ const InvoiceItems = ({ items, setItems, products }) => {
         Invoice Items
       </h3>
 
+      {/* Debug info - remove in production */}
+      {products && products.length > 0 && (
+        <div className="text-xs text-gray-500">
+          {products.length} products available
+        </div>
+      )}
+
       {items.map((item, index) => (
         <div
           key={index}
@@ -108,11 +135,17 @@ const InvoiceItems = ({ items, setItems, products }) => {
                 className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgInput} ${theme.textPrimary} focus:ring-2 focus:ring-[#667eea] focus:border-transparent text-sm`}
               >
                 <option value="">Select Product</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} (Stock: {product.quantity || 0})
+                {products && products.length > 0 ? (
+                  products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      [{product.id}] {product.name} (Stock: {product.quantity || 0})
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>
+                    Loading products...
                   </option>
-                ))}
+                )}
               </select>
             </div>
 

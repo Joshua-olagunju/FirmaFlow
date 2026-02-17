@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useSettings } from "../../contexts/SettingsContext";
 
-const InvoiceTotals = ({ items, setDiscount, taxRate }) => {
+const InvoiceTotals = ({ items, setDiscount, taxRate, shipping, setShipping }) => {
   const { theme } = useTheme();
   const { formatCurrency } = useSettings();
   const [discountType, setDiscountType] = useState("percentage"); // "percentage" or "amount"
   const [discountValue, setDiscountValue] = useState(0);
+  const [shippingCost, setShippingCost] = useState(0);
 
   // Calculate subtotal
   const subtotal = items.reduce((sum, item) => sum + (item.total || 0), 0);
@@ -17,17 +18,23 @@ const InvoiceTotals = ({ items, setDiscount, taxRate }) => {
       ? (subtotal * discountValue) / 100
       : discountValue;
 
-  // Calculate tax (after discount)
+  // Calculate tax (after discount, before shipping)
   const afterDiscount = subtotal - discountAmount;
   const taxAmount = (afterDiscount * taxRate) / 100;
 
-  // Calculate final total
-  const total = afterDiscount + taxAmount;
+  // Calculate final total (including shipping)
+  const total = afterDiscount + taxAmount + shippingCost;
 
-  // Update parent component when discount changes
+  // Update parent component when discount or shipping changes
   useEffect(() => {
     setDiscount(discountAmount);
   }, [discountAmount, setDiscount]);
+
+  useEffect(() => {
+    if (setShipping) {
+      setShipping(shippingCost);
+    }
+  }, [shippingCost, setShipping]);
 
   return (
     <div
@@ -92,6 +99,34 @@ const InvoiceTotals = ({ items, setDiscount, taxRate }) => {
           </span>
           <span className={`text-sm font-semibold ${theme.textPrimary}`}>
             {formatCurrency(afterDiscount)}
+          </span>
+        </div>
+      )}
+
+      {/* Shipping Input */}
+      <div className="space-y-2 border-t pt-2">
+        <label
+          className={`text-sm font-medium ${theme.textSecondary} block`}
+        >
+          Shipping Cost
+        </label>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={shippingCost}
+          onChange={(e) => setShippingCost(parseFloat(e.target.value) || 0)}
+          placeholder="0.00"
+          className={`w-full px-3 py-2 border ${theme.borderPrimary} rounded-lg ${theme.bgInput} ${theme.textPrimary} focus:ring-2 focus:ring-blue-500 text-sm`}
+        />
+      </div>
+
+      {/* Shipping Display */}
+      {shippingCost > 0 && (
+        <div className="flex justify-between items-center text-blue-600">
+          <span className="text-sm font-medium">Shipping</span>
+          <span className="text-sm font-semibold">
+            +{formatCurrency(shippingCost)}
           </span>
         </div>
       )}

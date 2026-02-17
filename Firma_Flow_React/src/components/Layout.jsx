@@ -84,9 +84,26 @@ const Layout = ({ children, onMenuClick }) => {
                   </p>
                 </div>
               </div>
-              <p className={`m-0 text-sm ${theme.textSecondary}`}>
-                © 2025 FirmaFlow Ledger. All rights reserved.
-              </p>
+              <div className="flex flex-col gap-2">
+                <p className={`m-0 text-sm ${theme.textSecondary}`}>
+                  © 2026 FirmaFlow Ledger. All rights reserved.
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs ${theme.textSecondary}`}>Powered by</span>
+                  <a 
+                    href="https://sodatim.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent hover:from-purple-300 hover:to-blue-300 transition-all duration-300"
+                    style={{
+                      textShadow: '0 0 15px rgba(167, 139, 250, 0.4)',
+                      filter: 'drop-shadow(0 0 6px rgba(167, 139, 250, 0.5))'
+                    }}
+                  >
+                    SODATIM TECHNOLOGIES
+                  </a>
+                </div>
+              </div>
             </div>
             <div
               className={`flex items-center justify-center w-full border-t-2 ${theme.borderPrimary} mt-3 py-2 gap-6 ${theme.textSecondary}`}
