@@ -339,6 +339,15 @@ const InvoicePDFTemplate = ({
                     </View>
                   )}
 
+                  {invoiceData?.shipping > 0 && (
+                    <View style={styles.totalRow}>
+                      <Text style={styles.totalLabel}>Shipping:</Text>
+                      <Text style={styles.totalValue}>
+                        {formatCurrency(invoiceData.shipping)}
+                      </Text>
+                    </View>
+                  )}
+
                   {invoiceData?.tax > 0 && (
                     <View style={styles.totalRow}>
                       <Text style={styles.totalLabel}>Tax:</Text>

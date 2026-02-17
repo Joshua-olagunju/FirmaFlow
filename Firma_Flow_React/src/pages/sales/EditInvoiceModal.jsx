@@ -20,6 +20,7 @@ const EditInvoiceModal = ({ isOpen, onClose, onSuccess, invoice }) => {
   const [notes, setNotes] = useState("");
   const [selectedTags, setSelectedTags] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [shipping, setShipping] = useState(0);
   const [status, setStatus] = useState("draft");
 
   // Data from API
@@ -53,6 +54,7 @@ const EditInvoiceModal = ({ isOpen, onClose, onSuccess, invoice }) => {
       setNotes(invoice.notes || "");
       setSelectedTags(invoice.tags || "");
       setDiscount(parseFloat(invoice.discount_amount || 0));
+      setShipping(parseFloat(invoice.shipping || 0));
       setStatus(invoice.status || "draft");
 
       // Fetch invoice lines
@@ -67,7 +69,7 @@ const EditInvoiceModal = ({ isOpen, onClose, onSuccess, invoice }) => {
         const data = await response.json();
         if (data.success && data.data.lines) {
           const formattedItems = data.data.lines.map((line) => ({
-            product_id: line.product_id,
+            product_id: parseInt(line.product_id), // Ensure integer type
             product_name: line.product_name,
             quantity: parseFloat(line.quantity),
             unit_price: parseFloat(line.unit_price),
@@ -79,7 +81,7 @@ const EditInvoiceModal = ({ isOpen, onClose, onSuccess, invoice }) => {
               ? formattedItems
               : [
                   {
-                    product_id: "",
+                    product_id: "", // Empty string for unselected
                     product_name: "",
                     quantity: 1,
                     unit_price: 0,
@@ -209,6 +211,7 @@ const EditInvoiceModal = ({ isOpen, onClose, onSuccess, invoice }) => {
             total: item.total,
           })),
           discount: discount,
+          shipping: shipping,
         }),
       });
 
@@ -382,6 +385,8 @@ const EditInvoiceModal = ({ isOpen, onClose, onSuccess, invoice }) => {
             items={items}
             setDiscount={setDiscount}
             taxRate={taxRate}
+            shipping={shipping}
+            setShipping={setShipping}
           />
 
           {/* Notes */}

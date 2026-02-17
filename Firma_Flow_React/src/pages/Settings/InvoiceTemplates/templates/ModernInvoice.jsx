@@ -187,6 +187,16 @@ const ModernInvoice = ({
               </span>
             </div>
           )}
+          {invoiceData?.shipping > 0 && (
+            <div className="flex justify-between py-1.5 sm:py-2 border-b border-gray-200 print:py-2">
+              <span className="text-gray-600 text-xs sm:text-sm print:text-sm">
+                Shipping:
+              </span>
+              <span className="text-blue-600 font-semibold text-xs sm:text-sm print:text-sm">
+                {formatCurrency(invoiceData?.shipping)}
+              </span>
+            </div>
+          )}
           {invoiceData?.tax > 0 && (
             <div className="flex justify-between py-1.5 sm:py-2 border-b border-gray-200 print:py-2">
               <span className="text-gray-600 text-xs sm:text-sm print:text-sm">
