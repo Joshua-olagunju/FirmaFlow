@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import { useTheme } from "../contexts/ThemeContext";
 import { motion } from "framer-motion";
 import FloatingAIBubble from "./AIAssistant/FloatingAIBubble";
+import AnnouncementBanner from "./AnnouncementBanner";
 import AIAssistantChat from "./AIAssistant/AIAssistantChat";
 
 const Layout = ({ children, onMenuClick }) => {
@@ -27,6 +28,7 @@ const Layout = ({ children, onMenuClick }) => {
 
   return (
     <div className={`flex w-full h-screen ${theme.bgPrimary} overflow-hidden`}>
+      <AnnouncementBanner />
       {/* Sidebar - Fixed, No Scroll */}
       <div className="h-screen">
         <Sidebar

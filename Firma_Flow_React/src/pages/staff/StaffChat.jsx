@@ -3,363 +3,387 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useStaff } from '../../contexts/StaffContext';
 import { buildApiUrl } from '../../config/api.config';
 import StaffLayout from '../../components/StaffLayout';
-import { Send, UserCircle, Clock, MessageSquare, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  Send,
+  Clock,
+  MessageSquare,
+  CheckCircle2,
+  AlertCircle,
+  ArrowLeft,
+  Search,
+  RefreshCw,
+} from 'lucide-react';
 
 const StaffChat = () => {
   const { theme } = useTheme();
   const { staff } = useStaff();
+
+  /* ── Data ────────────────────────────────────────────────────────────── */
   const [chatSessions, setChatSessions] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+
+  /* ── UI ──────────────────────────────────────────────────────────────── */
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState(null);
   const [showTakeModal, setShowTakeModal] = useState(false);
   const [chatToTake, setChatToTake] = useState(null);
-  const messagesEndRef = useRef(null);
+  const [showNewMessageNotice, setShowNewMessageNotice] = useState(false);
+  /** Mobile navigation — 'list' | 'chat' */
+  const [mobileView, setMobileView] = useState('list');
 
-  // Toast notification helper
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
+  const messagesRef = useRef(null);
+  const isAtBottomRef = useRef(true);
+
+  /* ── Toast ───────────────────────────────────────────────────────────── */
+  const showToast = (msg, type = 'success') => {
+    setToast({ message: msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
+  /* ── Polling ─────────────────────────────────────────────────────────── */
   useEffect(() => {
-    fetchChatSessions();
-    const interval = setInterval(fetchChatSessions, 5000);
-    return () => clearInterval(interval);
+    fetchSessions();
+    const iv = setInterval(fetchSessions, 5000);
+    return () => clearInterval(iv);
   }, [staff]);
 
   useEffect(() => {
-    if (selectedChat) {
-      fetchMessages(selectedChat.session_id);
-      const interval = setInterval(() => fetchMessages(selectedChat.session_id), 2000);
-      return () => clearInterval(interval);
-    }
+    if (!selectedChat) return;
+    fetchMessages(selectedChat.session_id);
+    const iv = setInterval(() => fetchMessages(selectedChat.session_id), 2000);
+    return () => clearInterval(iv);
   }, [selectedChat]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  /* ── Scroll tracking ─────────────────────────────────────────────────── */
+  const onScroll = () => {
+    const c = messagesRef.current;
+    if (!c) return;
+    isAtBottomRef.current = c.scrollHeight - c.scrollTop - c.clientHeight < 80;
+    if (isAtBottomRef.current) setShowNewMessageNotice(false);
   };
 
-  const fetchChatSessions = async () => {
-    try {
-      const url = buildApiUrl('superadmin/api/chat_sessions.php');
-      const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
+  /* ── Message renderer ────────────────────────────────────────────────── */
+  const renderContent = (msg) => {
+    if (msg.message_type === 'image' && msg.file_path) {
+      const url = buildApiUrl(msg.file_path);
+      return (
+        <div className="space-y-1">
+          <img
+            src={url}
+            alt={msg.file_name || 'image'}
+            className="max-w-xs rounded-xl shadow cursor-pointer"
+            style={{ maxHeight: 200 }}
+            onClick={() => window.open(url, '_blank')}
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+          {msg.message && msg.message !== 'Image shared' && (
+            <p className="text-sm">{msg.message}</p>
+          )}
+        </div>
+      );
+    }
+    return <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.message}</p>;
+  };
 
-      const data = await response.json();
-      if (data.success) {
-        // Show queue chats (no assigned_admin) AND chats assigned to this staff member
-        const relevantSessions = data.sessions.filter(session => {
-          const isAssignedToMe = session.assigned_admin === staff?.username || session.assigned_admin === staff?.full_name;
-          const isInQueue = !session.assigned_admin || session.assigned_admin === null || session.assigned_admin === '';
-          return isAssignedToMe || isInQueue;
-        });
-        setChatSessions(relevantSessions);
+  /* ── API helpers ─────────────────────────────────────────────────────── */
+  const apiFetch = (path, init = {}) =>
+    fetch(buildApiUrl(path), {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+    }).then((r) => r.json());
+
+  const fetchSessions = async () => {
+    try {
+      const d = await apiFetch('superadmin/api/chat_sessions.php');
+      if (d.success) {
+        setChatSessions(
+          (d.sessions || []).filter((s) => {
+            const isMe =
+              s.assigned_admin === staff?.username ||
+              s.assigned_admin === staff?.full_name;
+            const isQueue =
+              !s.assigned_admin ||
+              s.assigned_admin === null ||
+              s.assigned_admin === '';
+            return isMe || isQueue;
+          })
+        );
       }
-    } catch (error) {
-      console.error('Failed to fetch chat sessions:', error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchMessages = async (sessionId) => {
+  const fetchMessages = async (sid) => {
     try {
-      const url = buildApiUrl(`superadmin/api/chat_messages.php?session_id=${sessionId}`);
-      const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setMessages(data.messages);
+      const d = await apiFetch(`superadmin/api/chat_messages.php?session_id=${sid}`);
+      if (d.success) {
+        setMessages((prev) => {
+          const next = d.messages || [];
+          const prevLast = prev.length ? prev[prev.length - 1].id : 0;
+          const nextLast = next.length ? next[next.length - 1].id : 0;
+          if (prev.length && nextLast > prevLast && !isAtBottomRef.current)
+            setShowNewMessageNotice(true);
+          return next;
+        });
       }
-    } catch (error) {
-      console.error('Failed to fetch messages:', error);
+    } catch (e) {
+      console.error(e);
     }
   };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedChat) return;
-
     setSending(true);
     try {
-      const url = buildApiUrl('superadmin/api/send-chat-message.php');
-      const response = await fetch(url, {
+      const d = await apiFetch('superadmin/api/send-chat-message.php', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: selectedChat.session_id,
           message: newMessage,
-          sender_type: 'admin'
-        })
+          sender_type: 'admin',
+        }),
       });
-
-      const data = await response.json();
-      if (data.success) {
+      if (d.success) {
         setNewMessage('');
         await fetchMessages(selectedChat.session_id);
-        showToast('Message sent', 'success');
-      } else {
-        showToast(data.message || 'Failed to send message', 'error');
-      }
-    } catch (error) {
-      console.error('Failed to send message:', error);
+      } else showToast(d.message || 'Failed to send', 'error');
+    } catch {
       showToast('Failed to send message', 'error');
     } finally {
       setSending(false);
     }
   };
 
-  const takeChat = async (sessionId) => {
+  const takeChat = async (sid) => {
     try {
-      const url = buildApiUrl('superadmin/api/assign-chat.php');
-      const response = await fetch(url, {
+      const d = await apiFetch('superadmin/api/assign-chat.php', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          session_id: sessionId,
-          assign_to: null // Assign to self
-        })
+        body: JSON.stringify({ session_id: sid, assign_to: null }),
       });
-
-      const data = await response.json();
-      if (data.success) {
-        showToast('Chat taken successfully!', 'success');
-        fetchChatSessions();
+      if (d.success) {
+        showToast('Chat taken!', 'success');
+        fetchSessions();
         setShowTakeModal(false);
-        // Auto-select the chat
-        const session = chatSessions.find(s => s.id === sessionId);
+        const session = chatSessions.find((s) => s.session_id === sid);
         if (session) {
           setSelectedChat({ ...session, assigned_admin: staff?.username });
+          setMobileView('chat');
         }
-      } else {
-        showToast(data.message || 'Failed to take chat', 'error');
-      }
-    } catch (error) {
-      console.error('Failed to take chat:', error);
+      } else showToast(d.message || 'Failed to take chat', 'error');
+    } catch {
       showToast('Failed to take chat', 'error');
     }
   };
 
-  const closeChat = async (sessionId) => {
+  const closeChat = async (sid) => {
     try {
-      const url = buildApiUrl('superadmin/api/close-chat.php');
-      const response = await fetch(url, {
+      const d = await apiFetch('superadmin/api/close-chat.php', {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId })
+        body: JSON.stringify({ session_id: sid }),
       });
-
-      const data = await response.json();
-      if (data.success) {
-        showToast('Chat closed successfully', 'success');
+      if (d.success) {
+        showToast('Chat closed', 'success');
         setSelectedChat(null);
-        fetchChatSessions();
+        setMobileView('list');
+        fetchSessions();
       }
-    } catch (error) {
-      console.error('Failed to close chat:', error);
+    } catch {
       showToast('Failed to close chat', 'error');
     }
   };
 
-  const openTakeModal = (session) => {
-    setChatToTake(session);
-    setShowTakeModal(true);
+  const selectChat = (s) => {
+    setSelectedChat(s);
+    setMobileView('chat');
+    setShowNewMessageNotice(false);
   };
 
-  const handleTakeChatConfirm = () => {
-    if (chatToTake) {
-      takeChat(chatToTake.id);
-    }
-  };
+  /* ── Derived ─────────────────────────────────────────────────────────── */
+  const isMeCheck = (s) =>
+    s.assigned_admin === staff?.username || s.assigned_admin === staff?.full_name;
+  const isQueueCheck = (s) =>
+    !s.assigned_admin || s.assigned_admin === null || s.assigned_admin === '';
 
-  const filteredSessions = chatSessions.filter(session => {
-    const matchesSearch = session.visitor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         session.visitor_email?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    let matchesFilter = true;
-    if (activeFilter === 'assigned') {
-      matchesFilter = session.assigned_admin === staff?.username || session.assigned_admin === staff?.full_name;
-    } else if (activeFilter === 'queue') {
-      matchesFilter = !session.assigned_admin || session.assigned_admin === null || session.assigned_admin === '';
-    } else if (activeFilter === 'active') {
-      matchesFilter = session.status === 'active';
-    }
-    
-    return matchesSearch && matchesFilter;
+  const filtered = chatSessions.filter((s) => {
+    const q = searchTerm.toLowerCase();
+    const matchSearch =
+      s.visitor_name?.toLowerCase().includes(q) ||
+      s.visitor_email?.toLowerCase().includes(q);
+    if (!matchSearch) return false;
+    if (activeFilter === 'assigned') return isMeCheck(s);
+    if (activeFilter === 'queue') return isQueueCheck(s);
+    if (activeFilter === 'active') return s.status === 'active';
+    return true;
   });
 
-  const assignedCount = chatSessions.filter(s => s.assigned_admin === staff?.username || s.assigned_admin === staff?.full_name).length;
-  const queueCount = chatSessions.filter(s => !s.assigned_admin || s.assigned_admin === null || s.assigned_admin === '').length;
-  const unreadCount = chatSessions.filter(s => s.is_read === 0).length;
+  const assignedCount = chatSessions.filter(isMeCheck).length;
+  const queueCount = chatSessions.filter(isQueueCheck).length;
+  const activeCount = chatSessions.filter((s) => s.status === 'active').length;
+  const unreadCount = chatSessions.filter((s) => s.is_read === 0).length;
 
+  /* ── Theme shortcuts ─────────────────────────────────────────────────── */
+  const dk = theme === 'dark';
+  const card = dk ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200';
+  const sub = dk ? 'text-slate-400' : 'text-slate-500';
+  const inp = dk
+    ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500'
+    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400';
+  const hov = dk ? 'hover:bg-slate-800' : 'hover:bg-slate-100';
+
+  /* ── Render ──────────────────────────────────────────────────────────── */
   return (
     <StaffLayout>
-      <div className="h-full flex flex-col">
+      <div className="flex flex-col gap-5">
+
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Live Chat Support</h1>
-          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>
-            View queue chats and manage conversations assigned to you
+        <div>
+          <h1 className="text-2xl font-bold">Live Chat</h1>
+          <p className={`text-sm mt-0.5 ${sub}`}>
+            Manage queue chats and active conversations in real time.
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow`}>
-            <div className="flex items-center justify-between">
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'My Chats', value: assignedCount, icon: <MessageSquare className="w-7 h-7 text-indigo-500" /> },
+            { label: 'In Queue', value: queueCount, icon: <Clock className="w-7 h-7 text-amber-500" /> },
+            { label: 'Active', value: activeCount, icon: <CheckCircle2 className="w-7 h-7 text-emerald-500" /> },
+            { label: 'Unread', value: unreadCount, icon: <AlertCircle className="w-7 h-7 text-rose-500" /> },
+          ].map(({ label, value, icon }) => (
+            <div key={label} className={`p-4 rounded-2xl border flex items-center justify-between ${card}`}>
               <div>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Assigned to Me</p>
-                <p className="text-2xl font-bold">{assignedCount}</p>
+                <p className={`text-xs font-medium mb-0.5 ${sub}`}>{label}</p>
+                <p className="text-2xl font-bold">{value}</p>
               </div>
-              <MessageSquare className="w-8 h-8 text-blue-500" />
+              {icon}
             </div>
-          </div>
-
-          <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>In Queue</p>
-                <p className="text-2xl font-bold">{queueCount}</p>
-              </div>
-              <Clock className="w-8 h-8 text-yellow-500" />
-            </div>
-          </div>
-
-          <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Active</p>
-                <p className="text-2xl font-bold">{chatSessions.filter(s => s.status === 'active').length}</p>
-              </div>
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
-            </div>
-          </div>
-
-          <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Unread</p>
-                <p className="text-2xl font-bold">{unreadCount}</p>
-              </div>
-              <AlertCircle className="w-8 h-8 text-red-500" />
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Chat Interface */}
-        <div className={`flex-1 grid grid-cols-3 gap-4 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow overflow-hidden`}>
-          {/* Sessions List */}
-          <div className={`col-span-1 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} border-r flex flex-col`}>
-            {/* Search */}
-            <div className="p-4 border-b">
-              <input
-                type="text"
-                placeholder="Search chats..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg ${
-                  theme === 'dark' 
-                    ? 'bg-gray-700 border-gray-600 text-white' 
-                    : 'bg-gray-50 border-gray-200 text-gray-900'
-                } border focus:outline-none focus:ring-2 focus:ring-blue-500`}
-              />
+        {/* Chat interface — fixed height so it scrolls correctly */}
+        <div
+          className={`rounded-2xl border overflow-hidden flex ${card}`}
+          style={{ height: 'calc(100vh - 22rem)', minHeight: 440 }}
+        >
+          {/* ── Sessions panel ─────────────────────────────────────────── */}
+          {/* Mobile: toggle; Desktop: always visible */}
+          <div
+            className={`${
+              mobileView === 'list' ? 'flex' : 'hidden'
+            } lg:flex flex-col flex-shrink-0 w-full lg:w-72 xl:w-80 border-r ${
+              dk ? 'border-slate-800' : 'border-slate-200'
+            }`}
+          >
+            {/* Search bar */}
+            <div className={`p-3 border-b ${dk ? 'border-slate-800' : 'border-slate-200'} flex gap-2`}>
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`w-full pl-8 pr-3 py-2 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inp}`}
+                />
+              </div>
+              <button
+                onClick={fetchSessions}
+                title="Refresh"
+                className={`p-2 rounded-xl border transition ${dk ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-100'}`}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
             </div>
 
-            {/* Filters */}
-            <div className="p-2 border-b flex space-x-2">
-              {['all', 'assigned', 'queue', 'active'].map(filter => (
+            {/* Filter tabs */}
+            <div className={`px-3 py-2 border-b flex gap-1 flex-wrap ${dk ? 'border-slate-800' : 'border-slate-200'}`}>
+              {['all', 'assigned', 'queue', 'active'].map((f) => (
                 <button
-                  key={filter}
-                  onClick={() => setActiveFilter(filter)}
-                  className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                    activeFilter === filter
-                      ? 'bg-blue-500 text-white'
-                      : theme === 'dark'
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  key={f}
+                  onClick={() => setActiveFilter(f)}
+                  className={`px-2.5 py-1 text-xs rounded-lg font-medium transition ${
+                    activeFilter === f
+                      ? 'bg-indigo-500 text-white'
+                      : dk
+                      ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
               ))}
             </div>
 
-            {/* Chat List */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Session items */}
+            <div className={`flex-1 overflow-y-auto ${dk ? 'divide-slate-800' : 'divide-slate-100'} divide-y`}>
               {loading ? (
-                <div className="p-4 text-center">Loading...</div>
-              ) : filteredSessions.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
+                <p className={`p-6 text-sm text-center ${sub}`}>Loading…</p>
+              ) : filtered.length === 0 ? (
+                <p className={`p-6 text-sm text-center ${sub}`}>
                   {activeFilter === 'assigned' ? 'No chats assigned to you' : 'No chats available'}
-                </div>
+                </p>
               ) : (
-                filteredSessions.map(session => {
-                  const isAssigned = session.assigned_admin === staff?.username || session.assigned_admin === staff?.full_name;
-                  const isInQueue = !session.assigned_admin || session.assigned_admin === null || session.assigned_admin === '';
-                  
+                filtered.map((s) => {
+                  const isMe = isMeCheck(s);
+                  const isQ = isQueueCheck(s);
+                  const isSel = selectedChat?.session_id === s.session_id;
                   return (
                     <div
-                      key={session.id}
-                      onClick={() => isAssigned && setSelectedChat(session)}
-                      className={`p-4 border-b transition-colors ${
-                        isInQueue ? '' : 'cursor-pointer'
-                      } ${
-                        selectedChat?.id === session.id
-                          ? theme === 'dark' ? 'bg-gray-700' : 'bg-blue-50'
-                          : theme === 'dark' ? 'hover:bg-gray-750' : 'hover:bg-gray-50'
+                      key={s.id}
+                      onClick={() => isMe && selectChat(s)}
+                      className={`p-3.5 transition-colors ${isMe ? 'cursor-pointer' : ''} ${
+                        isSel
+                          ? dk
+                            ? 'bg-indigo-500/10 border-l-2 border-l-indigo-500'
+                            : 'bg-indigo-50 border-l-2 border-l-indigo-500'
+                          : dk
+                          ? 'hover:bg-slate-800/50'
+                          : 'hover:bg-slate-50'
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-3">
-                          <UserCircle className="w-10 h-10 text-gray-400" />
-                          <div>
-                            <p className="font-medium">{session.visitor_name || 'Anonymous'}</p>
-                            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                              {session.visitor_email || 'No email'}
-                            </p>
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative shrink-0">
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white ${
+                              isMe
+                                ? 'bg-gradient-to-br from-indigo-500 to-violet-500'
+                                : 'bg-gradient-to-br from-slate-500 to-slate-600'
+                            }`}
+                          >
+                            {(s.visitor_name || 'A')[0].toUpperCase()}
                           </div>
+                          {s.unread_count > 0 && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-indigo-500 rounded-full border-2 border-white dark:border-slate-900" />
+                          )}
                         </div>
-                        {session.is_read === 0 && (
-                          <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{s.visitor_name || 'Anonymous'}</p>
+                          <p className={`text-xs truncate ${sub}`}>{s.visitor_email || 'No email'}</p>
+                        </div>
+                        {isMe && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                       </div>
-                      
-                      {/* Status Indicator */}
-                      {isAssigned ? (
-                        <div className="flex items-center text-xs text-green-500 ml-13">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          <span>Assigned to you</span>
-                        </div>
-                      ) : isInQueue ? (
+                      {isQ && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            openTakeModal(session);
+                            setChatToTake(s);
+                            setShowTakeModal(true);
                           }}
-                          className="w-full mt-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                          className="mt-2 w-full py-1.5 text-xs rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-medium transition"
                         >
                           Take Chat
                         </button>
-                      ) : null}
+                      )}
                     </div>
                   );
                 })
@@ -367,123 +391,187 @@ const StaffChat = () => {
             </div>
           </div>
 
-          {/* Messages Area */}
-          <div className="col-span-2 flex flex-col">
+          {/* ── Messages panel ─────────────────────────────────────────── */}
+          <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} lg:flex flex-col flex-1 min-w-0`}>
             {selectedChat ? (
               <>
-                {/* Chat Header */}
-                <div className={`p-4 border-b flex items-center justify-between ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <div>
-                    <h3 className="font-semibold">{selectedChat.visitor_name || 'Anonymous'}</h3>
-                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {selectedChat.visitor_email || 'No email'}
-                    </p>
+                {/* Chat header */}
+                <div className={`px-4 py-3 border-b flex items-center gap-3 shrink-0 ${dk ? 'border-slate-800' : 'border-slate-200'}`}>
+                  <button
+                    className={`lg:hidden p-1.5 rounded-xl transition ${hov}`}
+                    onClick={() => { setMobileView('list'); setSelectedChat(null); }}
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center font-bold text-sm text-white shrink-0">
+                    {(selectedChat.visitor_name || 'A')[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{selectedChat.visitor_name || 'Anonymous'}</p>
+                    <p className={`text-xs truncate ${sub}`}>{selectedChat.visitor_email || 'No email'}</p>
                   </div>
                   <button
                     onClick={() => closeChat(selectedChat.session_id)}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    className="shrink-0 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white text-xs rounded-xl font-medium transition"
                   >
-                    Close Chat
+                    Close
                   </button>
                 </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map(msg => (
+                {/* Messages area */}
+                <div
+                  ref={messagesRef}
+                  onScroll={onScroll}
+                  className="flex-1 overflow-y-auto p-4 space-y-3"
+                  style={{ minHeight: 0 }}
+                >
+                  {messages.length === 0 && (
+                    <p className={`text-center text-sm pt-8 ${sub}`}>No messages yet.</p>
+                  )}
+                  {messages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-xs px-4 py-2 rounded-lg ${
+                      className={`flex ${
                         msg.sender_type === 'admin'
-                          ? 'bg-blue-500 text-white'
-                          : theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
-                      }`}>
-                        <p>{msg.message}</p>
-                        <p className={`text-xs mt-1 ${
-                          msg.sender_type === 'admin' ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
-                          {new Date(msg.sent_at).toLocaleTimeString()}
-                        </p>
-                      </div>
+                          ? 'justify-end'
+                          : msg.sender_type === 'system'
+                          ? 'justify-center'
+                          : 'justify-start'
+                      }`}
+                    >
+                      {msg.sender_type === 'system' ? (
+                        <div
+                          className={`px-4 py-1 rounded-full text-xs ${
+                            dk
+                              ? 'bg-amber-900/30 text-amber-300 border border-amber-700/40'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}
+                        >
+                          {msg.message}
+                        </div>
+                      ) : (
+                        <div
+                          className={`max-w-[70%] md:max-w-sm px-3.5 py-2.5 rounded-2xl ${
+                            msg.sender_type === 'admin'
+                              ? 'bg-indigo-500 text-white rounded-br-md'
+                              : dk
+                              ? 'bg-slate-800 text-slate-100 rounded-bl-md'
+                              : 'bg-slate-100 text-slate-800 rounded-bl-md'
+                          }`}
+                        >
+                          {msg.sender_type !== 'admin' && msg.sender_name && (
+                            <p className={`text-xs font-semibold mb-1 ${dk ? 'text-slate-400' : 'text-slate-500'}`}>
+                              {msg.sender_name}
+                            </p>
+                          )}
+                          {renderContent(msg)}
+                          <p className={`text-xs mt-1 ${
+                            msg.sender_type === 'admin' ? 'text-indigo-200' : dk ? 'text-slate-500' : 'text-slate-400'
+                          }`}>
+                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
-                  <div ref={messagesEndRef} />
                 </div>
 
-                {/* Message Input */}
-                <div className={`p-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <div className="flex space-x-3">
+                {/* New message notice */}
+                {showNewMessageNotice && (
+                  <div className="px-4 pb-1">
+                    <button
+                      onClick={() => {
+                        const c = messagesRef.current;
+                        if (c) c.scrollTop = c.scrollHeight;
+                        setShowNewMessageNotice(false);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
+                        dk
+                          ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300'
+                          : 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                      New message · scroll down
+                    </button>
+                  </div>
+                )}
+
+                {/* Input */}
+                <div className={`p-3 border-t shrink-0 ${dk ? 'border-slate-800' : 'border-slate-200'}`}>
+                  <div className="flex gap-2">
                     <input
                       type="text"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      placeholder="Type your message..."
-                      className={`flex-1 px-4 py-2 rounded-lg ${
-                        theme === 'dark' 
-                          ? 'bg-gray-700 border-gray-600 text-white' 
-                          : 'bg-gray-50 border-gray-200 text-gray-900'
-                      } border focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                      placeholder="Type a message…"
+                      className={`flex-1 px-4 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${inp}`}
                     />
                     <button
                       onClick={sendMessage}
                       disabled={sending || !newMessage.trim()}
-                      className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
-                      <Send className="w-5 h-5" />
+                      <Send className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-500">
-                Select a chat to start messaging
+              <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                <MessageSquare className={`w-12 h-12 ${dk ? 'text-slate-700' : 'text-slate-300'}`} />
+                <p className={`text-sm ${sub}`}>Select a conversation</p>
+                <button
+                  className={`lg:hidden px-4 py-2 text-sm rounded-xl border ${dk ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-200 hover:bg-slate-50'}`}
+                  onClick={() => setMobileView('list')}
+                >
+                  ← View Sessions
+                </button>
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Toast */}
-        {toast && (
-          <div className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg ${
-            toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-          } text-white z-50`}>
-            {toast.message}
-          </div>
-        )}
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-2xl text-white text-sm font-medium z-50 ${
+          toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'
+        }`}>
+          {toast.message}
+        </div>
+      )}
 
-        {/* Take Chat Modal */}
-        {showTakeModal && chatToTake && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-lg p-6 max-w-md w-full`}>
-              <h3 className="text-xl font-bold mb-4">Take Chat</h3>
-              <p className="mb-6">
-                Are you sure you want to take this chat from <strong>{chatToTake.visitor_name || 'Anonymous'}</strong>?
-                This chat will be assigned to you.
-              </p>
-              <div className="flex space-x-3 justify-end">
-                <button
-                  onClick={() => setShowTakeModal(false)}
-                  className={`px-4 py-2 rounded-lg ${
-                    theme === 'dark'
-                      ? 'bg-gray-700 hover:bg-gray-600'
-                      : 'bg-gray-200 hover:bg-gray-300'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleTakeChatConfirm}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                >
-                  Take Chat
-                </button>
-              </div>
+      {/* Take chat modal */}
+      {showTakeModal && chatToTake && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className={`rounded-2xl p-6 max-w-md w-full shadow-2xl border ${dk ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <h3 className={`text-lg font-bold mb-2 ${dk ? 'text-white' : 'text-slate-900'}`}>Take Chat</h3>
+            <p className={`text-sm mb-6 ${dk ? 'text-slate-400' : 'text-slate-600'}`}>
+              Take this conversation from{' '}
+              <span className={`font-semibold ${dk ? 'text-white' : 'text-slate-900'}`}>
+                {chatToTake.visitor_name || 'Anonymous'}
+              </span>
+              ? It will be assigned to you.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowTakeModal(false)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium ${dk ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => takeChat(chatToTake.session_id)}
+                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-sm font-medium transition"
+              >
+                Take Chat
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </StaffLayout>
   );
 };

@@ -71,12 +71,12 @@ export const pageData = [
     name: "Subscription",
     path: "/subscription",
     icon: Crown,
-    roles: ["admin", "user"], // both can see
+    roles: ["admin"], // admin only
   },
   {
     name: "Settings",
     path: "/settings",
     icon: Settings,
-    roles: ["admin", "user"], // both can see
+    roles: ["admin"], // admin only
   },
 ];
