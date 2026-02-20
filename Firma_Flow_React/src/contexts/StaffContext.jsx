@@ -53,10 +53,11 @@ export const StaffProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Use same logout as superadmin
-      await fetch('http://localhost/FirmaFlow/superadmin/api/logout.php', {
+      await fetch('http://localhost/FirmaFlow/superadmin/api/auth.php', {
         method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'logout' }),
       });
     } catch (error) {
       console.error('Logout error:', error);

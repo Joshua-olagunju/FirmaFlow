@@ -17,19 +17,31 @@ const LiveChatComponent = ({ onClose }) => {
   const [estimatedWait, setEstimatedWait] = useState(null);
   const [assignedAdmin, setAssignedAdmin] = useState(null);
   const [error, setError] = useState("");
-  const [lastMessageId, setLastMessageId] = useState(0);
-  const messagesEndRef = useRef(null);
+  const [showNewMessageNotice, setShowNewMessageNotice] = useState(false);
+  // Use a ref for lastMessageId to avoid stale closures in the polling interval
+  const lastMessageIdRef = useRef(0);
+  const messagesContainerRef = useRef(null);
   const pollingRef = useRef(null);
   const fileInputRef = useRef(null);
+  // Track whether the user is near bottom to decide when to show new-message notice
+  const isAtBottomRef = useRef(true);
 
-  // Auto-scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Merge incoming messages deduplicating by id — prevents double-display
+  // when the polling interval fires shortly after an optimistic send.
+  const mergeUnique = (existing, incoming) => {
+    const ids = new Set(existing.map(m => m.id));
+    return [...existing, ...incoming.filter(m => !ids.has(m.id))];
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const handleMessagesScroll = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    isAtBottomRef.current = distanceFromBottom < 80;
+    if (isAtBottomRef.current) {
+      setShowNewMessageNotice(false);
+    }
+  };
 
   // Start chat session
   const startChat = async () => {
@@ -71,17 +83,13 @@ const LiveChatComponent = ({ onClose }) => {
   };
 
   // Start polling for status and messages
-  const startPolling = (sessionId) => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-    }
-
+  // Using lastMessageIdRef avoids stale closure — always reads the latest ID
+  const startPolling = (sid) => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
     pollingRef.current = setInterval(() => {
-      checkStatus(sessionId);
-      if (status === 'active' || status === 'waiting') {
-        loadMessages(sessionId, lastMessageId);
-      }
-    }, 3000); // Poll every 3 seconds
+      checkStatus(sid);
+      loadMessages(sid, lastMessageIdRef.current);
+    }, 3000);
   };
 
   // Stop polling
@@ -133,19 +141,28 @@ const LiveChatComponent = ({ onClose }) => {
         if (sinceId === 0) {
           setMessages(data.messages);
         } else {
-          setMessages(prev => [...prev, ...data.messages]);
+          setMessages(prev => mergeUnique(prev, data.messages));
+          if (data.messages.length > 0 && !isAtBottomRef.current) {
+            setShowNewMessageNotice(true);
+          }
         }
 
-        // Update last message ID for polling
+        // Update last message ID ref (no state needed — only used in polling closure)
         if (data.messages.length > 0) {
-          setLastMessageId(data.messages[data.messages.length - 1].id);
+          lastMessageIdRef.current = data.messages[data.messages.length - 1].id;
         }
 
         // Update status if changed
-        if (data.session_status !== status) {
-          setStatus(data.session_status);
+        if (data.session_status) {
+          setStatus(prev => {
+            if (prev !== data.session_status) {
+              if (data.session_status === 'closed') stopPolling();
+              return data.session_status;
+            }
+            return prev;
+          });
         }
-        if (data.assigned_admin && !assignedAdmin) {
+        if (data.assigned_admin) {
           setAssignedAdmin(data.assigned_admin);
         }
       }
@@ -176,9 +193,9 @@ const LiveChatComponent = ({ onClose }) => {
 
       if (data.success) {
         setNewMessage("");
-        // Add message optimistically
-        setMessages(prev => [...prev, data.data]);
-        setLastMessageId(data.data.id);
+        // Update ref BEFORE setMessages so that any in-flight poll uses the new since_id
+        lastMessageIdRef.current = data.data.id;
+        setMessages(prev => mergeUnique(prev, [data.data]));
       } else {
         throw new Error(data.message || "Failed to send message");
       }
@@ -418,6 +435,7 @@ const LiveChatComponent = ({ onClose }) => {
                   setStatus('idle');
                   setSessionId(null);
                   setMessages([]);
+                  setShowNewMessageNotice(false);
                   setError("");
                 }}
                 className={`px-6 py-2 ${theme.bgCard} border ${theme.borderSecondary} ${theme.textPrimary} rounded-lg ${theme.bgHover} transition font-medium`}
@@ -429,10 +447,21 @@ const LiveChatComponent = ({ onClose }) => {
         ) : (
           <>
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div
+              ref={messagesContainerRef}
+              onScroll={handleMessagesScroll}
+              className="flex-1 overflow-y-auto p-4 space-y-2"
+            >
               {messages.map(renderMessage)}
-              <div ref={messagesEndRef} />
             </div>
+
+            {showNewMessageNotice && (
+              <div className="px-4 pb-2">
+                <div className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs">
+                  New message received
+                </div>
+              </div>
+            )}
 
             {/* Message Input */}
             {(status === 'waiting' || status === 'active') && (

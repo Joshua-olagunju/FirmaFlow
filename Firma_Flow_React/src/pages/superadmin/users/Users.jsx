@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SuperAdminLayout from '../../../components/SuperAdminLayout';
 import { 
   Users as UsersIcon, 
@@ -17,6 +18,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function Users() {
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,22 +144,8 @@ export default function Users() {
     }
   };
 
-  const viewUser = async (userId) => {
-    try {
-      const response = await fetch(`http://localhost/FirmaFlow/superadmin/api/users.php?action=get_user&id=${userId}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setSelectedUser(data.user);
-        setShowModal(true);
-      }
-    } catch (error) {
-      console.error('Failed to load user:', error);
-    }
+  const viewUser = (userId) => {
+    navigate(`/superadmin/users/${userId}`);
   };
 
   const getRoleBadge = (role) => {

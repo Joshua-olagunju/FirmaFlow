@@ -1,211 +1,189 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSuperAdmin } from '../contexts/SuperAdminContext';
+import AppFooter from './AppFooter';
+import AnnouncementBanner from './AnnouncementBanner';
+import {
+  LayoutDashboard, Users, Building2, Ticket, MessageSquare,
+  CreditCard, Settings, LogOut, X, Menu, Sun, Moon, Shield,
+  ChevronRight,
+} from 'lucide-react';
 
-const SuperAdminLayout = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { theme } = useTheme();
+const NAV_ITEMS = [
+  { path: '/superadmin/dashboard',     Icon: LayoutDashboard, label: 'Dashboard',       sub: 'Overview & Analytics'      },
+  { path: '/superadmin/users',         Icon: Users,           label: 'Users',            sub: 'System User Accounts'      },
+  { path: '/superadmin/companies',     Icon: Building2,       label: 'Companies',        sub: 'Manage All Companies'      },
+  { path: '/superadmin/tickets',       Icon: Ticket,          label: 'Support Tickets',  sub: 'Manage Support Requests'   },
+  { path: '/superadmin/live-chat',     Icon: MessageSquare,   label: 'Live Chat',        sub: 'Real-time Support'         },
+  { path: '/superadmin/subscriptions', Icon: CreditCard,      label: 'Subscriptions',    sub: 'Billing & Plans'           },
+  { path: '/superadmin/settings',      Icon: Settings,        label: 'Settings',         sub: 'System Configuration'      },
+];
+
+const SuperAdminLayout = ({ children, title, subtitle }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const { theme, toggleTheme } = useTheme();
   const { superAdmin, logout } = useSuperAdmin();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location  = useLocation();
+  const navigate  = useNavigate();
+  const dk        = theme === 'dark';
+
+  /* Auto-close on resize */
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setSidebarOpen(true);
+      else setSidebarOpen(false);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/superadmin/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+    try { await logout(); navigate('/superadmin/login'); }
+    catch (e) { console.error('Logout failed:', e); }
   };
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) =>
+    path === '/superadmin/users'
+      ? location.pathname.startsWith('/superadmin/users')
+      : location.pathname === path;
 
-  const sidebarItems = [
-    {
-      path: '/superadmin/dashboard',
-      icon: '📊',
-      label: 'Dashboard',
-      description: 'Overview & Analytics'
-    },
-    {
-      path: '/superadmin/users',
-      icon: '👥',
-      label: 'Users',
-      description: 'Manage System Users'
-    },
-    {
-      path: '/superadmin/companies',
-      icon: '🏢',
-      label: 'Companies',
-      description: 'Manage Companies'
-    },
-    {
-      path: '/superadmin/tickets',
-      icon: '🎫',
-      label: 'Support Tickets',
-      description: 'Manage Support Requests'
-    },
-    {
-      path: '/superadmin/live-chat',
-      icon: '💬',
-      label: 'Live Chat',
-      description: 'Real-time Customer Support'
-    },
-    {
-      path: '/superadmin/subscriptions',
-      icon: '💳',
-      label: 'Subscriptions',
-      description: 'Manage User Subscriptions'
-    },
-    {
-      path: '/superadmin/settings',
-      icon: '⚙️',
-      label: 'Settings',
-      description: 'Staff & System Configuration'
-    }
-  ];
+  const handleNavClick = () => {
+    if (window.innerWidth < 1024) setSidebarOpen(false);
+  };
+
+  /* ─── colour tokens ────────────────────────────────────────────────── */
+  const bg       = dk ? 'bg-slate-900'                     : 'bg-slate-50';
+  const sidebarBg= dk ? 'bg-slate-800 border-slate-700/60' : 'bg-white border-slate-200';
+  const topbarBg = dk ? 'bg-slate-800/95 border-slate-700' : 'bg-white/95 border-slate-200';
+  const logoBg   = 'bg-gradient-to-br from-indigo-600 to-purple-600';
+  const activeItem = dk
+    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30'
+    : 'bg-indigo-50 text-indigo-700 border border-indigo-200';
+  const inactiveItem = dk
+    ? 'text-slate-400 hover:bg-slate-700 hover:text-white'
+    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900';
+  const profileBg = dk ? 'bg-slate-700/60' : 'bg-slate-50';
+  const textMain  = dk ? 'text-white'      : 'text-slate-900';
+  const textSub   = dk ? 'text-slate-400'  : 'text-slate-500';
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Mobile sidebar overlay */}
+    <div className={`min-h-screen flex ${bg}`}>
+      <AnnouncementBanner />
+
+      {/* ── Mobile backdrop ──────────────────────────────────────────── */}
       {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar - Fixed on all screen sizes, hidden on mobile when closed */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-80 transform transition-transform duration-300 ease-in-out ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      } ${
-        theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-      } border-r`}>
-        <div className="flex flex-col h-full">
-          
-          {/* Header */}
-          <div className={`p-6 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                  SA
-                </div>
-                <div>
-                  <h1 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    SuperAdmin
-                  </h1>
-                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    FirmaFlow Control Panel
-                  </p>
-                </div>
-              </div>
-              <button
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
+      {/* ── Sidebar ──────────────────────────────────────────────────── */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-72 flex flex-col border-r
+        transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 lg:static lg:z-auto
+        ${sidebarBg}
+      `}>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
-            {sidebarItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center p-4 rounded-xl transition-all duration-200 group ${
-                  isActive(item.path)
-                    ? theme === 'dark'
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'bg-blue-50 text-blue-700 border border-blue-200'
-                    : theme === 'dark'
-                    ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <span className="text-2xl mr-4">{item.icon}</span>
-                <div className="flex-1">
-                  <div className="font-medium">{item.label}</div>
-                  <div className={`text-sm ${
-                    isActive(item.path) 
-                      ? theme === 'dark' ? 'text-blue-200' : 'text-blue-600'
-                      : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
-                    {item.description}
-                  </div>
-                </div>
-                {isActive(item.path) && (
-                  <div className="w-2 h-2 bg-current rounded-full opacity-60" />
-                )}
-              </Link>
-            ))}
-          </nav>
-
-          {/* User info & logout */}
-          <div className={`p-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-            <div className={`p-4 rounded-xl ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'} mb-3`}>
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                  {superAdmin?.username?.[0]?.toUpperCase() || 'A'}
-                </div>
-                <div className="flex-1">
-                  <p className={`font-medium text-sm ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                    {superAdmin?.username || 'Administrator'}
-                  </p>
-                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Super Administrator
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <button
-              onClick={handleLogout}
-              className={`w-full flex items-center justify-center p-3 rounded-xl transition-all duration-200 ${
-                theme === 'dark' 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
-              }`}
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main content - Always has left margin on desktop to account for fixed sidebar */}
-      <div className="lg:ml-80 min-h-screen">
-        {/* Top bar for mobile */}
-        <div className={`lg:hidden ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b p-4 sticky top-0 z-30`}>
+        {/* Logo */}
+        <div className={`p-5 border-b ${dk ? 'border-slate-700/60' : 'border-slate-200'}`}>
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 ${logoBg} rounded-xl flex items-center justify-center shadow-lg`}>
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className={`font-bold text-sm leading-none ${textMain}`}>SuperAdmin</p>
+                <p className={`text-xs mt-0.5 ${textSub}`}>Control Panel</p>
+              </div>
+            </div>
+            <button onClick={() => setSidebarOpen(false)}
+              className={`lg:hidden p-1.5 rounded-lg ${dk ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
+              <X className="w-4 h-4" />
             </button>
-            <h1 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-              SuperAdmin Portal
-            </h1>
-            <div className="w-8" /> {/* Spacer for centering */}
           </div>
         </div>
 
-        {/* Page content with proper padding and full height */}
-        <main className="p-4 lg:p-8">
-          <div className="w-full">
+        {/* Nav */}
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+          {NAV_ITEMS.map(({ path, Icon, label, sub }) => {
+            const active = isActive(path);
+            return (
+              <Link key={path} to={path} onClick={handleNavClick}
+                className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 ${active ? activeItem : inactiveItem}`}>
+                <Icon className="w-5 h-5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium leading-none">{label}</p>
+                  <p className={`text-xs mt-0.5 truncate ${active ? (dk ? 'text-indigo-200' : 'text-indigo-500') : textSub}`}>{sub}</p>
+                </div>
+                {active && <ChevronRight className="w-3.5 h-3.5 opacity-60 shrink-0" />}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Footer: profile + logout */}
+        <div className={`p-3 border-t ${dk ? 'border-slate-700/60' : 'border-slate-200'}`}>
+          <div className={`flex items-center gap-3 p-3 rounded-xl mb-2 ${profileBg}`}>
+            <div className={`w-8 h-8 ${logoBg} rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0`}>
+              {superAdmin?.username?.[0]?.toUpperCase() || 'A'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-medium truncate leading-none ${textMain}`}>{superAdmin?.username || 'Administrator'}</p>
+              <p className={`text-xs mt-0.5 ${textSub}`}>Super Administrator</p>
+            </div>
+          </div>
+          <button onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition-colors">
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main area ────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+
+        {/* Top bar */}
+        <header className={`sticky top-0 z-30 border-b ${topbarBg} backdrop-blur-sm`}>
+          <div className="flex items-center gap-3 px-4 py-3">
+            {/* Hamburger */}
+            <button onClick={() => setSidebarOpen((o) => !o)}
+              className={`lg:hidden p-2 rounded-lg ${dk ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-600'}`}>
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Title (optional) */}
+            {title && (
+              <div className="flex-1 min-w-0">
+                <p className={`font-semibold text-sm leading-none truncate ${textMain}`}>{title}</p>
+                {subtitle && <p className={`text-xs mt-0.5 ${textSub}`}>{subtitle}</p>}
+              </div>
+            )}
+            {!title && <div className="flex-1" />}
+
+            {/* Theme toggle */}
+            <button onClick={toggleTheme}
+              className={`p-2 rounded-lg transition-colors ${dk ? 'hover:bg-slate-700 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}>
+              {dk ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            {/* Avatar */}
+            <div className={`w-7 h-7 ${logoBg} rounded-full flex items-center justify-center text-white text-xs font-bold`}>
+              {superAdmin?.username?.[0]?.toUpperCase() || 'A'}
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
             {children}
           </div>
+          <AppFooter />
         </main>
       </div>
     </div>

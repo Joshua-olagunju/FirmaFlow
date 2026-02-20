@@ -13,8 +13,15 @@ export default function Hero() {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-blue-600 to-purple-800 opacity-90"></div>
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20"></div>
+      {/* Deep gradient base */}
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-700 via-purple-700 to-blue-800"></div>
+      {/* Subtle grid overlay */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjA4IiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-40"></div>
+      {/* Floating glowing orbs */}
+      <div className="absolute top-24 left-8 w-80 h-80 bg-purple-400 rounded-full filter blur-3xl opacity-25 animate-pulse pointer-events-none"></div>
+      <div className="absolute top-1/2 right-0 w-96 h-96 bg-blue-400 rounded-full filter blur-3xl opacity-20 animate-pulse pointer-events-none" style={{ animationDelay: '1.2s' }}></div>
+      <div className="absolute bottom-16 left-1/3 w-64 h-64 bg-indigo-300 rounded-full filter blur-3xl opacity-20 animate-pulse pointer-events-none" style={{ animationDelay: '2.4s' }}></div>
+      <div className="absolute top-1/3 left-1/2 w-48 h-48 bg-pink-400 rounded-full filter blur-3xl opacity-10 animate-pulse pointer-events-none" style={{ animationDelay: '0.6s' }}></div>
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 sm:mb-10 gap-12 items-center">
@@ -32,19 +39,19 @@ export default function Hero() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-delay-2 flex-wrap">
-              <button onClick={() => navigate('/signup')} className="group bg-white text-purple-600 px-8 py-4 rounded-lg font-semibold hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center">
-                <Rocket size={18} className="mr-2" />
+              <button onClick={() => navigate('/signup')} className="group bg-white text-purple-700 px-8 py-4 rounded-xl font-bold hover:shadow-2xl hover:shadow-white/20 transition-all transform hover:scale-105 flex items-center justify-center gap-2">
+                <Rocket size={18} />
                 Start Free Trial
               </button>
               <button
                 onClick={() => scrollToSection('how-to-use')}
-                className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-all transform hover:scale-105 flex items-center justify-center"
+                className="bg-white/10 backdrop-blur-sm border border-white/40 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-purple-700 transition-all transform hover:scale-105 flex items-center justify-center gap-2"
               >
-                <ArrowRight size={18} className="mr-2" />
+                <ArrowRight size={18} />
                 Learn More
               </button>
-              <button className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-lg font-semibold hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center">
-                <Download size={18} className="mr-2" />
+              <button className="bg-gradient-to-r from-green-400 to-emerald-500 text-white px-8 py-4 rounded-xl font-semibold hover:shadow-2xl hover:shadow-green-500/30 transition-all transform hover:scale-105 flex items-center justify-center gap-2">
+                <Download size={18} />
                 Install App
               </button>
             </div>

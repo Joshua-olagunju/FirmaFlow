@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronDown, LogIn, Rocket, Mail, MessageSquare, AlertCircle, Send } from 'lucide-react';
 import SupportModal from './SupportModal.jsx';
@@ -8,6 +8,13 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [modalType, setModalType] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
@@ -30,7 +37,11 @@ export default function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-md">
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'bg-white/95 backdrop-blur-md shadow-lg shadow-gray-200/60 border-b border-gray-100'
+          : 'bg-white/80 backdrop-blur-sm'
+      }`}>
         <nav className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex gap-2 text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
@@ -112,12 +123,12 @@ export default function Header() {
                 )}
               </div>
 
-              <button onClick={handleSignIn} className="text-gray-700 hover:text-purple-600 transition-colors font-medium flex items-center">
-                <LogIn size={16} className="mr-1" />
+              <button onClick={handleSignIn} className="text-gray-600 hover:text-purple-600 transition-colors font-medium flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-purple-50">
+                <LogIn size={16} />
                 Sign In
               </button>
-              <button onClick={() => navigate('/signup')} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all flex items-center font-medium">
-                <Rocket size={16} className="mr-1" />
+              <button onClick={() => navigate('/signup')} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-2 rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition-all transform hover:-translate-y-0.5 flex items-center gap-1.5 font-semibold text-sm">
+                <Rocket size={15} />
                 Get Started
               </button>
             </div>

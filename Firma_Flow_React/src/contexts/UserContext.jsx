@@ -18,7 +18,17 @@ export const UserProvider = ({ children }) => {
     updateUser,
   } = useUserStore();
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    try {
+      await fetch('http://localhost/FirmaFlow/api/auth.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'logout' }),
+      });
+    } catch (e) {
+      // ignore network errors — clear locally regardless
+    }
     logout();
     navigate("/login");
   }, [logout, navigate]);

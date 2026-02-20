@@ -3,6 +3,9 @@ import Home from "./pages/Home";
 import Signup from "./pages/auth/Signup";
 import EmailVerification from "./pages/auth/EmailVerification";
 import Login from "./pages/auth/Login";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ForgotPasswordOTP from "./pages/auth/ForgotPasswordOTP";
+import ResetPassword from "./pages/auth/ResetPassword";
 import Dashboard from "./pages/dashboard/Dashboard";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import Customers from "./pages/customers/Customers";
@@ -20,6 +23,7 @@ import SuperAdminDashboard from "./pages/superadmin/dashboard/SuperAdminDashboar
 import SuperAdminTickets from "./pages/superadmin/tickets/SupportTickets";
 import SuperAdminLiveChat from "./pages/superadmin/chat/LiveChat";
 import SuperAdminUsers from "./pages/superadmin/users/Users";
+import SuperAdminUserDetail from "./pages/superadmin/users/UserDetail";
 import SuperAdminCompanies from "./pages/superadmin/companies/Companies";
 import SuperAdminSubscriptions from "./pages/superadmin/subscriptions/Subscriptions";
 import SuperAdminSettings from "./pages/superadmin/Settings";
@@ -27,6 +31,7 @@ import StaffDashboard from "./pages/staff/StaffDashboard";
 import StaffChat from "./pages/staff/StaffChat";
 import StaffComplaints from "./pages/staff/StaffComplaints";
 import StaffUsers from "./pages/staff/StaffUsers";
+import StaffProfile from "./pages/staff/StaffProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SuperAdminProtectedRoute from "./components/SuperAdminProtectedRoute";
 import StaffProtectedRoute from "./components/StaffProtectedRoute";
@@ -46,6 +51,9 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/email-verification" element={<EmailVerification />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/forgot-password/verify" element={<ForgotPasswordOTP />} />
+        <Route path="/forgot-password/reset" element={<ResetPassword />} />
         
         {/* SuperAdmin Login */}
         <Route path="/superadmin/login" element={<SuperAdminLogin />} />
@@ -80,6 +88,14 @@ function App() {
           element={
             <SuperAdminProtectedRoute>
               <SuperAdminUsers />
+            </SuperAdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/superadmin/users/:id"
+          element={
+            <SuperAdminProtectedRoute>
+              <SuperAdminUserDetail />
             </SuperAdminProtectedRoute>
           }
         />
@@ -124,6 +140,10 @@ function App() {
         <Route
           path="/staff/users"
           element={<StaffProtectedRoute><StaffUsers /></StaffProtectedRoute>}
+        />
+        <Route
+          path="/staff/profile"
+          element={<StaffProtectedRoute><StaffProfile /></StaffProtectedRoute>}
         />
         
         {/* Dashboard - role-based routing */}
